@@ -6,6 +6,10 @@
 
 **评审演示入口：http://100.70.134.17:7860/**（按出题评委允许的自有服务器方式部署，需具备对应网络可达条件。）
 
+**魔搭创空间：https://www.modelscope.cn/studios/Shuuyou/MateQuill**
+
+**魔搭应用：https://shuuyou-matequill.ms.show**
+
 ## 已实现
 
 - 单一自然语言输入，型号或目标顾客不明确时追问。
