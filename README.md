@@ -37,7 +37,7 @@ python -m uvicorn app.api:app --host 127.0.0.1 --port 8000
 
 打开 http://127.0.0.1:8000，在本机设置中配置大模型连接，或通过 `.env.example` 对应的进程环境变量注入。真实凭证不在仓库。
 
-公开仓库包含已采集的华为官方规格数据及图片元数据。赛事知识库原包和运行缓存未公开。完整复现图片需根据 `data/official_assets.json` 的 `image_url` 下载到对应 `path`，并保持SHA256一致；或由授权参赛者将赛事资料放入私有 `research/knowledge/`。评审服务器已配置实际资料与模型。
+公开仓库包含已采集的华为官方规格数据及图片元数据。赛事知识库原包和运行缓存未公开。Docker 构建会自动从华为官方站点下载并校验图片；也可手动运行 `python scripts/fetch_official_assets.py`。手动完整复现图片需根据 `data/official_assets.json` 的 `image_url` 下载到对应 `path`，并保持SHA256一致；或由授权参赛者将赛事资料放入私有 `research/knowledge/`。评审服务器已配置实际资料与模型。
 
 ## 技术流程
 
