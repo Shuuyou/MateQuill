@@ -1,0 +1,1422 @@
+{
+  "9f9470747d7e3c406b87c31ecd5d51f1f3542626001ed8b00b04c5db8973de82": {
+    "observed_title": "浅绿色笔记本斜侧外观与键盘",
+    "visual_role": "product_overview",
+    "semantic_tags": [
+      "appearance",
+      "keyboard"
+    ],
+    "usable": true,
+    "reason": "已查看图片总览中可见画面；仅描述内容，不确认型号、参数、功能效果或授权。"
+  },
+  "e320384c91d75f723fb785fce8505c9ce099980cf4330e37d08d75430f32650d": {
+    "observed_title": "粉色笔记本斜侧外观与键盘",
+    "visual_role": "product_overview",
+    "semantic_tags": [
+      "appearance",
+      "keyboard"
+    ],
+    "usable": true,
+    "reason": "已查看图片总览中可见画面；仅描述内容，不确认型号、参数、功能效果或授权。"
+  },
+  "85fadb0cbceb8632b00301aa07db8b815469e0107b8c89b5d91baab15a9c281b": {
+    "observed_title": "笔记本屏幕上的演示文稿界面；未见手写笔",
+    "visual_role": "feature_detail",
+    "semantic_tags": [
+      "display",
+      "work_scene"
+    ],
+    "usable": true,
+    "reason": "已查看图片总览中可见画面；仅描述内容，不确认型号、参数、功能效果或授权。"
+  },
+  "ab085ae7d9fd83af91b68e1b32c9f6f2148ca22e0d656f16f89815b93650f440": {
+    "observed_title": "深色笔记本斜侧外观与键盘",
+    "visual_role": "product_overview",
+    "semantic_tags": [
+      "appearance",
+      "keyboard"
+    ],
+    "usable": true,
+    "reason": "已查看图片总览中可见画面；仅描述内容，不确认型号、参数、功能效果或授权。"
+  },
+  "361c5f89cb2bbc269210bf051e33b18a4e516d0536f2ae86067106edf4155458": {
+    "observed_title": "合盖机身侧面及接口",
+    "visual_role": "feature_detail",
+    "semantic_tags": [
+      "ports"
+    ],
+    "usable": true,
+    "reason": "已查看图片总览中可见画面；仅描述内容，不确认型号、参数、功能效果或授权。"
+  },
+  "793fe65d16b209f47f162537955c4c288be35000916105038b40cf4ebb81ce7d": {
+    "observed_title": "浅绿色笔记本正面开盖外观",
+    "visual_role": "product_overview",
+    "semantic_tags": [
+      "appearance"
+    ],
+    "usable": true,
+    "reason": "已查看图片总览中可见画面；仅描述内容，不确认型号、参数、功能效果或授权。",
+    "visual_group": "green-front"
+  },
+  "d36c93bb3309a15889de0c880c67fea59c1dd548e29cb823f84058989bc5076d": {
+    "observed_title": "浅绿色笔记本合盖顶面外观",
+    "visual_role": "product_overview",
+    "semantic_tags": [
+      "appearance"
+    ],
+    "usable": true,
+    "reason": "已查看图片总览中可见画面；仅描述内容，不确认型号、参数、功能效果或授权。"
+  },
+  "6cd1c887d3624dc55aa6f4d0db1d6deb59f98d766a7f61d3567557e832f7ea1d": {
+    "observed_title": "浅绿色笔记本正面外观",
+    "visual_role": "product_overview",
+    "semantic_tags": [
+      "appearance"
+    ],
+    "usable": true,
+    "reason": "已查看图片总览中可见画面；仅描述内容，不确认型号、参数、功能效果或授权。",
+    "visual_group": "green-front"
+  },
+  "c892487b3077760859991b683017ac96f876e040357aa9aa0ffbf4fa9babe972": {
+    "observed_title": "绿色笔记本键盘与触控板俯视画面",
+    "visual_role": "feature_detail",
+    "semantic_tags": [
+      "keyboard"
+    ],
+    "usable": true,
+    "reason": "已查看图片总览中可见画面；仅描述内容，不确认型号、参数、功能效果或授权。"
+  },
+  "dc06ae68921c4bb406b9ea3c5a517521b5f204009dabbcb5721401de5ce74879": {
+    "observed_title": "绿色笔记本俯视画面及小字说明",
+    "visual_role": "product_overview",
+    "semantic_tags": [
+      "appearance",
+      "keyboard"
+    ],
+    "usable": true,
+    "reason": "已查看图片总览中可见画面；仅描述内容，不确认型号、参数、功能效果或授权。"
+  },
+  "67f9d40dba32d929116396390c3402043270665a57cd880d186176cef658ac71": {
+    "observed_title": "笔记本开盖侧面及接口",
+    "visual_role": "feature_detail",
+    "semantic_tags": [
+      "ports"
+    ],
+    "usable": true,
+    "reason": "已查看图片总览中可见画面；仅描述内容，不确认型号、参数、功能效果或授权。"
+  },
+  "0bc94b00136a83292b1820a564b48087ddba3125b9852be977b4018e2e030c4f": {
+    "observed_title": "散热风扇示意及图片内性能宣传文字",
+    "visual_role": "feature_detail",
+    "semantic_tags": [
+      "performance"
+    ],
+    "usable": false,
+    "reason": "图内含性能、屏幕或续航宣传文字，尚未逐项核对该配置的数值与脚注，暂不作为营销配图。"
+  },
+  "36e59dd6859b68fc4ab1f0dc8f0d81c9e16cefb283d5bb4fd8fad3d9bab83f61": {
+    "observed_title": "绿色笔记本正面产品外观；未见手机",
+    "visual_role": "product_overview",
+    "semantic_tags": [
+      "appearance"
+    ],
+    "usable": true,
+    "reason": "已查看图片总览中可见画面；仅描述内容，不确认型号、参数、功能效果或授权。",
+    "visual_group": "green-front"
+  },
+  "1eda318e16490f59a945959dea7807be76aebe823e6728cb1e36d1da87da5e53": {
+    "observed_title": "金色笔记本外观；与同组绿色粉色造型不同，型号待查",
+    "visual_role": "unknown",
+    "semantic_tags": [],
+    "usable": false,
+    "reason": "已查看图片总览中可见画面；仅描述内容，不确认型号、参数、功能效果或授权。 当前不作为营销配图。"
+  },
+  "e68e9e549fea829dd4e899a44148feafdcf4d1f8d9628127ace25256b616d34e": {
+    "observed_title": "粉色笔记本及图片内屏幕宣传文字",
+    "visual_role": "feature_detail",
+    "semantic_tags": [
+      "display"
+    ],
+    "usable": false,
+    "reason": "图内含性能、屏幕或续航宣传文字，尚未逐项核对该配置的数值与脚注，暂不作为营销配图。"
+  },
+  "3b93b5d25e868c5966e65d8fc1b86cd561781aa616ee55ebb5860941aa855745": {
+    "observed_title": "粉色笔记本正面开盖外观",
+    "visual_role": "product_overview",
+    "semantic_tags": [
+      "appearance"
+    ],
+    "usable": true,
+    "reason": "已查看图片总览中可见画面；仅描述内容，不确认型号、参数、功能效果或授权。",
+    "visual_group": "pink-front"
+  },
+  "16c1a684146eac925112a8e6cfce48b2da1418348f9dcb67103c98e2e999e996": {
+    "observed_title": "粉色笔记本正面产品外观",
+    "visual_role": "product_overview",
+    "semantic_tags": [
+      "appearance"
+    ],
+    "usable": true,
+    "reason": "已查看图片总览中可见画面；仅描述内容，不确认型号、参数、功能效果或授权。",
+    "visual_group": "pink-front"
+  },
+  "b2a991f2763fd7d646e6a362b48536e3949c197137f097ad06b5fcb6fb3e321b": {
+    "observed_title": "浅绿色机身侧面及接口",
+    "visual_role": "feature_detail",
+    "semantic_tags": [
+      "ports"
+    ],
+    "usable": true,
+    "reason": "已查看图片总览中可见画面；仅描述内容，不确认型号、参数、功能效果或授权。"
+  },
+  "184c7622d78ff75778c6159af6121387b014bfe4e2aa198cdcc2f9dbf2d4446b": {
+    "observed_title": "笔记本与影音画面及图片内续航宣传文字",
+    "visual_role": "feature_detail",
+    "semantic_tags": [
+      "battery"
+    ],
+    "usable": false,
+    "reason": "图内含性能、屏幕或续航宣传文字，尚未逐项核对该配置的数值与脚注，暂不作为营销配图。"
+  },
+  "fa79555380e2fe0f21150da4e4f0427fbd4eb2d63ba344f1e29a9b21af116552": {
+    "observed_title": "女性手持合盖浅色笔记本的人像宣传场景",
+    "visual_role": "scene",
+    "semantic_tags": [
+      "portability"
+    ],
+    "usable": true,
+    "reason": "已查看图片总览中可见画面；仅描述内容，不确认型号、参数、功能效果或授权。"
+  },
+  "0c899ed8d886279a773ffb2b0e0a92c2cd495b4e2072b5d200349f82a60ea9af": {
+    "observed_title": "女性手持合盖浅色笔记本的人像宣传场景",
+    "visual_role": "scene",
+    "semantic_tags": [
+      "portability"
+    ],
+    "usable": true,
+    "reason": "已查看图片总览中可见画面；仅描述内容，不确认型号、参数、功能效果或授权。"
+  },
+  "3f41d3e266e690859fe0b0f134ab596d5bcb7be7f5718f5f8ecf663eafb99638": {
+    "observed_title": "男性手持合盖深色笔记本的人像宣传场景",
+    "visual_role": "scene",
+    "semantic_tags": [
+      "portability"
+    ],
+    "usable": true,
+    "reason": "已查看图片总览中可见画面；仅描述内容，不确认型号、参数、功能效果或授权。"
+  },
+  "8a481bfd1c318953484196cdaacd9150643010f6d1e1b52e13e755a2e4a53a7a": {
+    "observed_title": "人物操作笔记本并手持手机的桌面场景",
+    "visual_role": "scene",
+    "semantic_tags": [
+      "collaboration",
+      "work_scene"
+    ],
+    "usable": true,
+    "reason": "已查看图片总览中可见画面；仅描述内容，不确认型号、参数、功能效果或授权。"
+  },
+  "0ca951de6825e588950327be851259c9fe8dff18c9599ca6b9cea2d7765d4144": {
+    "observed_title": "展开屏幕、外置键盘与笔的产品展示",
+    "visual_role": "product_overview",
+    "semantic_tags": [
+      "folding",
+      "appearance"
+    ],
+    "usable": true,
+    "reason": "已查看图片总览中可见画面；仅描述内容，不确认型号、参数、功能效果或授权。"
+  },
+  "b497feae15d66cb640eb14345f324234243079d18e619ba34a76f6c1fa0c30f6": {
+    "observed_title": "女性在户外桌边使用粉色笔记本的宣传场景",
+    "visual_role": "scene",
+    "semantic_tags": [
+      "work_scene"
+    ],
+    "usable": true,
+    "reason": "已查看图片总览中可见画面；仅描述内容，不确认型号、参数、功能效果或授权。"
+  },
+  "7e502e7fe969ee70dcbb9c98cbb9f60b903b216f7babb3a707e0f6f6839bfff6": {
+    "observed_title": "男性在户外桌边使用深色笔记本的宣传场景",
+    "visual_role": "scene",
+    "semantic_tags": [
+      "work_scene"
+    ],
+    "usable": true,
+    "reason": "已查看图片总览中可见画面；仅描述内容，不确认型号、参数、功能效果或授权。"
+  },
+  "a6b6265f40892ae5ac767d5885cdc3ba040ff4794f854b8e5e637cdab1bd0945": {
+    "observed_title": "女性在桌边使用浅色笔记本的宣传场景",
+    "visual_role": "scene",
+    "semantic_tags": [
+      "work_scene"
+    ],
+    "usable": true,
+    "reason": "已查看图片总览中可见画面；仅描述内容，不确认型号、参数、功能效果或授权。"
+  },
+  "c7cda19d0676643e55c639a2585f8bf23f9ffd9ee9771c6064aeaa0158ab51c1": {
+    "observed_title": "男性在桌边使用深色笔记本的宣传场景",
+    "visual_role": "scene",
+    "semantic_tags": [
+      "work_scene"
+    ],
+    "usable": true,
+    "reason": "已查看图片总览中可见画面；仅描述内容，不确认型号、参数、功能效果或授权。",
+    "visual_group": "black-desk-man"
+  },
+  "147cb4886163000b3f3ed204070f02e2258fb4e7eef2460a99549aaf17dcb115": {
+    "observed_title": "桌前人物使用笔记本并在纸上书写",
+    "visual_role": "scene",
+    "semantic_tags": [],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "560099251ec0da953461932a3a3a8c4177735a9ef6de76cdc259c1ba04a1847a": {
+    "observed_title": "桌面上笔记本、平板与手机并列的宣传场景",
+    "visual_role": "scene",
+    "semantic_tags": [
+      "collaboration",
+      "work_scene"
+    ],
+    "usable": true,
+    "reason": "已查看图片总览中可见画面；仅描述内容，不确认型号、参数、功能效果或授权。"
+  },
+  "b5745be99251fac372a5967a827e43ccd8f8e1c845a8dab470b5a2f6c81bfb11": {
+    "observed_title": "女性沿街手持合盖笔记本的携带场景",
+    "visual_role": "scene",
+    "semantic_tags": [
+      "portability"
+    ],
+    "usable": true,
+    "reason": "已查看图片总览中可见画面；仅描述内容，不确认型号、参数、功能效果或授权。"
+  },
+  "a4422ab8a507393174e1ab673fd991b6e6e1e497a5640e84e44aec49ed3467fa": {
+    "observed_title": "深色背景下开盖笔记本与球形壁纸",
+    "visual_role": "product_overview",
+    "semantic_tags": [
+      "appearance"
+    ],
+    "usable": true,
+    "reason": "已查看图片总览中可见画面；仅描述内容，不确认型号、参数、功能效果或授权。"
+  },
+  "88477e9fb10790da1068abd21fafb341cb79cbd415bb0cc4129bdca3e3ed9c16": {
+    "observed_title": "紫色笔记本侧面薄度展示",
+    "visual_role": "unknown",
+    "semantic_tags": [],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "8df67bfab9c9d91af866526a5a7e82b74885b5399115202e170593b9e1a88bf1": {
+    "observed_title": "浅紫色笔记本正面开盖外观",
+    "visual_role": "product_overview",
+    "semantic_tags": [
+      "appearance"
+    ],
+    "usable": true,
+    "reason": "已查看图片总览中可见画面；仅描述内容，不确认型号、参数、功能效果或授权。"
+  },
+  "2d7d2da727f726550085a11d54d0297b6dfd6bd5e5668fb65190f621c37fd3fa": {
+    "observed_title": "多人围桌交流并使用笔记本的宣传场景",
+    "visual_role": "scene",
+    "semantic_tags": [
+      "work_scene"
+    ],
+    "usable": true,
+    "reason": "已查看图片总览中可见画面；仅描述内容，不确认型号、参数、功能效果或授权。"
+  },
+  "8a3b93e9b7df3fe13cb958e14726db8f76d871e6507774c4fec9a45a768f2826": {
+    "observed_title": "合盖浅紫色笔记本侧面外观",
+    "visual_role": "product_overview",
+    "semantic_tags": [
+      "appearance"
+    ],
+    "usable": true,
+    "reason": "已查看图片总览中可见画面；仅描述内容，不确认型号、参数、功能效果或授权。"
+  },
+  "d0e45db5dc74d9d42e75eea7aa94224c27a8788d4b238efd8b4dc8466d3b42e8": {
+    "observed_title": "女性在躺椅旁使用笔记本的户外宣传场景",
+    "visual_role": "scene",
+    "semantic_tags": [
+      "work_scene"
+    ],
+    "usable": true,
+    "reason": "已查看图片总览中可见画面；仅描述内容，不确认型号、参数、功能效果或授权。"
+  },
+  "4fd3d4c0ebc9ff6fae83c74ad4f9f1a335186e599010a36304c7da2c1d64d256": {
+    "observed_title": "金色笔记本合盖外观；未见屏幕画面",
+    "visual_role": "product_overview",
+    "semantic_tags": [
+      "appearance"
+    ],
+    "usable": true,
+    "reason": "已查看图片总览中可见画面；仅描述内容，不确认型号、参数、功能效果或授权。"
+  },
+  "42fe5f2856ddddf71d2099e9d2a43a53e100c08ead52d63b7a616a31276bba29": {
+    "observed_title": "手写笔悬于笔记本触屏文字前方的展示",
+    "visual_role": "unknown",
+    "semantic_tags": [],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "58fc4d2b72b827ea9a6942315067b0e2d3f8a5c908c40bfd0c1c6303e325cb24": {
+    "observed_title": "触笔靠近显示手写字样的笔记本屏幕",
+    "visual_role": "feature_detail",
+    "semantic_tags": [
+      "display"
+    ],
+    "usable": true,
+    "reason": "已查看图片总览中可见画面；仅描述内容，不确认型号、参数、功能效果或授权。",
+    "visual_group": "pen-handwriting"
+  },
+  "fbbaed8b92725dfc7873783c40d458321ec9c88f4e4946bee7f93a122712651c": {
+    "observed_title": "蓝色花朵景观素材；未见产品",
+    "visual_role": "decorative",
+    "semantic_tags": [],
+    "usable": false,
+    "reason": "已查看图片总览中可见画面；仅描述内容，不确认型号、参数、功能效果或授权。 当前不作为营销配图。"
+  },
+  "8c943ab29658ddaf3dbdcafccc656c66d5c6a3216cdbdf221724334c8f37ade5": {
+    "observed_title": "蓝色花朵景观素材；未见产品",
+    "visual_role": "decorative",
+    "semantic_tags": [],
+    "usable": false,
+    "reason": "已查看图片总览中可见画面；仅描述内容，不确认型号、参数、功能效果或授权。 当前不作为营销配图。"
+  },
+  "3c1145f841caab0c3b13aef08a825cffb8c36d8d59b8935bc4269639c06485da": {
+    "observed_title": "笔记本屏幕中的多彩图案展示",
+    "visual_role": "product_overview",
+    "semantic_tags": [
+      "appearance",
+      "display"
+    ],
+    "usable": true,
+    "reason": "已查看图片总览中可见画面；仅描述内容，不确认型号、参数、功能效果或授权。"
+  },
+  "eee2123a29badc715f9be786d9e3ce9f418ac5daedd7f82a229040402d7cdb86": {
+    "observed_title": "夜景建筑素材；未见产品",
+    "visual_role": "decorative",
+    "semantic_tags": [],
+    "usable": false,
+    "reason": "已查看图片总览中可见画面；仅描述内容，不确认型号、参数、功能效果或授权。 当前不作为营销配图。"
+  },
+  "1287e5a6d1d6fd75e79f2dc4ca19c83e0436253e53b9c11f178be023c2d38981": {
+    "observed_title": "绿色笔记本与宣传文字的组合主视觉",
+    "visual_role": "product_overview",
+    "semantic_tags": [
+      "appearance"
+    ],
+    "usable": true,
+    "reason": "已查看图片总览中可见画面；仅描述内容，不确认型号、参数、功能效果或授权。",
+    "visual_group": "green-hero-copy"
+  },
+  "36b36120c6d3d390d1c2f5465830695fc90d4b99c06074fc94b9ea688d4436da": {
+    "observed_title": "绿色笔记本与文字广告创意",
+    "visual_role": "product_overview",
+    "semantic_tags": [
+      "appearance"
+    ],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "161572cf649f168b342c1d8ee66b2dd98bd0a8ab3f182c0eef9a3e4f7c9fee7e": {
+    "observed_title": "手机电脑平板显示器的连接关系示意",
+    "visual_role": "feature_detail",
+    "semantic_tags": [
+      "display",
+      "collaboration"
+    ],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "5a768865a483be382b627eac6f88806e2a098d171a9cd9d7ac8716b9f8579ca1": {
+    "observed_title": "Intel Core i5标记示意无电脑主体",
+    "visual_role": "decorative",
+    "semantic_tags": [],
+    "usable": false,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "bb5dccd7a1f0c440e123a37563c56c67b8756be4dd15a330b87a8aa0d6824307": {
+    "observed_title": "打开的笔记本正面外观",
+    "visual_role": "product_overview",
+    "semantic_tags": [
+      "appearance"
+    ],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "53781651c6f0027c32f9ead10d06c9fc3a2b4269af09fad8aed65e1b9255e6e0": {
+    "observed_title": "笔记本屏幕显示多彩抽象图案",
+    "visual_role": "feature_detail",
+    "semantic_tags": [
+      "display"
+    ],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "823cf134fee72fcd929fa03aeb99860a32c7eeb32cc90ef551ef43a04f7be73c": {
+    "observed_title": "笔记本屏幕上的视频剪辑时间线界面",
+    "visual_role": "feature_detail",
+    "semantic_tags": [
+      "display"
+    ],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "0fb0a6d574d7b5ad3d91605d88f72ca3087ee497d172b8dd84458d36f93ecb53": {
+    "observed_title": "黑底百分比文字与细线示意；未见完整产品",
+    "visual_role": "decorative",
+    "semantic_tags": [],
+    "usable": false,
+    "reason": "已查看图片总览中可见画面；仅描述内容，不确认型号、参数、功能效果或授权。 当前不作为营销配图。"
+  },
+  "7fdbb0266f50aacb2001a1ffb3a2cff7b231df5c41e6be30dda169e821c2ae35": {
+    "observed_title": "黑屏笔记本正面轮廓，无法承载屏幕效果说明",
+    "visual_role": "unknown",
+    "semantic_tags": [],
+    "usable": false,
+    "reason": "已查看图片总览中可见画面；仅描述内容，不确认型号、参数、功能效果或授权。 当前不作为营销配图。"
+  },
+  "667d51d8d9e30cd722d57435cc6f1b646ac6de3e36cca72ff8947c545cae9866": {
+    "observed_title": "Intel Core i9处理器标识；未见产品",
+    "visual_role": "decorative",
+    "semantic_tags": [],
+    "usable": false,
+    "reason": "已查看图片总览中可见画面；仅描述内容，不确认型号、参数、功能效果或授权。 当前不作为营销配图。"
+  },
+  "292dbabfa8e367cb72f8745812399c75f7b7945f265f8b8448b0ed93f2682ccb": {
+    "observed_title": "多设备图标与互联关系示意图",
+    "visual_role": "feature_detail",
+    "semantic_tags": [
+      "collaboration"
+    ],
+    "usable": true,
+    "reason": "已查看图片总览中可见画面；仅描述内容，不确认型号、参数、功能效果或授权。"
+  },
+  "3e3a201d39a3bc3d47967efdaa3728a9081eb7c82cb0801010fd0620ee5a1ca6": {
+    "observed_title": "手机电脑平板显示器的连接关系示意",
+    "semantic_tags": [
+      "display",
+      "collaboration"
+    ],
+    "visual_role": "feature_detail",
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "06d927ab992db55b6687b27cb5e416559e88d408ceb1cef0ff4308b363db0862": {
+    "observed_title": "Intel Core i5标记无电脑主体",
+    "semantic_tags": [],
+    "visual_role": "decorative",
+    "usable": false,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "72c8ba4247c7d56624f426a2643f0b69ac5275f20c73c83ae037ae9b529a300e": {
+    "observed_title": "银色笔记本斜侧面与页面排版界面",
+    "visual_role": "product_overview",
+    "semantic_tags": [
+      "appearance"
+    ],
+    "usable": true,
+    "reason": "已查看图片总览中可见画面；仅描述内容，不确认型号、参数、功能效果或授权。"
+  },
+  "fbd6e8e5e327a8f8c752095fdbbd51fc335bdda968d29ce332cf05caed03d3f7": {
+    "observed_title": "黑屏笔记本正面轮廓，无法承载屏幕效果说明",
+    "visual_role": "unknown",
+    "semantic_tags": [],
+    "usable": false,
+    "reason": "已查看图片总览中可见画面；仅描述内容，不确认型号、参数、功能效果或授权。 当前不作为营销配图。"
+  },
+  "06bebb8fa25c57ca11e24b0f773347ba3de3d7d64f654bc0d3c8d89214a38889": {
+    "observed_title": "笔记本正面与彩色抽象壁纸",
+    "visual_role": "product_overview",
+    "semantic_tags": [
+      "appearance"
+    ],
+    "usable": true,
+    "reason": "已查看图片总览中可见画面；仅描述内容，不确认型号、参数、功能效果或授权。"
+  },
+  "e07d62713c78b6e8af74e37d1926319fe2653e44ecaecc52a5cf291b0451dd14": {
+    "observed_title": "黑屏笔记本正面轮廓，无法承载屏幕效果说明",
+    "visual_role": "unknown",
+    "semantic_tags": [],
+    "usable": false,
+    "reason": "已查看图片总览中可见画面；仅描述内容，不确认型号、参数、功能效果或授权。 当前不作为营销配图。"
+  },
+  "d0068293dc022e0d8b4981a6ca0b9cc44abe0058efc2920cc7fa3b7da4b87612": {
+    "observed_title": "笔记本一侧接口局部特写",
+    "visual_role": "feature_detail",
+    "semantic_tags": [
+      "ports"
+    ],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "9958e2c2ab5019b207d16c32f96dfd445cba33ad079561008bef7587e84a199b": {
+    "observed_title": "笔记本合盖和打开状态组合外观",
+    "visual_role": "product_overview",
+    "semantic_tags": [
+      "appearance"
+    ],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "30f700a053f66fa5038ea684da260869bfa5b6413668947bb26973fb984013c5": {
+    "observed_title": "笔记本屏幕中的设置或服务界面",
+    "visual_role": "feature_detail",
+    "semantic_tags": [
+      "display"
+    ],
+    "usable": true,
+    "reason": "已查看图片总览中可见画面；仅描述内容，不确认型号、参数、功能效果或授权。"
+  },
+  "89dddc4f9bdb7202c19927d576038fc09e58139bb481a6ad91aaa873b170894f": {
+    "observed_title": "黑屏笔记本正面轮廓，无法承载性能说明",
+    "visual_role": "unknown",
+    "semantic_tags": [],
+    "usable": false,
+    "reason": "已查看图片总览中可见画面；仅描述内容，不确认型号、参数、功能效果或授权。 当前不作为营销配图。"
+  },
+  "1a9693fffa90a90e116a3d2feae80f829d11c26a7756d48dd9dac24fa298da1d": {
+    "observed_title": "笔记本后部顶盖与散热结构特写",
+    "visual_role": "feature_detail",
+    "semantic_tags": [
+      "performance"
+    ],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "8988e18241d9aaab213cd8f024038e11d475fba5598f66c8e13f35a819b171ee": {
+    "observed_title": "人物坐在夸张放大的浅色电脑上的广告合成",
+    "visual_role": "product_overview",
+    "semantic_tags": [
+      "appearance"
+    ],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "b47741b3430582dea4daa2af2c1c5ea24ce356835da60bdd6db3fd82f6cea9cb": {
+    "observed_title": "人物坐在夸张放大的粉色电脑上的广告合成",
+    "visual_role": "product_overview",
+    "semantic_tags": [
+      "appearance"
+    ],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "731f792b77f86df2675aea5fef9a9fef29b946d894afc1479eb7a1b303254dd8": {
+    "observed_title": "电脑屏幕上的文档与侧边信息界面",
+    "visual_role": "feature_detail",
+    "semantic_tags": [
+      "display"
+    ],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "b29dfa960ffb723698d2417139c7c6371f39b84348d0270803807cd09436a14c": {
+    "observed_title": "电脑屏幕上的文档与侧边结果面板",
+    "visual_role": "feature_detail",
+    "semantic_tags": [
+      "display"
+    ],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "f610a3a5c12ab95045e9660857094c8af660539c32bcaf66072ad463c90c8197": {
+    "observed_title": "电脑屏幕上的卡片与侧边信息面板",
+    "visual_role": "feature_detail",
+    "semantic_tags": [
+      "display"
+    ],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "4a9d98b85571aead92346c28d477b53c051ae40ae2cc00d661a0b346068731c3": {
+    "observed_title": "电脑屏幕上的文件列表与侧边信息面板",
+    "visual_role": "feature_detail",
+    "semantic_tags": [
+      "display"
+    ],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "48cf851eb5cecd27e4b1fa7c8068db2da115e94faa9e9cda35d062afd6a24c7e": {
+    "observed_title": "户外木质座位上人物使用笔记本阅读",
+    "visual_role": "scene",
+    "semantic_tags": [],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "28a94d9ee4dedee67ac1c46458bd8b03e1884913721db1db6be48981c356ad1d": {
+    "observed_title": "夜间躺椅上人物使用笔记本观看内容",
+    "visual_role": "scene",
+    "semantic_tags": [],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "3546f53b881485e3bf2061303b82508bf02a16f4e18aad0efd85a56ede5b2cb1": {
+    "observed_title": "手机放在打开的笔记本键盘前方的组合展示",
+    "visual_role": "feature_detail",
+    "semantic_tags": [
+      "keyboard",
+      "collaboration"
+    ],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "663eee2a4e66bb21fb1885898b7d32d23616fcd42321d6fae3eac5b8551568d9": {
+    "observed_title": "绿色笔记本俯视外观与屏幕",
+    "visual_role": "feature_detail",
+    "semantic_tags": [
+      "display",
+      "appearance"
+    ],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "3be578dc205086ce4336a48d30ff61c094437f6f0eb68a609df88a2cc3e3f301": {
+    "observed_title": "浅绿色圆形键帽局部特写",
+    "visual_role": "unknown",
+    "semantic_tags": [],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "74b110987898b9273b1ab56d2e24ae9e79b91de0e8f3a09996ab2c894fe60a6f": {
+    "observed_title": "笔记本屏幕显示多彩抽象图案",
+    "visual_role": "feature_detail",
+    "semantic_tags": [
+      "display"
+    ],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "67767911cf30926367df0d1ece14cc75ebeefe5b29ca475aa8c65a7f0dcd6297": {
+    "observed_title": "街道上人物手持合上的笔记本",
+    "visual_role": "unknown",
+    "semantic_tags": [],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "5bb770aad9954137c087665ad8e8bed79d44c5acbc0381bc90a43ec22eed7a32": {
+    "observed_title": "户外绿植旁人物使用浅粉色笔记本",
+    "visual_role": "scene",
+    "semantic_tags": [],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "d01e6718e0ca18884592e51dd90e25d87afa9639c27af8676474ca4e894e794a": {
+    "observed_title": "户外人物使用深色笔记本",
+    "visual_role": "scene",
+    "semantic_tags": [],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "5ac1bfc53e3baf0c62c45eea7ef0efb4aba1573a4d24f27d07c74f8faddd5947": {
+    "observed_title": "室内窗旁人物使用浅色笔记本",
+    "visual_role": "scene",
+    "semantic_tags": [],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "d47e89e4fbf567e058e33259314ec76616b103ddfaadb2c8d6c74477b031a9ea": {
+    "observed_title": "俯视人物在休闲座位上使用笔记本",
+    "visual_role": "scene",
+    "semantic_tags": [],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "0d9781ee15dac288814896f219ddfb7c6908763b805fc458173dfb704bab453d": {
+    "observed_title": "电脑内部双风扇散热结构示意",
+    "visual_role": "feature_detail",
+    "semantic_tags": [
+      "performance"
+    ],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "22535d769a1ad398ddf2d2eed3e93220d8a4a445cbb634ee80fa3616c0efbce3": {
+    "observed_title": "键帽和标记局部渲染",
+    "visual_role": "feature_detail",
+    "semantic_tags": [
+      "performance"
+    ],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "466b33ebb1c00658e651efddec20cedfa61a02ed84a37e50c159d0b93c8fab15": {
+    "observed_title": "键盘按键结构分层示意",
+    "visual_role": "feature_detail",
+    "semantic_tags": [
+      "keyboard"
+    ],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "d23acc050d64fc5ee14c5d1b2594b774a997ce27e2ffa94c7015acf51eac3053": {
+    "observed_title": "桌面与白色对话框界面截图",
+    "visual_role": "unknown",
+    "semantic_tags": [],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "6d9f4d1d7f513baf4a951f796707e7074a3965a149e788ac2ad136c5f8b79abc": {
+    "observed_title": "花丛上方人物与紫色笔记本广告合成",
+    "visual_role": "product_overview",
+    "semantic_tags": [
+      "appearance"
+    ],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "c1dbc0febdfeae6366d88dce2038176b5928ef5e358d020c9fdb4540aaee8196": {
+    "observed_title": "紫色笔记本键盘与屏幕边缘特写",
+    "visual_role": "feature_detail",
+    "semantic_tags": [
+      "display",
+      "keyboard"
+    ],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "4954a46f78a65d4f827a6dee19c3a9b69b00c9f9d0175bd1aa8749414ed4c150": {
+    "observed_title": "紫色笔记本正面外观",
+    "visual_role": "product_overview",
+    "semantic_tags": [
+      "appearance"
+    ],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "e593c5ec3017632a00642522892ba9ab0b0969ff1febb4da17548d6d47af610f": {
+    "observed_title": "紫色笔记本顶盖与底壳组合展示",
+    "visual_role": "unknown",
+    "semantic_tags": [],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "08c5c4fe26c5dfcf3990015967de88651fb3d0fa3ef67c5095368f56d1bc9bcc": {
+    "observed_title": "花丛上方人物与黄色笔记本广告合成",
+    "visual_role": "product_overview",
+    "semantic_tags": [
+      "appearance"
+    ],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "e3c2c1f2ffab38370458b016c2b061d5cd2a0219425e3eed0cdcfc4b44275e44": {
+    "observed_title": "黄色笔记本键盘与屏幕边缘特写",
+    "visual_role": "feature_detail",
+    "semantic_tags": [
+      "display",
+      "keyboard"
+    ],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "7ff7eb3621a444df6f0a64754529a95df4228b6a7f5a690dc4bf6acf630eb49e": {
+    "observed_title": "黄色笔记本侧面薄度展示",
+    "visual_role": "unknown",
+    "semantic_tags": [],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "95caafe48679636e84c7db1fd519c16d041cdcd621f05f12c5b316e8b4333d33": {
+    "observed_title": "黄色笔记本正面外观",
+    "visual_role": "product_overview",
+    "semantic_tags": [
+      "appearance"
+    ],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "ee5eecc93ebaf8c1017471deda99fbecb6fdbc3cd547408e2de9e77161fcf34a": {
+    "observed_title": "黄色笔记本顶盖与底壳组合展示",
+    "visual_role": "unknown",
+    "semantic_tags": [],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "1e11a53be4293fded6c18509218fc1048e2207ac29317aa9ebbf087fe837d99d": {
+    "observed_title": "笔记本与手机的多设备界面展示",
+    "visual_role": "unknown",
+    "semantic_tags": [
+      "collaboration"
+    ],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "ca628adabb5bd54eaf64ff2473ac4ddedfad75b11807574d9a9783ae60cdce3b": {
+    "observed_title": "笔记本与平板显示绘图软件界面",
+    "visual_role": "feature_detail",
+    "semantic_tags": [
+      "display"
+    ],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "e6dd6857b70bf80baed50c737a8639f7452a74fa326a0ce22b9611106de85fb0": {
+    "observed_title": "笔记本与外接显示器显示表格和图表",
+    "visual_role": "feature_detail",
+    "semantic_tags": [
+      "display",
+      "ports"
+    ],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "ece5368cbdc821bed4095617c2e5a0d9c230daa9680793f5a7a540e06f5786c7": {
+    "observed_title": "笔记本与外接大屏显示山景与排版内容",
+    "visual_role": "feature_detail",
+    "semantic_tags": [
+      "display",
+      "ports"
+    ],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "9fa6482922455a38680f598d9f2534edad12879369175577d725ab7767580cbc": {
+    "observed_title": "笔记本左右两侧接口局部展示",
+    "visual_role": "feature_detail",
+    "semantic_tags": [
+      "ports"
+    ],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "22c0463c1baa81ee9358e190b3e800e1cb86072a3df60669644e6e58207afcd2": {
+    "observed_title": "深蓝色森林壁纸无电脑主体",
+    "visual_role": "decorative",
+    "semantic_tags": [],
+    "usable": false,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "f598479903036af2f356def6d69a909aca8983b0921135be6ca2ab7a009a216a": {
+    "observed_title": "深蓝色森林壁纸无电脑主体",
+    "visual_role": "decorative",
+    "semantic_tags": [],
+    "usable": false,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "477bcf1510aca02df4388ea9d097706a1aa59dd4be88ce87863720898dbcac42": {
+    "observed_title": "笔记本屏幕显示绿色晶体图案",
+    "visual_role": "feature_detail",
+    "semantic_tags": [
+      "display"
+    ],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "c09b36e39bb63935d3fcdeb232d0b299f530c65578be5b9b80d74d3cabb1a67b": {
+    "observed_title": "笔记本一侧多种接口特写",
+    "visual_role": "feature_detail",
+    "semantic_tags": [
+      "ports"
+    ],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "0fac5d11b41db38b6a05b2a33a337187864583e625a2b64f3d6d2f50eb59ab03": {
+    "observed_title": "笔记本另一侧接口特写",
+    "visual_role": "feature_detail",
+    "semantic_tags": [
+      "ports"
+    ],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "59e47fe580d64b89e625d51210817a56cc32012f151f2f1c8853e1494ffef713": {
+    "observed_title": "笔记本屏幕中的多设备连接界面",
+    "visual_role": "feature_detail",
+    "semantic_tags": [
+      "display",
+      "collaboration"
+    ],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "d6f50ab1f5d024b919e25631b066c91c4a1f287b5d592bb1093afa73c2121feb": {
+    "observed_title": "笔记本屏幕上的视频通话人物画面",
+    "visual_role": "feature_detail",
+    "semantic_tags": [
+      "display"
+    ],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "f7637417bcab3dd0ff0f13def237c13680a9dfa302cdfb9fe90350a323ddf334": {
+    "observed_title": "人物与悬浮笔记本的外观广告合成",
+    "visual_role": "product_overview",
+    "semantic_tags": [
+      "appearance"
+    ],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "4fd776c19aa541522793d867df685ab58c86ee7c98228e49a46cfde320bd56ae": {
+    "observed_title": "红黑抽象屏幕壁纸无电脑主体",
+    "visual_role": "decorative",
+    "semantic_tags": [
+      "display"
+    ],
+    "usable": false,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "39551752ee3fa8ee8f0f6913f43a34cd17cefc0221b6b7ed90bcd06e83e1fdb3": {
+    "observed_title": "笔记本背部散热栅格局部特写",
+    "visual_role": "feature_detail",
+    "semantic_tags": [
+      "performance"
+    ],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "205fc01062987caafa81ba857ec914933c8569628b73b5149403d7f1e0990941": {
+    "observed_title": "笔记本另一侧接口局部特写",
+    "visual_role": "feature_detail",
+    "semantic_tags": [
+      "ports"
+    ],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "8258fd84f47d5e9f82b9553780cefa9e80f44af7b3afbd80e9aee62ba60d38cc": {
+    "observed_title": "黑色装饰图层无可辨识主体",
+    "visual_role": "decorative",
+    "semantic_tags": [],
+    "usable": false,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "684ec47d605d461b9c3ee09f5b97fc017ee4121a4233667095d12a788d49e8ba": {
+    "observed_title": "斜置的软件窗口界面展示",
+    "visual_role": "unknown",
+    "semantic_tags": [],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "db9e47722f4c03391112764a5afd95b92eb5822b0ce8b1407242eef59bcc5b5d": {
+    "observed_title": "笔记本手机平板和显示器多设备组合",
+    "visual_role": "feature_detail",
+    "semantic_tags": [
+      "display",
+      "collaboration"
+    ],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "a600c9337700851170b3944868e88c786649d906fd9273851f0a5d18dde5cc0b": {
+    "observed_title": "黑底打开的笔记本正面外观",
+    "visual_role": "product_overview",
+    "semantic_tags": [
+      "appearance"
+    ],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "86ef8d0f1cad333ea3a3c17d7565397a5bd818207d077bf82ebdeddec666091d": {
+    "observed_title": "笔记本手机平板和显示器多设备组合",
+    "visual_role": "feature_detail",
+    "semantic_tags": [
+      "display",
+      "collaboration"
+    ],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "1eb7e2d32ff063ad850b89f2e2b6c12b48ad07a8589d90196deafbd1b7ce4b63": {
+    "observed_title": "蓝色笔记本侧面薄度展示",
+    "visual_role": "unknown",
+    "semantic_tags": [],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "6fb8a2585209e347459c80f4354b333cdaf4ba6fc23c08a2694df3eae93628a8": {
+    "observed_title": "深色笔记本合盖倾斜外观",
+    "visual_role": "product_overview",
+    "semantic_tags": [
+      "appearance"
+    ],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "41a4b488849f5806430b989beb5b533216e77b6f8cf7c04e5e64ae78fdd5bc5b": {
+    "observed_title": "白裙人物与悬浮笔记本的广告创意合成",
+    "visual_role": "product_overview",
+    "semantic_tags": [
+      "appearance"
+    ],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "627430e22181040e3bb9d8035d4addd06233c115845e339ec2958db0a481556a": {
+    "observed_title": "人物坐在夸张放大的蓝色电脑上的广告合成",
+    "visual_role": "product_overview",
+    "semantic_tags": [
+      "appearance"
+    ],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "052508bd41573e2e541946b135fbdb1dd1e52d767137c95fa1192718b8d10fda": {
+    "observed_title": "人物坐在夸张放大的深色电脑上的广告合成",
+    "visual_role": "product_overview",
+    "semantic_tags": [
+      "appearance"
+    ],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "48c36691dadf43c0e19128a0f9171e908e779b90f9dba980ddef289991018616": {
+    "observed_title": "深色笔记本顶盖外观",
+    "visual_role": "product_overview",
+    "semantic_tags": [
+      "appearance"
+    ],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "7f15b169aa51658cf4867410d7050044e0c00eace7dcf1ee49bb293f463eb686": {
+    "observed_title": "浅色笔记本打开状态外观",
+    "visual_role": "product_overview",
+    "semantic_tags": [
+      "appearance"
+    ],
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "87074bcde08146365bf5ea2d5734e59da7ab983b937bf6ba6263784361743f2b": {
+    "observed_title": "打开与合盖的笔记本外观组合",
+    "semantic_tags": [
+      "appearance"
+    ],
+    "visual_role": "product_overview",
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "e5a13c26d9d92b5aa57fd13e4b7ef02047eb452eff0d8ad1262f6151dabd3843": {
+    "observed_title": "笔记本屏幕上的蓝绿色图案",
+    "semantic_tags": [
+      "display"
+    ],
+    "visual_role": "feature_detail",
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "cf3c75e28168b0c8345e9e52350dbdae1fdff2f0362b5ed4855f729f23748e76": {
+    "observed_title": "户外建筑前人物抱着合盖笔记本",
+    "semantic_tags": [],
+    "visual_role": "unknown",
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "53d962f280570b0a14e4625501c2c6ea244b330e9f1ab5287b08d61ca22aed0e": {
+    "observed_title": "室内人物抱着合盖笔记本",
+    "semantic_tags": [],
+    "visual_role": "unknown",
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "d96b927734991e5fc9f3b02944f35df0ac2ce113890bfea7a7fe5b15a72d6318": {
+    "observed_title": "笔记本数字键盘局部特写",
+    "semantic_tags": [
+      "keyboard"
+    ],
+    "visual_role": "feature_detail",
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "21e625630dbd1df11256105390196bd2b420e22d7902de3c3b9bc44e07e4fa29": {
+    "observed_title": "笔记本键盘与机身边缘局部",
+    "semantic_tags": [
+      "portability",
+      "keyboard"
+    ],
+    "visual_role": "feature_detail",
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "2e54978f019c205612678093927baab29b14fb5ad811a33b805a07b0bf7c560c": {
+    "observed_title": "深色装饰背景无可辨识主体",
+    "semantic_tags": [],
+    "visual_role": "decorative",
+    "usable": false,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "a159bd3c8c1eb47d4d955a075d791321aee9b1e16a71865ba9c44e3f0f54f3c1": {
+    "observed_title": "扬声器结构分层示意",
+    "semantic_tags": [],
+    "visual_role": "decorative",
+    "usable": false,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "da6018f24012734accd00e3e0d0e9854fff16222d44a271c8c14017d51e67669": {
+    "observed_title": "桌前人物在笔记本上操作图表与表格",
+    "semantic_tags": [
+      "work_scene"
+    ],
+    "visual_role": "scene",
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "fa7e553936d561768c07128e6bff73f32edfd55777ae941ce40d83e9bcbd6d1f": {
+    "observed_title": "银色笔记本半合盖侧面外观",
+    "semantic_tags": [
+      "appearance"
+    ],
+    "visual_role": "product_overview",
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "763ef27469f2e40fe4f022ea2937d74983805e0aa4b9cbf1e232ea34caddf4ac": {
+    "observed_title": "笔记本两侧接口组合特写",
+    "semantic_tags": [
+      "ports"
+    ],
+    "visual_role": "feature_detail",
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "4755d6d3569a6fa9552da5482d49435b776500dd0603acafbfb4448bf7d9ba0c": {
+    "observed_title": "笔记本屏幕中的多设备连接界面",
+    "semantic_tags": [
+      "display",
+      "collaboration"
+    ],
+    "visual_role": "feature_detail",
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "ea872df76825d91b7d0179444ecf7fe4c158fb9fbada536b81d3eedde8770425": {
+    "observed_title": "笔记本键盘与屏幕俯视外观",
+    "semantic_tags": [
+      "display",
+      "keyboard",
+      "appearance"
+    ],
+    "visual_role": "feature_detail",
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "00b69553709a73332fc9fdd898428d2effc98258539e50611ee3a2e130d7a244": {
+    "observed_title": "黑底孤立标记无电脑主体",
+    "semantic_tags": [],
+    "visual_role": "decorative",
+    "usable": false,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "ef5ba9a0668c6c075fc05f73cf0e5731c19232528c69f6a7585b35a34419f2a6": {
+    "observed_title": "电脑外设分散排列的局部合成图",
+    "semantic_tags": [],
+    "visual_role": "decorative",
+    "usable": false,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "158716f7830f59b13cb67678233892f189b3416a6d42c04745fae3d7dbf9567d": {
+    "observed_title": "笔记本正面屏幕与键盘",
+    "semantic_tags": [
+      "display",
+      "keyboard"
+    ],
+    "visual_role": "feature_detail",
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "51ba48174f8f22b236ca0e26eee3d1f8334b3d68f0cfd6bd466c5d9c916722c6": {
+    "observed_title": "斜置打开的笔记本外观",
+    "semantic_tags": [
+      "appearance"
+    ],
+    "visual_role": "product_overview",
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "c8e394adcb5e65c151f972c0d22bc4dca12df2d9de0dcae2464d6def84dd2f99": {
+    "observed_title": "笔记本屏幕上的多人视频通话界面",
+    "semantic_tags": [
+      "display",
+      "work_scene"
+    ],
+    "visual_role": "feature_detail",
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "4546577a501ea140f41ee7f3a1e780c493fa76458e895adee25a30ed08c5d2fc": {
+    "observed_title": "笔记本屏幕显示山湖风景",
+    "semantic_tags": [
+      "display"
+    ],
+    "visual_role": "feature_detail",
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "61dc5e7ddad3f66ad2ee550a747dca6a587e1d6e9cbb877572ee1f4f3b289338": {
+    "observed_title": "桌前人物用手写笔在触控板位置操作文档",
+    "semantic_tags": [
+      "display",
+      "keyboard",
+      "work_scene"
+    ],
+    "visual_role": "scene",
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "ce28dd045f8209ea683aa41e6f46bb8b459f9e00ae6c4f610cc63e9a34aa8b3a": {
+    "observed_title": "多人围桌使用笔记本讨论",
+    "semantic_tags": [
+      "work_scene"
+    ],
+    "visual_role": "scene",
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "397bf97393dd2cb7b9bf5279c8f48c5581630bef30ed2ef3222de20255eff09b": {
+    "observed_title": "浅色笔记本键盘与屏幕俯视外观",
+    "semantic_tags": [
+      "display",
+      "keyboard",
+      "appearance"
+    ],
+    "visual_role": "feature_detail",
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "f77156a2e233320223e90d873da962d4a32af914e672cdd715dd1cb1716dcf01": {
+    "observed_title": "笔记本顶盖顶部摄像头局部",
+    "semantic_tags": [],
+    "visual_role": "unknown",
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "44e0f9288f071c934355481e7ffbdd2397b0dc9fe81514b2fe91f83d7cff6a2d": {
+    "observed_title": "笔记本屏幕与顶盖组合外观",
+    "semantic_tags": [
+      "display",
+      "appearance"
+    ],
+    "visual_role": "feature_detail",
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "82ef3db77e14dae49e35531918d34f96c986b2d49d8edcaa3f53b2becd349612": {
+    "observed_title": "黑色屏幕边框装饰层无内容",
+    "semantic_tags": [
+      "display"
+    ],
+    "visual_role": "decorative",
+    "usable": false,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "1e9205ae955cf831d9bb66d3fd64f99b2f922efd603eef575e3bb04dbef4e329": {
+    "observed_title": "Kirin XE90标记无电脑主体",
+    "semantic_tags": [],
+    "visual_role": "decorative",
+    "usable": false,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "f09939103eafe0d909c4d9bcffd256a4252faa159248becb7cff1a165e845e7e": {
+    "observed_title": "照片编辑软件界面截图",
+    "semantic_tags": [],
+    "visual_role": "unknown",
+    "usable": true,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "b6f3dd648486c2924f7efb63700f47858386e6c1cf9c0deb8ea68dbcbbd366da": {
+    "observed_title": "黑色屏幕装饰层无内容",
+    "semantic_tags": [
+      "display"
+    ],
+    "visual_role": "decorative",
+    "usable": false,
+    "reason": "已目视contactsheet对应SHA256图片；仅描述可见画面，不确认型号、功能、参数或授权。"
+  },
+  "0886a6786e229ae20b43130f34d59873799641335f5fd17853478a143712241a": {
+    "observed_title": "室内双人会谈，桌上打开折叠设备",
+    "semantic_tags": [
+      "folding",
+      "work_scene"
+    ],
+    "visual_role": "scene",
+    "usable": true,
+    "reason": "已目视Fold contact-10对应SHA256图片；仅描述可见画面，不确认参数、功能效果或授权。"
+  },
+  "ce14bff3a40aad7dd0f453e202929efe1d9b739433a77f7e695e7e9aa61effe8": {
+    "observed_title": "桌前人物在白色书写区域用笔书写",
+    "semantic_tags": [
+      "work_scene"
+    ],
+    "visual_role": "scene",
+    "usable": true,
+    "reason": "已目视Fold contact-10对应SHA256图片；仅描述可见画面，不确认参数、功能效果或授权。"
+  },
+  "a68525dbb836b277b5d9d89e418729e46ffe81a88b8a0cbe50514c5e47534f7b": {
+    "observed_title": "户外露台上人物手持打开的折叠设备操作",
+    "semantic_tags": [
+      "folding"
+    ],
+    "visual_role": "scene",
+    "usable": true,
+    "reason": "已目视Fold contact-10对应SHA256图片；仅描述可见画面，不确认参数、功能效果或授权。"
+  },
+  "1da4f2ec46d1d145662523c7ed6e17f86c5ccc330afa8562e7f1d39cf1d51371": {
+    "observed_title": "拍摄现场多人围坐交流并使用打开的折叠设备",
+    "semantic_tags": [
+      "folding",
+      "work_scene"
+    ],
+    "visual_role": "scene",
+    "usable": true,
+    "reason": "已目视Fold contact-10对应SHA256图片；仅描述可见画面，不确认参数、功能效果或授权。"
+  },
+  "ed47cff065d4c7f97598ef9d59a8705d3907a5d9b348195619268e0f799cddab": {
+    "observed_title": "室内两人围桌用笔讨论，桌面有设备与纸张",
+    "semantic_tags": [
+      "work_scene"
+    ],
+    "visual_role": "scene",
+    "usable": true,
+    "reason": "已目视Fold contact-10对应SHA256图片；仅描述可见画面，不确认参数、功能效果或授权。"
+  },
+  "9144254a8ede3f9f51ef2d9d73ec506af1793b20ba2dd81c0a458630b9041498": {
+    "observed_title": "户外露台上人物手持打开的折叠设备",
+    "semantic_tags": [
+      "folding"
+    ],
+    "visual_role": "scene",
+    "usable": true,
+    "reason": "已目视Fold contact-10对应SHA256图片；仅描述可见画面，不确认参数、功能效果或授权。"
+  },
+  "57b7a01d5aec5ec9eb5c74973d00875d478e65a9cc250014aab9ea8338a0f590": {
+    "observed_title": "沙发上人物使用打开的折叠设备浏览内容",
+    "semantic_tags": [
+      "folding"
+    ],
+    "visual_role": "scene",
+    "usable": true,
+    "reason": "已目视Fold contact-10对应SHA256图片；仅描述可见画面，不确认参数、功能效果或授权。"
+  },
+  "45064c350675c5ff34a104471a31c86dcf3452296bf735d47ca3cdb85796c751": {
+    "observed_title": "人物同时查看手机与打开的折叠设备",
+    "semantic_tags": [
+      "folding",
+      "collaboration"
+    ],
+    "visual_role": "scene",
+    "usable": true,
+    "reason": "已目视Fold contact-10对应SHA256图片；仅描述可见画面，不确认参数、功能效果或授权。"
+  },
+  "1a9a375476e45f0d17c4463f861b8818816e0ae623ee7b4d4223ddefd9b48301": {
+    "observed_title": "展开屏幕上的图文资料界面",
+    "semantic_tags": [
+      "folding",
+      "display"
+    ],
+    "visual_role": "feature_detail",
+    "usable": true,
+    "reason": "已目视Fold contact-10对应SHA256图片；仅描述可见画面，不确认参数、功能效果或授权。"
+  },
+  "9af2ffd25b15ddcf640fb683206dc94c29f5e095be0e1eca8829c84bab857784": {
+    "observed_title": "展览空间中人物手持打开的折叠设备交流",
+    "semantic_tags": [
+      "folding",
+      "work_scene"
+    ],
+    "visual_role": "scene",
+    "usable": true,
+    "reason": "已目视Fold contact-10对应SHA256图片；仅描述可见画面，不确认参数、功能效果或授权。"
+  }
+}

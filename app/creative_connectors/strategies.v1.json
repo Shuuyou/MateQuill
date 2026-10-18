@@ -1,0 +1,551 @@
+{
+  "research_date": "2026-10-18",
+  "scope": "图文质量模块；不包含部署、来源模式或销售业务模块变更",
+  "status": "已接入创意连接器；属于编辑策略，不是效果预测",
+  "principle": "先共同策划阅读承诺、标题、封面、逐页信息与正文，再选择素材和渲染；每个悬念必须兑现",
+  "sources": [
+    {
+      "id": "xhs_playbook",
+      "type": "platform_guidance_and_case",
+      "title": "小红书蒲公英帮助中心：我要爆款",
+      "url": "https://pgy.xiaohongshu.com/help/detail?id=97e5a307cc23aeefc7295c76926088c6&userType=4",
+      "limit": "公开运营方法与品牌案例，非对某种封面或标题的随机对照实验"
+    },
+    {
+      "id": "xhs_learning",
+      "type": "platform_learning_entry",
+      "title": "小红书种草学",
+      "url": "https://xue1.xiaohongshu.com/",
+      "limit": "课程入口和主题可核验，不声称已读取全部付费或登录课程"
+    },
+    {
+      "id": "xhs_covenant",
+      "type": "platform_norms",
+      "title": "小红书社区公约2.0",
+      "url": "https://pgy.xiaohongshu.com/help/detail?id=1eda0a065dd894063c2e029a49e8f6a1&userType=4",
+      "limit": "规范，不是推荐量预测公式"
+    },
+    {
+      "id": "canva_carousel",
+      "type": "design_guidance",
+      "title": "Canva：How to create carousels worth swiping for",
+      "url": "https://www.canva.com/design-school/resources/how-to-create-instagram-carousels-worth-swiping-for/",
+      "limit": "2026-10-08更新；跨平台设计指导，非小红书流量实验"
+    },
+    {
+      "id": "canva_hierarchy",
+      "type": "design_guidance",
+      "title": "Canva：Visual hierarchy",
+      "url": "https://www.canva.com/design-school/resources/visual-hierarchy/",
+      "limit": "通过尺寸、对比和间距组织阅读，不保证点击率"
+    },
+    {
+      "id": "canva_text_image",
+      "type": "design_guidance",
+      "title": "Canva：How to combine text and images",
+      "url": "https://www.canva.com/learn/How-to-combine-text-and-images-to-improve-visual-design-and-communication/",
+      "limit": "图文关系与构图原则，不等于素材都可自由商用"
+    },
+    {
+      "id": "tencent_oa",
+      "type": "platform_product",
+      "title": "腾讯官方公众号产品说明",
+      "url": "https://www.tencent.com/zh-cn/products/official-accounts/",
+      "limit": "说明内容、关系和服务用途；不是自然推荐算法说明"
+    },
+    {
+      "id": "tencent_ads",
+      "type": "paid_ad_training",
+      "title": "腾讯广告2025旅游行业培训",
+      "url": "https://training.tencentads.com/uploads/202504/jfgt3GHS_IzrmFx.pdf",
+      "limit": "只借鉴信息组织，不能迁移广告效果数字到门店自然朋友圈"
+    },
+    {
+      "id": "curiosity",
+      "type": "preregistered_research",
+      "title": "When curiosity gaps backfire",
+      "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC11704130/",
+      "limit": "8977个Upworthy标题实验；具体程度的效果取决于基线，不是中文小红书实验"
+    },
+    {
+      "id": "questions",
+      "type": "research",
+      "title": "Titles framed as questions reduce reader engagement",
+      "url": "https://myscp.onlinelibrary.wiley.com/doi/10.1002/jcpy.70031",
+      "limit": "2026-07-09发表；多项研究反驳问句必然优于陈述，不能直接推断小红书效果"
+    },
+    {
+      "id": "nng_scent",
+      "type": "ux_guidance",
+      "title": "NN/g：Information scent",
+      "url": "https://www.nngroup.com/articles/information-scent/",
+      "limit": "标题、图像及背景共同提示内容价值；非社交推荐规则"
+    }
+  ],
+  "design_defaults": {
+    "status": "本项目初始设计参数，须经手机预览和测试调整；不是平台算法阈值",
+    "canvas": [
+      1080,
+      1440
+    ],
+    "safe_margin_px": 72,
+    "cover_headline_target_chars": [
+      8,
+      14
+    ],
+    "font_title_px": [
+      88,
+      116
+    ],
+    "font_body_px": [
+      40,
+      52
+    ],
+    "mobile_preview_width_px": 360,
+    "thumbnail_preview_width_px": 180,
+    "one_slide_one_job": true,
+    "force_nine_images": false,
+    "counts_separate": [
+      "unique_source_assets",
+      "rendered_pages",
+      "collage_tiles"
+    ],
+    "visual_routes": [
+      "授权实景照片＋注释",
+      "产品素材＋任务清单文字卡",
+      "实景与步骤卡混合"
+    ],
+    "card_layouts": [
+      "scene_annotation",
+      "task_checklist",
+      "decision_tree",
+      "workflow_path",
+      "evidence_detail",
+      "saveable_summary"
+    ],
+    "style_options": [
+      "纸张便利贴：温暖底色、手绘框线、少量标注",
+      "编辑杂志：大字、留白、实景局部",
+      "清单工具：网格、编号、可填写空白"
+    ]
+  },
+  "creative_plan_schema": {
+    "reader_tension": "一个具体阻碍，来自输入或明确标注条件设想",
+    "reader_gain": "读完能够完成的具体判断或动作",
+    "narrative_device": "物件线索／时间推进／任务冲突／认知转折／清单兑现",
+    "scene_details": [
+      {
+        "detail": "时间、物件、动作、环境",
+        "truth_status": "用户提供／条件设想／待拍摄"
+      }
+    ],
+    "title": "指出对象、主题或阅读利益",
+    "cover_copy": "补充标题而非逐字重复",
+    "opening_lines": [
+      "可识别的处境",
+      "具体阻碍",
+      "明确阅读回报"
+    ],
+    "promise_payoff": [
+      {
+        "promise": "开头承诺",
+        "payoff_card_id": "在哪页兑现",
+        "evidence_needed": "需要什么资料或实测"
+      }
+    ],
+    "cards": [
+      {
+        "id": "s1",
+        "narrative_role": "开场／推进／方法／证据／边界／总结",
+        "headline": "本页一句话",
+        "layout": "卡片版式",
+        "visual_intent": "画面解释什么",
+        "image_text_relation": "补充／解释／对照／心理与物证互补",
+        "overlay_text": [],
+        "asset_ids": [],
+        "fact_ids": [],
+        "truth_status": "官方素材／真实实拍／图表整理／示意合成",
+        "missing_assets": []
+      }
+    ],
+    "caption": "说明、边界和一个具体互动，不重复全部卡片",
+    "cta": "与顾客阶段一致且确实可执行的下一步",
+    "test_variants": [
+      "同一事实底稿的不同标题封面组合；无预测CTR"
+    ]
+  },
+  "playbooks": [
+    {
+      "id": "xhs_course_list",
+      "platform": "xiaohongshu",
+      "audience_stage": "新生探索与比较",
+      "device": "具体物件引出任务，清单兑现",
+      "title": "把课表摊开，再选第一台电脑",
+      "cover_copy": "第一节课之前，先过这一关",
+      "opening": [
+        "如果课表已经排好，电脑还没选定，先把课程群里的软件名单找出来。",
+        "真正值得提前确认的，是安装、打开文件和连接外设这些具体动作。",
+        "下面这张清单，可以直接带去逐项核对。"
+      ],
+      "promise": "给出能实际使用的软件与外设核验清单",
+      "payoff": "第三页给方法，第五页给可保存清单",
+      "cards": [
+        {
+          "role": "cover",
+          "headline": "第一节课之前，先过这一关",
+          "visual": "授权课表或书包照片＋一个圈选；无照片则排成明确的任务卡示意"
+        },
+        {
+          "role": "tension",
+          "headline": "课程名字相同，软件要求未必相同",
+          "visual": "软件名称／版本／插件三栏空白表，不伪造学校指定要求"
+        },
+        {
+          "role": "method",
+          "headline": "把‘能不能用’拆成三个动作",
+          "visual": "安装→打开自己的文件→连接现有外设的步骤卡"
+        },
+        {
+          "role": "evidence",
+          "headline": "这一款，哪些已经有依据",
+          "visual": "准确型号产品素材＋核实事实＋待实测项，三者分栏"
+        },
+        {
+          "role": "summary",
+          "headline": "带走这张验机清单",
+          "visual": "可填写清单与适用条件，回扣封面所说的‘这一关’"
+        }
+      ],
+      "cta": "你最先要核对哪一个课程软件？",
+      "evidence_requirements": [
+        "课程要求只从用户提供的信息取得",
+        "产品系统及功能来自对应型号资料",
+        "无实测记录不写已验证兼容"
+      ],
+      "variant": "陈述标题‘把课表摊开，再选第一台电脑’与问题标题‘第一台电脑，先看哪张清单’配同一底稿比较"
+    },
+    {
+      "id": "xhs_final_file",
+      "platform": "xiaohongshu",
+      "audience_stage": "设计学生比较与到店",
+      "device": "未完成动作、前后回扣",
+      "title": "把‘最终版’带去试电脑",
+      "cover_copy": "最后一步，也值得先试",
+      "opening": [
+        "假设一个课程项目已经改到最终版，字体、素材和导出设置都已确定。",
+        "换一台设备，打开、编辑、导出、转交，哪一步还需要确认？",
+        "选电脑时，把这段交稿流程一起带去试。"
+      ],
+      "promise": "将交稿焦虑变成可复现测试",
+      "payoff": "第四页列出完整交稿动作与记录方式",
+      "cards": [
+        {
+          "role": "cover",
+          "headline": "最后一步，也值得先试",
+          "visual": "获授权文件局部或‘最终版’文字卡；不伪造运行窗口"
+        },
+        {
+          "role": "inputs",
+          "headline": "先列出你的项目环境",
+          "visual": "软件版本／插件／字体／外设清单"
+        },
+        {
+          "role": "evidence",
+          "headline": "先看已知，再标未知",
+          "visual": "对应型号确证信息与待验证项"
+        },
+        {
+          "role": "payoff",
+          "headline": "打开→编辑→导出→转交",
+          "visual": "四步流程与结果空白格，不预填成功"
+        },
+        {
+          "role": "summary",
+          "headline": "带文件，比只带问题更具体",
+          "visual": "可保存验机卡与必要限制"
+        }
+      ],
+      "cta": "选一个你每天都会交付的文件，按这条路径核对。",
+      "evidence_requirements": [
+        "不编造个人交稿经历",
+        "不生成假软件截图",
+        "屏幕效果和软件兼容分别取证"
+      ]
+    },
+    {
+      "id": "xhs_travel_cable",
+      "platform": "xiaohongshu",
+      "audience_stage": "差旅用户准备体验",
+      "device": "物件伏笔、较早揭示、结尾回扣",
+      "title": "电脑进包了，这根线呢",
+      "cover_copy": "下一场会议，先检查包底",
+      "opening": [
+        "如果下一场会议需要投屏，临时改稿又离不开公司应用，出发前要核对的就不止电脑。",
+        "把那根转接线、常用外设和工作文件一起列出来。",
+        "这一页清单，按你真实的会议流程逐项走。"
+      ],
+      "promise": "明确出发前需要准备及核对的物件",
+      "payoff": "第二至三页揭示转接与环境条件，最后给完整清单",
+      "cards": [
+        {
+          "role": "cover",
+          "headline": "下一场会议，先检查包底",
+          "visual": "授权背包物件俯拍，或明确标示的物件清单插画"
+        },
+        {
+          "role": "reveal",
+          "headline": "先问会议室接什么",
+          "visual": "显示设备／线材／转接设备三项条件，不画不存在的接口"
+        },
+        {
+          "role": "evidence",
+          "headline": "把接口和应用核对到型号",
+          "visual": "真实型号接口细节及文字依据，未核对项留空"
+        },
+        {
+          "role": "method",
+          "headline": "出发前，走一次真实流程",
+          "visual": "编辑文件→参会→投屏的步骤卡"
+        },
+        {
+          "role": "summary",
+          "headline": "电脑、线、文件，一起确认",
+          "visual": "打包检查表回扣包底的线"
+        }
+      ],
+      "cta": "你常用的会议应用和投屏方式是什么？",
+      "evidence_requirements": [
+        "接口归属、数量和型号必须准确",
+        "不承诺任意会议室秒连",
+        "不编造全天续航"
+      ]
+    },
+    {
+      "id": "xhs_library_flow",
+      "platform": "xiaohongshu",
+      "audience_stage": "资料整理与写作任务核对",
+      "device": "资料流转物件线索、过程拆解、清单兑现",
+      "title": "手机里的资料，怎么接进写作流程",
+      "cover_copy": "截图存好了，下一步呢",
+      "opening": [
+        "如果参考截图和阅读资料在手机里，动笔前先列清它们要去哪里。",
+        "从取用、分类到写作，每一步要核对的条件可以分别列出。",
+        "按自己的设备与常用应用填写，不预设跨设备功能已兼容。"
+      ],
+      "promise": "给出手机资料到整理写作的核对流程与可填写清单",
+      "payoff": "第三页拆解流程和条件，第五页留下可保存的核对清单",
+      "cards": [
+        {
+          "role": "cover",
+          "headline": "截图存好了，下一步呢",
+          "visual": "明确标注的截图资料文字卡或获授权的实景，不编造软件运行截图"
+        },
+        {
+          "role": "tension",
+          "headline": "先分清：截图、链接，还是文档",
+          "visual": "资料类型与目标用途三栏，不默认用户正在写论文"
+        },
+        {
+          "role": "method",
+          "headline": "取用→分类→写作，逐步核对",
+          "visual": "流程卡列设备、应用、文件类型；不画未经证实的自动传输结果"
+        },
+        {
+          "role": "evidence",
+          "headline": "哪些有依据，哪些要先试",
+          "visual": "准确型号产品能力与限定、待实测条件分开排版"
+        },
+        {
+          "role": "summary",
+          "headline": "带上这张资料流转清单",
+          "visual": "可填写任务、设备、软件版本和验证结果，回扣开头资料去向"
+        }
+      ],
+      "cta": "你最常整理的是截图、链接，还是文档？",
+      "evidence_requirements": [
+        "不从大学生身份推定已有课表或课程要求",
+        "不从图书馆场景推定用户正在写论文",
+        "跨设备功能只写对应型号证据和必要条件",
+        "无实测记录不承诺任意软件兼容或一键自动流转"
+      ]
+    },
+    {
+      "id": "wechat_course_story",
+      "platform": "wechat",
+      "audience_stage": "需要解释与决策的读者",
+      "device": "首屏微场景、认知转折、回扣开场",
+      "title": "新电脑还没选，课表已经提了要求",
+      "summary": "把课程软件、外设和日常任务排清楚，再决定该比较什么。",
+      "opening": "情境设想：课表上多了一门实验课，课程群里又出现一个安装包。电脑还没选好，要确认的事情却已经具体了。",
+      "sections": [
+        "先把课程要求写成动作",
+        "从参数表转向实际任务",
+        "哪些产品信息有依据，哪些需要现场验证",
+        "把开场那份清单带到店里"
+      ],
+      "visual_sequence": [
+        "进入处境的课表或任务示意",
+        "软件／外设检查表",
+        "精确型号能力与条件说明",
+        "可保存验机卡"
+      ],
+      "cta": "填好必装软件、现有外设和常用文件，带着清单逐项验证。"
+    },
+    {
+      "id": "moments_one_help",
+      "platform": "moments",
+      "audience_stage": "已有联系、准备咨询",
+      "device": "一次有用提醒与一张可带走的清单",
+      "caption": "准备为新学期选电脑，可以先把课程软件名单存好。到店时，把安装、打开自己的文件、连接外设逐项核对。下面这张清单，填完再去，比临时想问题更省心。",
+      "visual_sequence": [
+        "一张可填写清单，或任务／步骤／记录三张图"
+      ],
+      "cta": "先填一个最常用的软件或文件。",
+      "boundary": "不是付费朋友圈广告，不虚构接待顾客或聊天记录，不默认补满九图"
+    },
+    {
+      "id": "poster_file_first",
+      "platform": "poster",
+      "audience_stage": "门店路过与体验准备",
+      "device": "一个任务主张与互补画面",
+      "headline": "带着你的文件来试",
+      "supporting_text": "把常用软件、现有外设和日常任务，一起放进检查清单。",
+      "visual_sequence": [
+        "所选型号产品素材＋文件／软件／外设三个独立标注区"
+      ],
+      "cta": "先列清单，再逐项验证。",
+      "boundary": "真实门店联系方式和可提供服务确认后才能添加，不虚构二维码或优惠"
+    }
+  ],
+  "evaluation": {
+    "offline": [
+      "标题封面是否互补且题文一致",
+      "开头是否包含具体动作与阅读回报",
+      "每个悬念是否按承诺兑现",
+      "每页是否带来新的信息",
+      "文字卡缩略图与手机正文是否可读",
+      "图片是否准确对应型号、主题与文字主张",
+      "是否区分实拍、官方素材与示意",
+      "CTA是否对应客户阶段"
+    ],
+    "experiments": [
+      "固定事实底稿只换标题",
+      "固定标题只换封面",
+      "固定封面比较直给价值与轻悬念开场",
+      "记录账号、人群、时间与自然／付费来源，不能用不同曝光环境比较宣称因果"
+    ],
+    "business_metrics": [
+      "曝光到阅读",
+      "可用时的停留或读完",
+      "收藏与有内容的评论",
+      "有效咨询",
+      "预约或到店"
+    ],
+    "not_metrics": [
+      "模型自报爆款概率",
+      "情绪词数量",
+      "emoji数量",
+      "未发布样例的预测CTR"
+    ]
+  },
+  "schema_version": "1.0",
+  "connector_version": "1.0.0",
+  "platform_profiles": {
+    "xiaohongshu": {
+      "editorial_target": "搜索发现与选购收藏；明确商家视角，不伪装路人种草",
+      "length_target": "正文180–350字，3–5个短段；脚注不计入正文；这是编辑目标而非平台限制",
+      "fact_budget": 3,
+      "opening": "具体处境与动作开场，交代读完的判断收益；轻悬念要在内页兑现",
+      "structure": "具体困扰 → 场景化判断 → 对应事实与适用条件 → 可保存清单与一个问题",
+      "title": "提供3个不同切角候选，每个20字以内为编辑目标；标题封面互补，不伪造亲测",
+      "images": "3:4为设计默认；每页一个任务；官方产品图与任务清单卡可组合，不强制九图，不冒充真实生活实拍",
+      "interaction": "只选一个主目标：可回答的具体问题或保存清单；不强迫点赞关注",
+      "tags": "3–5个精准相关话题，不蹭无关热点"
+    },
+    "wechat": {
+      "editorial_target": "帮助读者做购买决策，建立门店专业可信度",
+      "length_target": "正文约600–900字，4–6个有小标题段落；这是编辑目标",
+      "fact_budget": 4,
+      "opening": "首屏微场景、具体任务冲突与本文收益；不以时代浪潮或品牌赞歌开篇",
+      "structure": "处境导语 → 任务拆解 → 有据能力 → 适用边界与核对清单 → 回扣开场",
+      "title": "3个候选，明确人群与决策问题，题文一致，不仿冒官方通知",
+      "images": "2–4图紧邻对应论点，每图解释新增信息，封面概括主题",
+      "interaction": "一个真实可执行下一步，不杜撰二维码、活动和门店服务",
+      "tags": "tags为空列表"
+    },
+    "moments": {
+      "editorial_target": "已有联系客户的自然对话与一次有效咨询；区别于付费朋友圈广告",
+      "length_target": "总文案约80–160字，2–3个短段；这是编辑目标",
+      "fact_budget": 1,
+      "opening": "一次有用提醒与具体问题，不能编造今天接待的客户或聊天记录",
+      "structure": "一个使用处境 → 一个有据能力及限定 → 一个低负担询问",
+      "title": "一句短钩子，导出正文避免重复；不用公众号式长标题",
+      "images": "1–3图；可填写清单可单独成页；无实拍就明示官方产品素材或示意",
+      "interaction": "只问一个低负担问题，例如常用软件；不机械以到店体验结尾",
+      "tags": "tags为空列表"
+    },
+    "poster": {
+      "editorial_target": "单屏快速看懂适合谁、解决什么、下一步是什么",
+      "length_target": "主标题约8–16字，副标题15–30字，1–2条卖点各不超过35字；限定条件完整放入disclosures脚注",
+      "fact_budget": 2,
+      "opening": "主标题表达任务或选择难题，副标题讲人群，不堆品牌口号",
+      "structure": "一个主张 → 最多3条具体卖点 → 一个行动引导",
+      "title": "3个候选仅采用一个，不制造无依据的最低价、最后一天、限量",
+      "images": "一张主体产品图和相关任务标注，信息层级清楚；不拼凑不相关图",
+      "interaction": "一次真实可执行邀请；没有真实二维码不写扫码",
+      "tags": "tags为空列表"
+    }
+  },
+  "platform_rules": {
+    "xiaohongshu": {
+      "name": "小红书",
+      "structure": "问题切入 → 场景短段 → 选购建议",
+      "tone": "口语、真实，不伪造亲测",
+      "min_images": 3,
+      "max_images": 6,
+      "cta": "收藏选购清单，到店验证使用场景"
+    },
+    "wechat": {
+      "name": "公众号",
+      "structure": "导语 → 场景分析 → 分节证据 → 选购建议",
+      "tone": "清晰、有信息密度",
+      "min_images": 2,
+      "max_images": 4,
+      "cta": "预约场景体验并咨询具体配置"
+    },
+    "moments": {
+      "name": "门店朋友圈",
+      "structure": "一个场景 → 一个核心卖点 → 咨询引导",
+      "tone": "简短、直接、有人情味",
+      "min_images": 1,
+      "max_images": 3,
+      "cta": "私信沟通你的使用需求，预约到店体验"
+    },
+    "poster": {
+      "name": "门店海报",
+      "structure": "主标题 → 副标题 → 不超过三个卖点 → 行动引导",
+      "tone": "精炼、醒目",
+      "min_images": 1,
+      "max_images": 1,
+      "cta": "提出一项具体需求，再咨询可提供的体验方式；不虚构二维码或门店服务"
+    }
+  },
+  "card_limits": {
+    "xiaohongshu": {
+      "min": 4,
+      "max": 6
+    },
+    "wechat": {
+      "min": 2,
+      "max": 4
+    },
+    "moments": {
+      "min": 1,
+      "max": 3
+    },
+    "poster": {
+      "min": 1,
+      "max": 1
+    }
+  }
+}
