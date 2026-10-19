@@ -10,6 +10,12 @@
 
 **魔搭应用：https://shuuyou-matequill.ms.show**
 
+## 作品说明书
+
+- [完整作品说明书 PDF（18 页）](docs/MateQuill-作品说明书.pdf)
+- [HTML 图文版](docs/作品说明.html)
+- [魔搭创空间](https://modelscope.cn/studios/Shuuyou/MateQuill)
+
 ## 已实现
 
 - 单一自然语言输入，型号或目标顾客不明确时追问。
