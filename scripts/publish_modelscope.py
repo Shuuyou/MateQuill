@@ -20,7 +20,8 @@ FORBIDDEN = {"node_modules", ".next", ".git", "__pycache__", "evidence"}
 
 
 def stage(destination: Path) -> int:
-    names = ("app", "web", "web-next", "prompts", "data", "docs/PLAN.html", "README.md",
+    names = ("app", "web", "web-next", "prompts", "data", "docs/PLAN.html",
+             "docs/SEMIFINAL_ENGINEERING.md", "docs/SEMIFINAL_RESEARCH.md", "docs/SEMIFINAL_VIDEO.md", "README.md",
              "Dockerfile", ".dockerignore", "requirements.txt", "constraints-runtime.txt",
              "scripts/run_services.py", "scripts/fetch_official_assets.py")
     count = 0

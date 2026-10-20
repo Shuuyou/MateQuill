@@ -4,6 +4,20 @@
   "provenance": "First-party product-scoped consumer.huawei.com DAM images; pixel review pending.",
   "assets": [
     {
+      "path": "runtime/official-assets/matebook-pro/1dbfcb76aed7d685.jpg",
+      "sha256": "1dbfcb76aed7d68511ca77331f12a370e256a00d6f3049f52c713ecff384fb6c",
+      "image_url": "https://consumer.huawei.com/content/dam/huawei-cbg-site/cn/mkt/pdp/harmonyos-computer/matebook-pro/new/assets/pc/huawei-matebook-pro-card-design.jpg",
+      "source_url": "https://consumer.huawei.com/cn/harmonyos-computer/matebook-pro/",
+      "product": "HUAWEI MateBook Pro",
+      "title": "华为官方产品页外观设计图",
+      "captured_at": "2026-10-20",
+      "alt": "",
+      "context": "准确产品官方页面原始设计图；像素观察单独绑定SHA256。",
+      "mime": "image/jpeg",
+      "width": 2592,
+      "height": 1460
+    },
+    {
       "product": "HUAWEI MateBook 14（鸿蒙版）",
       "path": "runtime/official-assets/matebook-14-harmonyos-version/731f792b77f86df2.jpg",
       "source_url": "https://consumer.huawei.com/cn/harmonyos-computer/matebook-14-harmonyos-version/",

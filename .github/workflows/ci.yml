@@ -17,7 +17,7 @@ jobs:
           cache-dependency-path: |
             requirements.txt
             requirements-dev.txt
-      - run: pip install -r requirements-dev.txt
+      - run: pip install -r requirements-dev.txt -c constraints-runtime.txt
       - run: python -m playwright install --with-deps chromium
       - run: python -m pytest -q
         env:

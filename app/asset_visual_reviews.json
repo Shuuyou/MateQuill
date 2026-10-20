@@ -1418,5 +1418,14 @@
     "visual_role": "scene",
     "usable": true,
     "reason": "已目视Fold contact-10对应SHA256图片；仅描述可见画面，不确认参数、功能效果或授权。"
+  },
+  "1dbfcb76aed7d68511ca77331f12a370e256a00d6f3049f52c713ecff384fb6c": {
+    "observed_title": "浅粉色笔记本的合盖外观与展开键盘组合设计图",
+    "visual_role": "product_overview",
+    "semantic_tags": [
+      "overview"
+    ],
+    "usable": true,
+    "reason": "2026-10-20直接目视本SHA256原图：可见两台浅粉色笔记本的外观与键盘；仅作官方产品外观封面，不证明兼容性、功能、体验或配置。"
   }
 }
