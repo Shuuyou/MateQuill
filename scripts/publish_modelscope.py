@@ -10,6 +10,7 @@ import argparse
 import getpass
 import json
 import logging
+import os
 from pathlib import Path
 import shutil
 import sys
@@ -22,7 +23,7 @@ FORBIDDEN = {"node_modules", ".next", ".git", "__pycache__", "evidence"}
 def stage(destination: Path) -> int:
     names = ("app", "web", "web-next", "prompts", "data", "docs/PLAN.html",
              "docs/SEMIFINAL_ENGINEERING.md", "docs/SEMIFINAL_RESEARCH.md", "docs/SEMIFINAL_VIDEO.md", "README.md",
-             "Dockerfile", ".dockerignore", "requirements.txt", "constraints-runtime.txt",
+             "Dockerfile", ".dockerignore", ".gitattributes", "requirements.txt", "constraints-runtime.txt",
              "scripts/run_services.py", "scripts/fetch_official_assets.py")
     count = 0
     for name in names:
@@ -62,6 +63,10 @@ def main() -> int:
         token = sys.stdin.readline().strip() if args.token_stdin else getpass.getpass("ModelScope token (hidden): ")
         if not token:
             raise RuntimeError("No ModelScope credential provided")
+        # Keep application JSON/fonts as actual Git blobs in Docker checkouts.
+        # The SDK's 64 KiB default can otherwise commit LFS pointer text for
+        # a JSON manifest, which Docker COPY cannot parse as product data.
+        os.environ.setdefault("MODELSCOPE_UPLOAD_LFS_FORCE_THRESHOLD", "8MB")
         from modelscope_hub import HubApi
         logging.getLogger("modelscope_hub").setLevel(logging.ERROR)
         api = HubApi(token=token, endpoint="https://modelscope.cn")
