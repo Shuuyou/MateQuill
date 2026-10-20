@@ -6,7 +6,7 @@
 
 - Python 全套回归：**411 passed**。
 - Next.js 16 正式 webpack 构建、TypeScript 检查通过。
-- GitHub Actions 在干净的 Linux 环境完成前端构建与后端测试：[成功运行](https://github.com/Shuuyou/MateQuill/actions/runs/39391974397)。
+- GitHub Actions 在干净的 Linux 环境完成前端构建与后端测试：[成功运行](https://github.com/Shuuyou/MateQuill/actions/runs/39395283496)。
 - 运行数据与凭证独立于源码仓库；应用、测试、部署及视频生成脚本已提交。
 
 ## 实际操作验收
@@ -25,6 +25,13 @@
 | 独立部署素材 | 空赛事资料目录下，实际读取并核验同型号官方封面图片字节、SHA256及视觉审阅记录 |
 
 产品库包含 **13 款产品、416 条产品事实**；官方素材索引 **119 条**。图片按实际文件哈希核对，像素观察与产品功能证据分别维护。
+
+## 部署验收
+
+- [魔搭创空间](https://modelscope.cn/studios/Shuuyou/MateQuill) 已运行新版 Next.js 前端；首页、应用状态和产品目录实际返回 HTTP 200。
+- 线上三设备任务（MateBook Pro、Mate 80、MatePad Edge）实际生成结果为 `ready`，记录 `0583e0f979364dd5a7f6dc7f1b8f65b2`，本次耗时 18.3 秒；包含 1 张官方图片，图片读取和 HTML 导出均返回 HTTP 200。此耗时为单次验收记录。
+- 本机 Next.js 演示入口为 `http://127.0.0.1:3003/`；健康、目录、门店、API 契约及既有成稿导出只读检查全部通过。
+- 原服务器已完成新版前端构建与预览启动；随后 SSH 与 HTTP 链路超时，尚未切换 7860，公开演示使用上述魔搭入口。
 
 ## 视频交付
 
