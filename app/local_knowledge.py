@@ -46,21 +46,41 @@ class LocalKnowledgeProvider(DemoProvider):
         except (OSError, ValueError):
             return []
 
+    def _product_records(self):
+        if self.products_file == ROOT/'data/official_products.json':
+            from .product_knowledge import load_products
+            return load_products()
+        return self._records(self.products_file, 'products')
+
     async def catalog(self):
         rows = await super().catalog()
         for item in rows:
             item['catalog_source'] = 'local_archive'
         names = {norm(x['name']) for x in rows}
-        for row in self._records(self.products_file, 'products'):
+        for row in self._product_records():
             name = row.get('product') or row.get('name', '')
             if not name or norm(name) in names or not row.get('facts'):
                 continue
             url = row.get('spec_url') or row.get('product_url')
-            if not official_url(url):
+            if not official_url(url) and not (row.get('reviewed') and row.get('provider') == 'store_knowledge'):
                 continue
             rows.append({'id':'official-'+hashlib.sha256(name.encode()).hexdigest()[:12], 'name':name,
-                         'system':row.get('system','待核对具体配置'), 'catalog_source':'huawei_official'})
+                         'system':row.get('system','待核对具体配置'), 'catalog_source':row.get('provider','huawei_official'),
+                         'category':row.get('category','computer'), 'aliases':row.get('aliases',[])})
             names.add(norm(name))
+        metadata = {norm(row.get('product') or row.get('name','')): row for row in self._product_records()}
+        for item in rows:
+            record = metadata.get(norm(item['name']), {})
+            item['category'] = record.get('category', 'computer')
+            item['aliases'] = record.get('aliases', [])
+            # Archive directory labels describe folders, not the device OS.
+            # Prefer the exact-model official specification when available.
+            os_fact = next((f for f in record.get('facts', [])
+                            if f.get('label') == '操作系统'), None)
+            if os_fact:
+                item['system'] = os_fact['value']
+            elif record.get('system'):
+                item['system'] = record['system']
         return rows
 
     async def status(self):
@@ -87,12 +107,13 @@ class LocalKnowledgeProvider(DemoProvider):
                 asset.sha256 = hashlib.sha256(path.read_bytes()).hexdigest()
         if has_archive:
             bundle.warnings.append('使用赛事 ZIP 原文快照；价格、活动和软件适配的时效须单独核对，不因改用本地来源降低事实要求。')
-        for row in self._records(self.products_file, 'products'):
+        for row in self._product_records():
             name = row.get('product') or row.get('name', '')
             if norm(name) != norm(product):
                 continue
             url = row.get('spec_url') or row.get('product_url') or ''
-            if not official_url(url):
+            reviewed = row.get('reviewed') and row.get('provider') == 'store_knowledge'
+            if not official_url(url) and not reviewed:
                 continue
             records = row.get('facts') or []
             # Each fact remains linked to its exact collected span, never inferred
@@ -104,14 +125,15 @@ class LocalKnowledgeProvider(DemoProvider):
                 if not value or not label or value not in quote or not quote:
                     continue
                 fact_url = record.get('source_url') or url
-                if not official_url(fact_url):
+                if not official_url(fact_url) and not (reviewed and fact_url == url):
                     continue
                 digest = hashlib.sha256(quote.encode()).hexdigest()
                 sid = 'official-'+hashlib.sha256((fact_url+quote).encode()).hexdigest()[:20]
                 fid = 'FO'+hashlib.sha256((product+label+value+sid).encode()).hexdigest()[:14]
                 if any(norm(f.label)==norm(label) and norm(f.value)==norm(value) for f in bundle.facts):
                     continue
-                bundle.sources.append(Source(id=sid, title=product+' / 华为官方规格', provider='huawei_official',
+                provider = 'store_knowledge' if reviewed else 'huawei_official'
+                bundle.sources.append(Source(id=sid, title=product+(' / 门店确认资料' if reviewed else ' / 华为官方规格'), provider=provider,
                     url=fact_url, excerpt=quote, sha256=digest, captured_at=row.get('captured_at','')))
                 bundle.facts.append(Fact(id=fid, product=product, label=label, value=value, quote=quote,
                     source_id=sid, qualifiers=record.get('qualifiers') or [], system=record.get('system','')))

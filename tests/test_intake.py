@@ -22,6 +22,12 @@ def test_natural_complete_brief_needs_no_form():
     assert '课程软件' in result['task']['requirements']
 
 
+def test_audience_after_the_request_is_not_asked_again():
+    result=resolve('帮我写一篇MateBook 14的小红书，面向准备课堂展示的大学生。')
+    assert result['task']['audience']=='准备课堂展示的大学生'
+    assert [q['field'] for q in result['questions']]==['product']
+
+
 def test_bare_family_only_offers_matching_variants():
     result = resolve('给大学生写一篇MateBook 14小红书')
     assert result['status'] == 'clarify'

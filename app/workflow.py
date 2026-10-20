@@ -2,6 +2,10 @@ from __future__ import annotations
 import re
 import time
 import hashlib
+import asyncio
+import inspect
+import io
+from pathlib import Path
 from .models import (TaskInput, EvidenceBundle, RunResult, ContentBlock, ImagePlacement,
                      AuditItem, TraceItem, creative_review_blocks)
 from .creative_connectors import get_connector
@@ -11,8 +15,8 @@ from .sales import build_sales_plan
 
 
 PLATFORMS = {
-    'xiaohongshu': {'name':'小红书','structure':'问题切入 → 场景短段 → 选购建议','tone':'口语、真实，不伪造亲测','min_images':3,'max_images':6,'cta':'收藏选购清单，到店验证使用场景'},
-    'wechat': {'name':'公众号','structure':'导语 → 场景分析 → 分节证据 → 选购建议','tone':'清晰、有信息密度','min_images':2,'max_images':4,'cta':'预约场景体验并咨询具体配置'},
+    'xiaohongshu': {'name':'小红书','structure':'问题切入 → 场景短段 → 选购建议','tone':'口语、真实，不伪造亲测','min_images':1,'max_images':6,'cta':'围绕一个具体任务展开交流'},
+    'wechat': {'name':'公众号','structure':'导语 → 场景分析 → 分节证据 → 选购建议','tone':'清晰、有信息密度','min_images':1,'max_images':4,'cta':'围绕本文任务咨询一个具体问题'},
     'moments': {'name':'门店朋友圈','structure':'一个场景 → 一个核心卖点 → 咨询引导','tone':'简短、直接、有人情味','min_images':1,'max_images':3,'cta':'私信沟通你的使用需求，预约到店体验'},
     'poster': {'name':'门店海报','structure':'主标题 → 副标题 → 不超过三个卖点 → 行动引导','tone':'精炼、醒目','min_images':1,'max_images':1,'cta':'扫码咨询或预约到店体验'},
 }
@@ -25,6 +29,21 @@ def norm(value):
 def qualifier_norm(value):
     """Typography changes are harmless; words, digits and negation stay significant."""
     return re.sub(r'[\W_]+','',value,flags=re.UNICODE).casefold()
+
+
+def strip_selected_model_names(text, products):
+    """Model identifiers contain digits, but do not authorize numeric claims.
+
+    Match only selected names, allowing the omitted brand and harmless spacing.
+    Digit/Latin boundaries ensure a selected Mate 80 cannot hide Mate 800 or 80GB.
+    """
+    names = {name for name in products if name}
+    names.update(re.sub(r'^(?:HUAWEI|华为)\s*', '', name, flags=re.I) for name in tuple(names))
+    for name in sorted(names, key=len, reverse=True):
+        tokens = re.split(r'\s+', name.strip())
+        pattern = r'(?<![A-Za-z0-9])' + r'\s*'.join(re.escape(token) for token in tokens) + r'(?![A-Za-z0-9])'
+        text = re.sub(pattern, '', text, flags=re.I)
+    return text
 
 
 def connector_platform_rule(task, bundle=None, strategy=None):
@@ -110,6 +129,72 @@ class AgentWorkflow:
     def __init__(self, provider, llm=None):
         self.provider, self.llm = provider, llm
 
+    async def _official_cover(self, task, result, bundle):
+        """Assemble an omitted cover from reviewed bytes, before all audits.
+
+        This is asset selection rather than a substitute audit: it is limited to
+        same-product official overview material already present in this bundle.
+        """
+        if result.images or task.mode != 'local':
+            return None
+        from .local_knowledge import official_url
+        from .visual_assets import review_asset_bytes
+        from PIL import Image
+        provider = self.provider
+        for _ in range(4):
+            if callable(getattr(provider, 'get_asset', None)):
+                break
+            provider = getattr(provider, 'base', None)
+            if provider is None:
+                return None
+        getter = getattr(provider, 'get_asset', None)
+        if not callable(getter):
+            return None
+        sources = {source.id: source for source in bundle.sources}
+        limit = 12 * 1024 * 1024
+        for asset in bundle.assets:
+            source = sources.get(asset.source_id)
+            if (norm(asset.product) != norm(task.product) or not asset.verified
+                    or asset.provenance != 'huawei_official'
+                    or asset.visual_role != 'product_overview'
+                    or asset.semantic_basis != 'pixel_review_sha256'
+                    or not re.fullmatch(r'[0-9a-f]{64}', asset.sha256)
+                    or not source or source.provider != 'huawei_official'
+                    or not official_url(source.url)):
+                continue
+            try:
+                value = getter(asset.id)
+                if inspect.isawaitable(value):
+                    value = await value
+                if isinstance(value, tuple):
+                    raw = value[0]
+                elif isinstance(value, (str, Path)):
+                    path = Path(value)
+                    if not path.is_file() or path.stat().st_size > limit:
+                        continue
+                    raw = await asyncio.to_thread(path.read_bytes)
+                else:
+                    raw = value
+                if not isinstance(raw, bytes) or not raw or len(raw) > limit:
+                    continue
+                if hashlib.sha256(raw).hexdigest() != asset.sha256:
+                    continue
+                with Image.open(io.BytesIO(raw)) as image:
+                    if image.format not in ('JPEG', 'PNG', 'WEBP'):
+                        continue
+                    image.verify()
+                reviewed = review_asset_bytes(raw, asset.original_title or asset.title)
+                if (not reviewed.get('usable') or reviewed.get('semantic_basis') != 'pixel_review_sha256'
+                        or reviewed.get('visual_role') != 'product_overview'):
+                    continue
+            except Exception:
+                continue
+            result.images = [ImagePlacement(asset_id=asset.id, caption='官方产品资料图', position='封面',
+                                             role='cover', block_index=None, supported_fact_ids=[],
+                                             reason='采用本次同型号官方素材中已按图片哈希审阅的产品总览图作为封面')]
+            return asset.id
+        return None
+
     def _audit(self, task, result, bundle):
         issues = []
         def add(category,message):
@@ -117,11 +202,12 @@ class AgentWorkflow:
         source_map = {s.id:s for s in bundle.sources}
         fact_map = {f.id:f for f in bundle.facts}
         asset_map = {a.id:a for a in bundle.assets}
+        product_scope = {norm(task.product), *(norm(name) for name in task.ecosystem_products)}
         if task.mode in ('local','live') and norm(task.product) != norm(bundle.product):
             add('model','任务指定型号与知识包型号不一致，需要确认准确型号')
         if task.mode == 'live' and any(s.provider != 'ima' for s in bundle.sources):
             add('evidence','实时模式来源必须全部来自ima')
-        if task.mode == 'local' and any(s.provider not in ('local_archive','huawei_official') for s in bundle.sources):
+        if task.mode == 'local' and any(s.provider not in ('local_archive','huawei_official','store_knowledge','store_upload') for s in bundle.sources):
             add('evidence','正式本地模式须使用赛事附件或华为官方原文，不能用演练资料替代')
         for fact in bundle.facts:
             source = source_map.get(fact.source_id)
@@ -129,9 +215,9 @@ class AgentWorkflow:
                 add('evidence',f'事实 {fact.id} 原文摘录无法在来源中精确定位')
             if task.mode=='local' and source and (not source.sha256 or source.sha256!=hashlib.sha256(source.excerpt.encode('utf-8')).hexdigest()):
                 add('evidence',f'本地正式事实 {fact.id} 的原文缺少可复核内容哈希')
-            if norm(fact.product) != norm(bundle.product):
+            if norm(fact.product) not in product_scope:
                 add('model',f'事实 {fact.id} 型号与选定产品不一致')
-            if fact.system and bundle.system and norm(fact.system) != norm(bundle.system):
+            if norm(fact.product)==norm(bundle.product) and fact.system and bundle.system and norm(fact.system) != norm(bundle.system):
                 add('system',f'事实 {fact.id} 的操作系统与产品知识包不一致')
             if fact.value not in fact.quote:
                 add('evidence',f'事实 {fact.id} 的值不在对应原文摘录中')
@@ -161,7 +247,7 @@ class AgentWorkflow:
                 if qualifier_norm(disclosure) and qualifier_norm(disclosure) not in qualifier_norm(allowed):
                     add('qualifier','脚注包含所引事实及限定之外的内容，需保留原文或删除新增主张')
             numbered_text=re.sub(r'(?m)^\s*(?:\d+(?:\.(?!\d)|[、）)])|第\d+[章节步点])[ \t]*','',block.text)
-            numbered_text=numbered_text.replace(bundle.product,'')
+            numbered_text=strip_selected_model_names(numbered_text, [task.product, *task.ecosystem_products])
             for number in re.findall(r'\d+(?:\.\d+)?',numbered_text) if valid or has_product_claim(numbered_text,bundle.facts) else []:
                 if number not in re.findall(r'\d+(?:\.\d+)?',allowed):
                     add('number',f'正文出现所引证据未包含的数字 {number}')
@@ -195,13 +281,13 @@ class AgentWorkflow:
             if not asset:
                 add('image','图片ID不在本次检索素材集合中')
                 continue
-            if norm(asset.product) != norm(bundle.product):
+            if norm(asset.product) not in product_scope:
                 add('image','图片型号与选定型号不一致')
             if asset.source_id not in source_map:
                 add('image','图片缺少本次检索来源')
             if task.mode == 'live' and (not asset.verified or asset.provenance != 'ima_direct'):
                 add('image','图片尚未确认来自本次ima直接返回素材')
-            if task.mode == 'local' and (not asset.verified or asset.provenance not in ('local_archive','huawei_official') or not re.fullmatch(r'[0-9a-f]{64}',asset.sha256)):
+            if task.mode == 'local' and (not asset.verified or asset.provenance not in ('local_archive','huawei_official','store_upload') or not re.fullmatch(r'[0-9a-f]{64}',asset.sha256)):
                 add('image','本地正式图片缺少附件/官方来源或图片完整性记录')
         for card in result.creative_plan.get('cards', []):
             for asset_id in card.get('asset_ids', []):
@@ -209,14 +295,19 @@ class AgentWorkflow:
                 if not asset:
                     add('image','创意卡片引用的图片不在本次检索素材集合中')
                     continue
-                if norm(asset.product)!=norm(bundle.product) or asset.source_id not in source_map:
+                if norm(asset.product) not in product_scope or asset.source_id not in source_map:
                     add('image','创意卡片图片型号或来源不匹配')
                 if task.mode=='live' and (not asset.verified or asset.provenance!='ima_direct'):
                     add('image','创意卡片图片尚未完成ima直接来源验证')
-                if task.mode=='local' and (not asset.verified or asset.provenance not in ('local_archive','huawei_official') or not re.fullmatch(r'[0-9a-f]{64}',asset.sha256)):
+                if task.mode=='local' and (not asset.verified or asset.provenance not in ('local_archive','huawei_official','store_upload') or not re.fullmatch(r'[0-9a-f]{64}',asset.sha256)):
                     add('image','创意卡片图片缺少本地正式来源或图片完整性记录')
                 if card.get('supported_fact_ids') and asset.visual_role in ('product_overview','unknown'):
                     add('image','产品外观图不能在创意卡片中作为功能或场景实证，请改用信息卡或匹配素材')
+                if asset.provenance == 'store_upload':
+                    if card.get('supported_fact_ids'):
+                        add('image','门店上传照片只作场景素材，不能作为创意卡片中产品参数或功能的证明')
+                    if card.get('truth_status') == 'official_material':
+                        add('image','门店上传照片应标为真实照片，不能改标成官方产品素材')
         if task.platform == 'poster' and len(result.blocks) > 3:
             add('platform','海报卖点不能超过三个')
         issues.extend(image_editorial_audit(result,bundle))
@@ -289,8 +380,9 @@ class AgentWorkflow:
             result.audit.append(AuditItem(severity='error',category='model',message='未配置可调用模型，正式模式不能用模板代替真实生成和审计'))
             return result
         creative_plan_errors=[]
+        model_omitted_images = False
         def apply(data):
-            nonlocal creative_plan_errors
+            nonlocal creative_plan_errors, model_omitted_images
             creative_plan_errors=[]
             # A repair replaces the plan. Never retain stale cards from a prior
             # draft when the repaired model response omits them.
@@ -321,6 +413,7 @@ class AgentWorkflow:
             result.tags=[str(x) for x in data.get('tags',[])]
             result.blocks=[ContentBlock.model_validate(x) for x in data.get('blocks',[])]
             result.images=bind_legacy_images([ImagePlacement.model_validate(x) for x in data.get('images',[])],len(result.blocks))
+            model_omitted_images = not result.images
             if isinstance(data.get('content_plan'),dict):
                 result.content_plan={k:v for k,v in data['content_plan'].items() if k in {
                     'title_candidates','hook','reader_value','cover_copy','image_brief','interaction_goal','publication_note'}}
@@ -329,6 +422,8 @@ class AgentWorkflow:
         try:
             if enabled:
                 apply(await self.llm.generate(task,bundle,result.strategy))
+                if model_omitted_images and await self._official_cover(task, result, bundle):
+                    trace('cover_assembly','已从本次同型号官方素材中选入哈希匹配且已审阅的产品封面，随后执行完整审查')
                 result.model_used=getattr(self.llm,'model','configured-model')
             else:
                 ranking={fid:i for i,fid in enumerate(result.strategy['priority_fact_ids'])}
@@ -364,6 +459,8 @@ class AgentWorkflow:
                 trace('semantic_verification','完成独立语义事实核验')
                 if (any(a.severity=='error' for a in result.audit) or any(a.severity=='warning' for a in result.editorial_review)) and hasattr(self.llm,'repair'):
                     apply(await self.llm.repair(task,bundle,result.strategy,result))
+                    if model_omitted_images and await self._official_cover(task, result, bundle):
+                        trace('cover_assembly','修订稿选入本次已核对官方产品封面，随后重新执行完整审查')
                     result.audit=[a for a in result.audit if a.category=='retrieval']
                     result.audit.extend(self._audit(task,result,bundle))
                     result.audit.extend(creative_plan_errors)

@@ -1,0 +1,59 @@
+/* Conversation first; structured inputs appear only by request or clarification. */
+body { font-family: var(--font-ui, 'Noto Sans SC Variable', 'Microsoft YaHei', sans-serif); }
+h1, .welcome-heading h1, .sidebar-wordmark, .result-heading h1, .loading h1 { font-family: var(--font-display, 'Scene Display', sans-serif); }
+.intake-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.welcome-heading { margin-bottom: 34px; }
+.welcome-heading h1 { font-size: clamp(32px,3.4vw,44px); }
+.greeting-stop { color: #286544; }
+#scene { min-height: 140px; max-height: 300px; font-size: 18px; padding-top: 5px; }
+.scene-field { padding: 23px 24px 4px; }
+.form-bottom { min-height: 64px; align-items: center; padding: 0 17px 17px 18px; }
+.form-bottom .disclosure-toggle { font-size: 16px; min-height: 42px; border-radius: 8px; padding: 7px 8px; }
+.form-bottom .disclosure-toggle:hover { background: #f4f6ee; }
+.form-bottom .form-actions { margin-left: auto; }
+#generate { min-height: 44px; border-radius: 13px 13px 13px 6px; font-size: 16px; padding: 10px 20px; }
+.brief-details { border-bottom: 1px solid #e6ebdd; border-top: 1px solid #e6ebdd; margin-bottom: 17px; padding: 20px 24px 0; }
+.brief-details .required-fields { padding: 0; border: 0; margin-bottom: 24px; background: none; }
+.brief-details .platform-field { margin: 0 0 20px; }
+.brief-details .sample-menu { display: inline-block; margin: 0 0 20px; }
+.brief-details .sample-options { bottom: auto; top: calc(100% + 8px); left: 0; right: auto; }
+.intake-panel { width: min(100%,880px); margin: 0 auto; padding: 15px 0 30px; }
+.is-intaking .welcome-heading, .is-intaking .brief, .is-clarifying .welcome-heading, .is-clarifying .brief { display: none; }
+.is-intaking #create-panel, .is-clarifying #create-panel { margin: 0 auto; }
+.intake-question { display: flex; align-items: flex-start; justify-content: space-between; gap: 22px; margin: 0 0 32px; }
+.intake-question p { font-size: 18px; line-height: 1.9; background: #fff; border: 1px solid #dce3d1; border-radius: 18px 18px 18px 5px; padding: 17px 21px; margin: 0; white-space: pre-wrap; flex: 1; }
+.intake-question button { flex-shrink: 0; font-size: 16px; }
+.clarification-heading { display: flex; gap: 20px; align-items: center; margin: 0 0 25px; }
+.clarification-character { width: 84px; height: 84px; flex-shrink: 0; }
+.clarification-heading h1 { font-size: 28px; font-weight: 400; line-height: 1.5; }
+.clarification-heading p { font-size: 16px; line-height: 1.8; color: #56664a; margin: 12px 0 0; }
+.clarification-heading p:empty { display: none; }
+.clarification-field { border: 0; margin: 0 0 25px; padding: 0; min-width: 0; }
+.clarification-field legend { font-size: 18px; font-weight: 500; margin-bottom: 16px; padding: 0; }
+.clarification-field>input { font-size: 18px; background: #fff; border: 1px solid #bdcab0; border-radius: 10px; min-height: 50px; }
+.clarification-choices { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.clarification-choices label { display: flex; align-items: center; gap: 12px; border: 1px solid #d6dfc9; background: #fff; padding: 15px 17px; border-radius: 12px 12px 12px 5px; cursor: pointer; font-size: 16px; line-height: 1.8; min-width: 0; }
+.clarification-choices label:has(input:checked) { background: #edf4df; border-color: #64804d; }
+.clarification-choices input { width: 19px; height: 19px; min-height: 19px; flex-shrink: 0; margin: 0; accent-color: #335e24; }
+.clarification-choices span { overflow-wrap: anywhere; }
+.clarification-actions { display: flex; justify-content: flex-end; padding-top: 10px; }
+.intake-error { font-size: 18px; line-height: 1.9; color: #82402d; }
+.intake-error button { display: block; margin-top: 15px; }
+@media (max-width: 760px) {
+ .welcome-heading h1 { font-size: 32px; }
+ .clarification-choices { grid-template-columns: 1fr; }
+ .intake-question { gap: 12px; }
+ .intake-question p { font-size: 18px; padding: 15px 17px; }
+ .clarification-heading h1 { font-size: 25px; }
+ .clarification-character { width: 72px; height: 72px; }
+}
+@media (max-width:480px) {
+ .welcome-heading h1 { font-size: 28px; }
+ .scene-field { padding: 18px 18px 4px; }
+ .form-bottom { padding: 0 13px 13px; flex-wrap: nowrap; gap: 10px; }
+ .form-bottom .form-actions { width: auto; }
+ .intake-question { flex-wrap: wrap; }
+ .intake-question p { flex-basis: 100%; }
+ .clarification-heading { gap: 13px; }
+ .clarification-heading h1 { font-size: 23px; }
+}

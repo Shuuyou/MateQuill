@@ -47,6 +47,11 @@ def _candidates(query, catalog):
 
 
 def _audience(query):
+    match = re.search(r'(?:面向|针对|写给)([^，。！？,\n]{2,60})', query)
+    if match:
+        value = re.split(r'写一|做一|推荐|生成|设计|制作',match.group(1),maxsplit=1)[0].strip()
+        if re.search(r'学生|新生|大[一二三四]|设计师|程序员|老师|教师|家长|老板|创业|职场|上班|摄影|剪辑|商务|顾客|客户|专业|工程师|研究生|大学|高中|中学',value):
+            return value
     match = re.search(r'(?:给|面向|针对|为)([^，。！？,\n]{2,40}?)(?:写|做|推荐|生成|设计一|制作)', query)
     if match:
         value = match.group(1).strip()

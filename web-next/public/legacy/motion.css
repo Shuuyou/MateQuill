@@ -1,0 +1,30 @@
+/* Expressive stage character: same visual grammar as Mingcha, Youju silhouette. */
+.youju-character {display:inline-block;overflow:visible;vertical-align:middle;flex:none;}
+.youju-character .yj-head {transform-box:fill-box;transform-origin:50% 70%;transition:transform .45s cubic-bezier(.2,.8,.2,1);}
+.youju-character .yj-gaze {transform-box:fill-box;transform-origin:center;transition:transform .4s ease;}
+.youju-character .yj-eye {transform-box:fill-box;transform-origin:center;animation:yj-blink 6.4s ease-in-out infinite;}
+.youju-character .yj-smile-eyes {display:none;}
+.youju-character[data-state='idle'] .yj-head {animation:yj-breathe 4.8s ease-in-out infinite;}
+.youju-character[data-state='focus'] .yj-head {transform:rotate(2deg);}
+.youju-character[data-state='focus'] .yj-gaze {transform:translate(3px,3px);}
+.youju-character[data-state='thinking'] .yj-head {animation:yj-think 4.2s ease-in-out infinite;}
+.youju-character[data-state='thinking'] .yj-gaze {transform:translate(-2px,-2px);}
+.youju-character[data-state='thinking'] .yj-eye-right {animation:yj-squint 4.2s ease-in-out infinite;}
+.youju-character[data-state='waiting'] .yj-head {transform:rotate(-5deg);}
+.youju-character[data-state='waiting'] .yj-gaze {transform:translate(3px,-1px);}
+.youju-character[data-state='waiting'] .yj-eye {animation-duration:8s;}
+.youju-character[data-state='done'] .yj-head {animation:yj-nod .9s ease-in-out 1 both;}
+.youju-character[data-state='done'] .yj-open-eyes {display:none;}
+.youju-character[data-state='done'] .yj-smile-eyes {display:inline;}
+.youju-character[data-state='error'] .yj-head {animation:yj-shake .7s ease-in-out 1 both;}
+.youju-character[data-state='error'] .yj-eye {animation:none;transform:scaleY(.65);}
+.youju-character[data-paused='true'] * {animation-play-state:paused!important;}
+@keyframes yj-breathe {0%,100%{transform:translateY(0) scale(1)}50%{transform:translateY(-1px) scale(1.012,1.008)}}
+@keyframes yj-blink {0%,40%,44%,100%{transform:scaleY(1)}42%{transform:scaleY(.1)}}
+@keyframes yj-think {0%,100%{transform:rotate(-3deg)}40%,65%{transform:rotate(-7deg)}}
+@keyframes yj-squint {0%,100%{transform:scaleY(1)}40%,65%{transform:scaleY(.6)}}
+@keyframes yj-nod {0%,100%{transform:translateY(0)}35%{transform:translateY(4px) rotate(4deg)}70%{transform:translateY(-1px) rotate(-2deg)}}
+@keyframes yj-shake {0%,100%{transform:translateX(0)}20%{transform:translateX(-3px)}40%{transform:translateX(3px)}60%{transform:translateX(-2px)}80%{transform:translateX(1px)}}
+@media (prefers-reduced-motion:reduce) {.youju-character *{animation:none!important;transition:none!important;}.youju-character[data-state='thinking'] .yj-head{transform:rotate(-6deg);}}
+/* The SVG container stays anchored; only the face performs. */
+.youju-character.welcome-character,.youju-character.loading-character,.youju-character.clarification-character {animation:none;}

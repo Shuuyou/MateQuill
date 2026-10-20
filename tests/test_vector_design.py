@@ -21,6 +21,15 @@ def sample():
     return task, result
 
 
+def test_editorial_spine_is_short_section_title_instead_of_raw_prompt():
+    task,result=sample()
+    task.scene='给大学生做一张HUAWEI MateBook 14海报主题是图书馆写论文'
+    doc=compose_vector_poster(task,result,PosterBrief(direction='editorial'))
+    index=next(layer for layer in doc.layers if layer.name=='场景索引')
+    assert index.text=='学习日常'
+    assert task.scene not in doc.model_dump_json()
+
+
 @pytest.mark.parametrize('preset', ['portrait','square','story','landscape','a4'])
 @pytest.mark.parametrize('direction', ['minimal','editorial','bold'])
 def test_vector_artboards_preserve_complete_content_and_provenance(preset, direction):

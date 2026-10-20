@@ -1,0 +1,235 @@
+"use client";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { createPoster, getPoster, getRun, intake, runTask } from "@/lib/api";
+import type {
+  MediaIntake,
+  PosterResponse,
+  Question,
+  RunResult,
+  RunTask,
+} from "@/lib/types";
+interface SavedCreation {
+  query: string;
+  answers: Record<string, string>;
+  media: MediaIntake[];
+  result: RunResult | null;
+  task: RunTask | null;
+  poster: PosterResponse | null;
+  history: { id: string; title: string; at: string; task?: RunTask }[];
+}
+const KEY = "matequill-creation-v2";
+const initial: SavedCreation = {
+  query: "",
+  answers: {},
+  media: [],
+  result: null,
+  task: null,
+  poster: null,
+  history: [],
+};
+export function useCreation() {
+  const [data, setData] = useState<SavedCreation>(initial);
+  const [questions, setQuestions] = useState<Question[]>([]);
+  const [phase, setPhase] = useState<"idle" | "understanding" | "generating">(
+    "idle",
+  );
+  const [error, setError] = useState("");
+  const [hydrated, setHydrated] = useState(false);
+  const active = useRef(false);
+  useEffect(() => {
+    try {
+      const value = JSON.parse(sessionStorage.getItem(KEY) || "null");
+      if (
+        value &&
+        typeof value.query === "string" &&
+        Array.isArray(value.history)
+      )
+        setData({ ...initial, ...value });
+    } catch {
+      /* A damaged draft should not prevent a new creation. */
+    }
+    setHydrated(true);
+  }, []);
+  useEffect(() => {
+    if (hydrated) {
+      try {
+        sessionStorage.setItem(KEY, JSON.stringify(data));
+      } catch {
+        /* The current draft stays available in memory. */
+      }
+    }
+  }, [data, hydrated]);
+  const update = useCallback(
+    (
+      patch:
+        | Partial<SavedCreation>
+        | ((previous: SavedCreation) => Partial<SavedCreation>),
+    ) =>
+      setData((previous) => ({
+        ...previous,
+        ...(typeof patch === "function" ? patch(previous) : patch),
+      })),
+    [],
+  );
+  const remember = (result: RunResult, task: RunTask) =>
+    setData((previous) => ({
+      ...previous,
+      result,
+      task,
+      history: [
+        {
+          id: result.run_id,
+          title: result.title || task.product,
+          at: new Date().toISOString(),
+          task,
+        },
+        ...previous.history.filter((item) => item.id !== result.run_id),
+      ].slice(0, 12),
+    }));
+  async function generate(task: RunTask) {
+    setPhase("generating");
+    if (task.platform === "poster") {
+      const poster = await createPoster(task);
+      setData((previous) => ({
+        ...previous,
+        result: null,
+        poster,
+        task,
+        history: [
+          {
+            id: `poster:${poster.id}`,
+            title: task.product + " · 海报",
+            at: new Date().toISOString(),
+            task,
+          },
+          ...previous.history,
+        ].slice(0, 12),
+      }));
+      return;
+    }
+    update({ poster: null });
+    const result = await runTask(task);
+    remember(result, task);
+  }
+  async function resolve(extra: Record<string, string> = {}) {
+    if (active.current || (!data.query.trim() && !data.media.length)) return;
+    active.current = true;
+    setError("");
+    setPhase("understanding");
+    const answers = { ...data.answers, ...extra };
+    update({ answers });
+    try {
+      const observations = data.media
+        .filter((item) => item.kind === "photo")
+        .map((item) => item.observations?.caption)
+        .filter(Boolean);
+      const query =
+        [
+          data.query.trim(),
+          observations.length
+            ? `附加门店照片场景：${observations.join("；")}`
+            : "",
+        ]
+          .filter(Boolean)
+          .join("\n") || "请根据上传的门店素材创作一篇推广内容";
+      const response = await intake(query, "local", answers);
+      if (response.status === "clarify") {
+        setQuestions(response.questions);
+        return;
+      }
+      setQuestions([]);
+      const task: RunTask = {
+        ...response.task,
+        mode: "local",
+        media_ids: data.media.map((item) => item.id),
+      };
+      update({ task });
+      await generate(task);
+    } catch (reason) {
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : "这次内容没有完成，需求已经保留，可以再试一次。",
+      );
+    } finally {
+      active.current = false;
+      setPhase("idle");
+    }
+  }
+  async function direct(task: RunTask) {
+    if (active.current) return;
+    active.current = true;
+    setError("");
+    setQuestions([]);
+    update({ task, query: task.scene, result: null, poster: null });
+    try {
+      await generate(task);
+    } catch (reason) {
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : "这次内容没有完成，请再试一次。",
+      );
+    } finally {
+      active.current = false;
+      setPhase("idle");
+    }
+  }
+  async function revise(instruction: string) {
+    if (!data.task) return;
+    await direct({
+      ...data.task,
+      requirements: [data.task.requirements, `本次修改：${instruction}`]
+        .filter(Boolean)
+        .join("\n"),
+    });
+  }
+  async function reopen(id: string) {
+    setError("");
+    try {
+      if (id.startsWith("poster:"))
+        update({
+          poster: await getPoster(id.slice(7)),
+          result: null,
+          task: data.history.find((item) => item.id === id)?.task || null,
+        });
+      else
+        update({
+          result: await getRun(id),
+          poster: null,
+          task: data.history.find((item) => item.id === id)?.task || null,
+        });
+    } catch (reason) {
+      setError(
+        reason instanceof Error ? reason.message : "这份记录暂时无法打开。",
+      );
+    }
+  }
+  function reset() {
+    setQuestions([]);
+    setError("");
+    update({
+      query: "",
+      media: [],
+      answers: {},
+      result: null,
+      poster: null,
+      task: null,
+    });
+  }
+  return {
+    ...data,
+    questions,
+    phase,
+    error,
+    hydrated,
+    update,
+    resolve,
+    direct,
+    revise,
+    reopen,
+    reset,
+    clearQuestions: () => setQuestions([]),
+    clearError: () => setError(""),
+  };
+}

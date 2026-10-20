@@ -1,0 +1,13 @@
+:root {--motion-fast:140ms;--motion-base:260ms;--ease-emphasized:cubic-bezier(.2,.8,.2,1);}
+.motion-tabs {position:relative;isolation:isolate;}
+.motion-tabs::after {content:'';position:absolute;pointer-events:none;left:0;top:var(--tab-top,0);width:var(--tab-width,0);height:2px;background:var(--accent,#36552b);border-radius:2px;transform:translateX(var(--tab-left,0));transition:transform var(--motion-base) var(--ease-emphasized),width var(--motion-base) var(--ease-emphasized),top var(--motion-base) var(--ease-emphasized);}
+.motion-tabs button,.motion-tabs button.selected {border-bottom-color:transparent;transition:color var(--motion-fast),background var(--motion-fast);}
+button {transition:background-color var(--motion-fast),color var(--motion-fast),border-color var(--motion-fast),box-shadow var(--motion-fast),transform var(--motion-fast);}
+button:active:not(:disabled) {transform:translateY(1px);}
+.brief {transition:border-color var(--motion-base),box-shadow var(--motion-base);}
+.brief:focus-within {box-shadow:0 3px 0 #d5ed83,0 0 0 3px #d5ed8326;}
+dialog[open] {animation:dialog-enter 240ms var(--ease-emphasized) both;}
+dialog[open]::backdrop {animation:backdrop-enter 180ms ease both;}
+@keyframes dialog-enter {from{opacity:0;transform:translateY(10px) scale(.985)}to{opacity:1;transform:none}}
+@keyframes backdrop-enter {from{background:transparent}}
+@media(prefers-reduced-motion:reduce){.motion-tabs::after,button,.brief{transition:none!important;}dialog[open],dialog[open]::backdrop{animation:none!important;}}

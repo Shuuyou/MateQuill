@@ -87,6 +87,11 @@ def compose_vector_poster(task, result, brief: PosterBrief | dict) -> PosterDocu
     brand = brief.brand_name or task_data.get('product', '')
     cta = brief.cta or source.get('cta') or '到店体验你的真实任务'
     blocks = source.get('blocks', [])[:3]
+    audience = str(task_data.get('audience', ''))
+    # The spine is an editorial section title, never the user's full command.
+    section_title = ('学习日常' if any(w in audience for w in ('学生','校园','家长')) else
+                     '创作日常' if any(w in audience for w in ('创作','设计','摄影')) else
+                     '工作日常' if any(w in audience for w in ('商务','职场','办公','出差')) else '灵感日常')
 
     def benefits(boxes, size=23, color=fg):
         for number, (block, box) in enumerate(zip(blocks, boxes), 1):
@@ -120,7 +125,7 @@ def compose_vector_poster(task, result, brief: PosterBrief | dict) -> PosterDocu
         rule('编辑页眉线', .065,.092,.87, accent)
         if landscape:
             shape('编辑侧栏', (.065,.13,.24,.73), accent, role='vector_motif')
-            text('场景索引', task_data.get('scene') or brief.purpose, (.085,.17,.19,.22), 68,
+            text('场景索引', section_title, (.085,.17,.19,.22), 68,
                  color='#FFFFFF', family='serif', role='design_annotation')
             benefits([(.085,.45+i*.12,.18,.105) for i in range(3)], 22, '#FFFFFF')
             text('编辑主标题', headline, (.36,.14,.57,.25), 92, family='serif', weight=700, role='headline')
@@ -130,7 +135,7 @@ def compose_vector_poster(task, result, brief: PosterBrief | dict) -> PosterDocu
         else:
             # The left column is a publication spine, not a rounded UI card.
             shape('编辑书脊', (.065,.14,.19,.73), accent, role='vector_motif')
-            text('场景索引', task_data.get('scene') or brief.purpose, (.084,.17,.15,.14), 48,
+            text('场景索引', section_title, (.084,.17,.15,.14), 48,
                  color='#FFFFFF', family='serif', role='design_annotation')
             benefits([(.084,.365+i*.155,.15,.13) for i in range(3)], 22, '#FFFFFF')
             text('编辑主标题', headline, (.31,.14,.625,.24), 96, family='serif', weight=700, role='headline')

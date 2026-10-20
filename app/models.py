@@ -17,6 +17,8 @@ class TaskInput(BaseModel):
     creative_connector: str = Field(default='auto', max_length=100)
     creative_style: str = Field(default='auto', max_length=100)
     mode: Literal['local', 'demo', 'live'] = 'local'
+    ecosystem_products: list[str] = Field(default_factory=list, max_length=4)
+    media_ids: list[str] = Field(default_factory=list, max_length=12)
 
 
 class Fact(BaseModel):
@@ -70,6 +72,7 @@ class EvidenceBundle(BaseModel):
     conflicts: list[str] = Field(default_factory=list)
     verified_live: bool = False
     verified_local: bool = False
+    user_materials: list[dict] = Field(default_factory=list)
 
 
 class ContentBlock(BaseModel):

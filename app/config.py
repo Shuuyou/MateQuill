@@ -18,6 +18,9 @@ class Settings:
     image_api_key: str = field(default_factory=lambda: os.getenv('IMAGE_API_KEY', ''))
     image_model: str = field(default_factory=lambda: os.getenv('IMAGE_MODEL', 'gpt-image-2.5'))
     image_review_model: str = field(default_factory=lambda: os.getenv('IMAGE_REVIEW_MODEL', ''))
+    asr_base_url: str = field(default_factory=lambda: os.getenv('ASR_BASE_URL', ''))
+    asr_api_key: str = field(default_factory=lambda: os.getenv('ASR_API_KEY', ''))
+    asr_model: str = field(default_factory=lambda: os.getenv('ASR_MODEL', ''))
     allow_local_settings: bool = field(default_factory=lambda: os.getenv('ALLOW_LOCAL_SETTINGS', '1') == '1')
     max_media_bytes: int = 12 * 1024 * 1024
     max_directory_items: int = 1800
@@ -30,6 +33,7 @@ class Settings:
         return {'ima_configured': self.ima_ready, 'llm_configured': bool(self.llm_api_key),
                 'image_configured': bool(self.image_api_key), 'image_model': self.image_model,
                 'image_review_model': self.image_review_model,
+                'asr_configured': bool(self.asr_base_url and self.asr_model),
                 'knowledge_base': self.ima_kb_name, 'llm_model': self.llm_model,
                 'local_settings_enabled': self.allow_local_settings}
 

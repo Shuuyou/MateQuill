@@ -57,6 +57,8 @@ def image_editorial_audit(result, bundle):
             add('error', '普通外观图只作封面或产品总览，不能随意插入功能论述段落')
         if any(fid not in facts for fid in item.supported_fact_ids):
             add('error', '图片关联了不存在的事实 ID')
+        if asset.provenance == 'store_upload' and item.supported_fact_ids:
+            add('error', '门店上传照片用于场景表达，不能作为产品参数或功能的证明')
         if item.block_index is not None and item.block_index < len(result.blocks):
             block = result.blocks[item.block_index]
             if any(fid not in block.fact_ids for fid in item.supported_fact_ids):

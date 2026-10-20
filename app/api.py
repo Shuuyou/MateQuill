@@ -189,6 +189,9 @@ async def run_task(task: TaskInput, request: Request):
     if task.mode == 'local' and not settings.llm_api_key:
         raise HTTPException(400,'本地正式模式仅需配置模型服务，无需 ima 凭证')
     provider = get_demo() if task.mode == 'demo' else get_local() if task.mode == 'local' else ima
+    if task.ecosystem_products or task.media_ids:
+        from .task_context import TaskContextProvider
+        provider = TaskContextProvider(provider, task)
     llm = OpenAICompatibleLLM(settings.llm_base_url,settings.llm_api_key,settings.llm_model)
     try:
         async with semaphore:
@@ -216,9 +219,20 @@ async def run_task(task: TaskInput, request: Request):
     run_id = record.get('id') or record.get('run_id')
     if run_id:
         runs[run_id] = record
+        from .run_records import save_run
+        save_run(run_id, record)
         while len(runs)>100:
             runs.popitem(last=False)
     return JSONResponse(record)
+
+
+@app.get('/api/runs/{run_id}')
+async def read_run(run_id: str):
+    from .run_records import load_run
+    record = runs.get(run_id) or load_run(run_id)
+    if record is None:
+        raise HTTPException(404, '没有找到这次创作，可以用保留的需求重新开始')
+    return JSONResponse(record, headers={'Cache-Control':'private, no-store'})
 
 
 @app.get('/api/assets/{asset_id}')
@@ -226,6 +240,12 @@ async def asset(asset_id: str):
     if not asset_id or len(asset_id)>120 or '/' in asset_id or '..' in asset_id:
         raise HTTPException(404,'素材不存在')
     try:
+        if asset_id.startswith('upload-'):
+            from .media_routes import media_store
+            record = media_store().get(asset_id.removeprefix('upload-'))
+            if record and record[1].startswith('image/'):
+                return FileResponse(record[0], media_type=record[1], headers={
+                    'Cache-Control':'private, no-store', 'X-Content-Type-Options':'nosniff'})
         if asset_id in ima.assets:
             data,mime = await ima.get_asset(asset_id)
             return Response(data,media_type=mime,headers={'Cache-Control':'private, max-age=120',
@@ -285,7 +305,8 @@ def markdown_export(record):
 
 @app.get('/api/runs/{run_id}/export')
 async def export(run_id:str,format:str='md'):
-    record = runs.get(run_id)
+    from .run_records import load_run
+    record = runs.get(run_id) or load_run(run_id)
     if not record:
         raise HTTPException(404,'运行记录不存在或服务已重启')
     if format not in ('md','html','json'):
@@ -323,6 +344,12 @@ from .poster_routes import router as poster_router
 app.include_router(poster_router)
 from .creative_routes import router as creative_router
 app.include_router(creative_router)
+from .media_routes import router as media_router
+from .campaign_routes import router as campaign_router
+from .product_routes import router as product_router
+app.include_router(media_router)
+app.include_router(campaign_router)
+app.include_router(product_router)
 
 if (ROOT/'web').is_dir():
     app.mount('/',StaticFiles(directory=ROOT/'web',html=True),name='web')

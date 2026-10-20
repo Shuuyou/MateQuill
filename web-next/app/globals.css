@@ -1,0 +1,166 @@
+@import "tailwindcss/theme.css" layer(theme);
+@import "tailwindcss/utilities.css" layer(utilities);
+
+/* 设计 token 与旧版保持一致；页面样式沿用 web/legacy 下的既有 CSS。 */
+@theme {
+  --color-canvas: #faf9f5;
+  --color-paper: #ffffff;
+  --color-ink: #24261f;
+  --color-secondary: #555b4d;
+  --color-line: #d4d7cd;
+  --color-soft: #e6e8e0;
+  --color-accent: #285d3d;
+  --color-selected: #e9f0db;
+}
+
+:root {
+  --font-ui: "Noto Sans SC Variable", "Microsoft YaHei", sans-serif;
+  --font-display: "Scene Display", "Noto Sans SC Variable", sans-serif;
+}
+
+/* ---- 迁移期补充样式（旧版没有对应类时使用） ---- */
+.mq-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  background: #24261f55;
+  padding: 24px;
+}
+.mq-modal-card {
+  width: min(560px, 100%);
+  max-height: 86vh;
+  overflow: auto;
+  background: #fffefa;
+  border: 1px solid #d4d7cd;
+  border-radius: 16px;
+  padding: 28px;
+}
+.mq-modal-card h2 {
+  font-family: var(--font-display);
+  font-size: 26px;
+  margin: 0 0 6px;
+}
+.mq-settings {
+  display: grid;
+  gap: 14px;
+  margin-top: 18px;
+}
+.mq-settings label {
+  display: grid;
+  gap: 6px;
+  font-size: 15px;
+}
+.mq-settings input {
+  width: 100%;
+  border: 1px solid #a4ab9b;
+  border-radius: 9px;
+  padding: 10px 12px;
+  font: inherit;
+  background: #fff;
+}
+.mq-modal-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.catalog-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 14px;
+  margin-top: 8px;
+}
+.catalog-card {
+  display: grid;
+  gap: 6px;
+  text-align: left;
+  background: #fff;
+  border: 1px solid #dfe4d6;
+  border-radius: 14px;
+  padding: 18px 20px;
+  cursor: pointer;
+  transition:
+    border-color 0.16s ease,
+    transform 0.16s ease;
+}
+.catalog-card:hover {
+  border-color: #285d3d;
+  transform: translateY(-1px);
+}
+.catalog-card strong {
+  font-size: 17px;
+  font-weight: 600;
+}
+.catalog-card span {
+  font-size: 14px;
+  color: #6b7365;
+}
+
+.history-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 8px;
+  padding: 0;
+  list-style: none;
+}
+.history-list li {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.result-intro {
+  font-size: 18px;
+  line-height: 1.9;
+}
+.result-cta {
+  margin-top: 18px;
+  padding: 12px 16px;
+  background: #f3f6ec;
+  border-radius: 10px;
+  font-size: 16px;
+}
+.fact-note {
+  font-size: 14px;
+  color: #6b7365;
+  margin-top: -4px;
+}
+.result-images {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+  margin-top: 22px;
+}
+.result-images figure {
+  margin: 0;
+}
+.result-images img {
+  width: 100%;
+  border-radius: 10px;
+  border: 1px solid #e6e8e0;
+}
+.result-images figcaption {
+  font-size: 13px;
+  color: #6b7365;
+  margin-top: 6px;
+}
+.strategy-list {
+  display: grid;
+  gap: 10px;
+}
+.strategy-list dt {
+  font-size: 14px;
+  color: #6b7365;
+}
+.strategy-list dd {
+  margin: 0 0 6px;
+  font-size: 16px;
+}
+.evidence-inline {
+  margin-top: 18px;
+  border-top: 1px solid #e6e8e0;
+  padding-top: 14px;
+}

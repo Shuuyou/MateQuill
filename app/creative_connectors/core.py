@@ -163,7 +163,7 @@ class EditorialConnector:
                     add('error', 'photo_truth', f'{card.id}声称真实实拍但没有对应素材。')
                 for aid in card.asset_ids:
                     asset = assets.get(aid)
-                    if asset and _get(asset,'provenance','') not in ('user_photo','authorized_photo','real_photo'):
+                    if asset and _get(asset,'provenance','') not in ('user_photo','authorized_photo','real_photo','store_upload'):
                         add('error', 'photo_truth', f'{card.id}将未核实的来源素材标为真实实拍。')
             if card.block_index is not None and result is not None:
                 if card.block_index >= len(_get(result,'blocks',[])):

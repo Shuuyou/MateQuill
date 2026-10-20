@@ -501,17 +501,17 @@
       "name": "小红书",
       "structure": "问题切入 → 场景短段 → 选购建议",
       "tone": "口语、真实，不伪造亲测",
-      "min_images": 3,
+      "min_images": 1,
       "max_images": 6,
-      "cta": "收藏选购清单，到店验证使用场景"
+      "cta": "围绕一个具体任务展开交流"
     },
     "wechat": {
       "name": "公众号",
       "structure": "导语 → 场景分析 → 分节证据 → 选购建议",
       "tone": "清晰、有信息密度",
-      "min_images": 2,
+      "min_images": 1,
       "max_images": 4,
-      "cta": "预约场景体验并咨询具体配置"
+      "cta": "围绕本文任务咨询一个具体问题"
     },
     "moments": {
       "name": "门店朋友圈",
