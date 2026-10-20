@@ -380,9 +380,9 @@ class AgentWorkflow:
             result.audit.append(AuditItem(severity='error',category='model',message='未配置可调用模型，正式模式不能用模板代替真实生成和审计'))
             return result
         creative_plan_errors=[]
-        model_omitted_images = False
+        cover_assembly_allowed = False
         def apply(data):
-            nonlocal creative_plan_errors, model_omitted_images
+            nonlocal creative_plan_errors, cover_assembly_allowed
             creative_plan_errors=[]
             # A repair replaces the plan. Never retain stale cards from a prior
             # draft when the repaired model response omits them.
@@ -413,7 +413,24 @@ class AgentWorkflow:
             result.tags=[str(x) for x in data.get('tags',[])]
             result.blocks=[ContentBlock.model_validate(x) for x in data.get('blocks',[])]
             result.images=bind_legacy_images([ImagePlacement.model_validate(x) for x in data.get('images',[])],len(result.blocks))
-            model_omitted_images = not result.images
+            # Editorial cleanup may remove a valid product overview that the
+            # model incorrectly positioned as a detail image. Reassemble only
+            # when all original references themselves were legitimate; never
+            # hide an unknown ID, wrong model, missing source or unverified item.
+            by_asset_id = {asset.id: asset for asset in bundle.assets}
+            source_ids = {source.id for source in bundle.sources}
+            fact_ids = {fact.id for fact in bundle.facts}
+            selected_products = {norm(task.product), *(norm(name) for name in task.ecosystem_products)}
+            cover_assembly_allowed = all(
+                (asset := by_asset_id.get(image.asset_id)) is not None
+                and norm(asset.product) in selected_products
+                and asset.source_id in source_ids and asset.verified
+                and asset.provenance in ('local_archive', 'huawei_official', 'store_upload')
+                and re.fullmatch(r'[0-9a-f]{64}', asset.sha256)
+                and set(image.supported_fact_ids).issubset(fact_ids)
+                for image in result.images)
+            if len({image.asset_id for image in result.images}) != len(result.images):
+                cover_assembly_allowed = False
             if isinstance(data.get('content_plan'),dict):
                 result.content_plan={k:v for k,v in data['content_plan'].items() if k in {
                     'title_candidates','hook','reader_value','cover_copy','image_brief','interaction_goal','publication_note'}}
@@ -422,7 +439,7 @@ class AgentWorkflow:
         try:
             if enabled:
                 apply(await self.llm.generate(task,bundle,result.strategy))
-                if model_omitted_images and await self._official_cover(task, result, bundle):
+                if cover_assembly_allowed and await self._official_cover(task, result, bundle):
                     trace('cover_assembly','已从本次同型号官方素材中选入哈希匹配且已审阅的产品封面，随后执行完整审查')
                 result.model_used=getattr(self.llm,'model','configured-model')
             else:
@@ -459,7 +476,7 @@ class AgentWorkflow:
                 trace('semantic_verification','完成独立语义事实核验')
                 if (any(a.severity=='error' for a in result.audit) or any(a.severity=='warning' for a in result.editorial_review)) and hasattr(self.llm,'repair'):
                     apply(await self.llm.repair(task,bundle,result.strategy,result))
-                    if model_omitted_images and await self._official_cover(task, result, bundle):
+                    if cover_assembly_allowed and await self._official_cover(task, result, bundle):
                         trace('cover_assembly','修订稿选入本次已核对官方产品封面，随后重新执行完整审查')
                     result.audit=[a for a in result.audit if a.category=='retrieval']
                     result.audit.extend(self._audit(task,result,bundle))

@@ -23,7 +23,7 @@ SCENES=[
   '新品知识不必等待模型更新。加入最新产品资料，预览型号、事实和原文，再确认入库。内容创作由最新资料承接，每项产品信息可以追到具体来源。电脑、手机和平板，沿用同一套知识流程。'),
  ('从一台设备，\n讲完整一件事。','围绕顾客任务组织华为生态内容。','ecosystem-result-final.png',
   '社团策划从手机收集灵感，到电脑写成方案，再用平板通读。生态内容围绕这个完整任务展开。每项参数归属于对应设备，跨设备剪贴板关联具体操作条件，让功能介绍变成清楚的使用方法。'),
- ('这张海报，\n由你定稿。','修改文字、字体和位置 · 撤销重做 · 导出','poster-editor-final.png',
+ ('这张海报，\n由你定稿。','文字 · 字体 · 位置\n撤销重做 · 多格式导出','poster-editor-final.png',
   '内容生成之后，销售员可以继续决定它的样子。海报里的文字、字号、颜色和位置都能调整，支持撤销重做。PNG用于分享，SVG和设计文档保留后续编辑空间。文字和画面，最终交付在一起。'),
  ('好体验，\n也要有好工程。','Next.js 16 · 类型化接口 · 模块化工作流','home-desktop-final.png',
   '前端采用Next.js十六，媒体输入、门店策划、新品知识和生成工作流分开维护。事实、创意和审校各有职责，记录与画像持久保存。自动化测试和持续集成，让产品可以在复赛之后继续迭代。'),
@@ -64,8 +64,7 @@ def main():
  timeline=[];subtitles=[];elapsed=0
  for number,(title,summary,screenshot,narration) in enumerate(SCENES,1):
   image=Image.new('RGB',(1920,1080),'#f8f7f1');draw=ImageDraw.Draw(image)
-  draw.rounded_rectangle((74,62,126,114),radius=16,fill='#d6ed86')
-  draw.text((147,65),'MateQuill',font=brand,fill='#242b23')
+  draw.text((82,65),'MateQuill',font=brand,fill='#242b23')
   draw.text((1640,73),f'{number:02} / {len(SCENES):02}',font=small,fill='#52614f')
   y=260
   for line in wrap(title,title_font,575,draw):draw.text((82,y),line,font=title_font,fill='#242b23');y+=88

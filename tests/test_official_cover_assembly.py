@@ -108,6 +108,45 @@ def test_invalid_explicit_selection_is_not_replaced_to_hide_an_error(cover_setup
     assert not any(trace.stage == 'cover_assembly' for trace in result.trace)
 
 
+def test_legitimate_overview_removed_from_detail_position_is_reassembled_as_cover(cover_setup):
+    bundle, provider, model, task, _, _ = cover_setup
+    original = model.generate
+    async def misplaced_overview(*args):
+        draft = await original(*args)
+        draft['images'] = [{'asset_id': 'official-cover', 'caption': '产品资料图',
+                            'position': '正文第1段', 'block_index': 0, 'role': 'detail',
+                            'reason': '展示产品外观'}]
+        return draft
+    model.generate = misplaced_overview
+    result = asyncio.run(AgentWorkflow(provider, model).run(task))
+    assert result.status == 'ready'
+    assert model.reviewed_image_ids == [['official-cover']]
+    assert len(result.images) == 1 and result.images[0].role == 'cover'
+    assert result.images[0].block_index is None and result.images[0].supported_fact_ids == []
+    assert any(trace.stage == 'editorial_edit' for trace in result.trace)
+    assert any(trace.stage == 'cover_assembly' for trace in result.trace)
+
+
+@pytest.mark.parametrize('mutation', ['wrong_model', 'unverified', 'missing_source', 'unknown_id'])
+def test_invalid_original_detail_selection_does_not_enable_cover_replacement(cover_setup, mutation):
+    bundle, provider, model, task, _, _ = cover_setup
+    invalid = bundle.assets[0].model_copy(update={'id': 'bad-detail'})
+    if mutation == 'wrong_model': invalid.product = 'HUAWEI UnselectedBook'
+    if mutation == 'unverified': invalid.verified = False
+    if mutation == 'missing_source': invalid.source_id = 'missing-source'
+    if mutation != 'unknown_id': bundle.assets.append(invalid)
+    original = model.generate
+    async def wrong_detail(*args):
+        draft = await original(*args)
+        draft['images'] = [{'asset_id': 'bad-detail', 'caption': '产品图', 'position': '正文第1段',
+                            'block_index': 0, 'role': 'detail', 'reason': '展示产品'}]
+        return draft
+    model.generate = wrong_detail
+    result = asyncio.run(AgentWorkflow(provider, model).run(task))
+    assert result.status == 'blocked'
+    assert not any(trace.stage == 'cover_assembly' for trace in result.trace)
+
+
 def test_export_embeds_real_document_cover_even_without_a_storyboard_card(monkeypatch, cover_setup):
     from app import api
     bundle, _, _, _, _, raw = cover_setup

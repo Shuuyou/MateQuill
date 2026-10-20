@@ -2,9 +2,11 @@
 
 拍一张，说一句，把门店里的好故事讲给对的人。MateQuill 为华为门店销售员连接自然输入、门店选题、产品知识、图文创作与可编辑海报，覆盖电脑、手机和平板生态。
 
-由 Shuuyou 与 6TDooo 面向浙客松华为产业赛道构建。复赛采用 Next.js 16 + React 19 前端、FastAPI 工作流与 SQLite 持久化；后端已通过 406 项自动化测试。工程结构见 [复赛工程说明](docs/SEMIFINAL_ENGINEERING.md)，技术决策见 [复赛研究](docs/SEMIFINAL_RESEARCH.md)，视频分镜见 [复赛视频脚本](docs/SEMIFINAL_VIDEO.md)。初赛作品说明见 [作品说明书](docs/MateQuill-作品说明书.pdf)。
+由 Shuuyou 与 6TDooo 面向浙客松华为产业赛道构建。复赛采用 Next.js 16 + React 19 前端、FastAPI 工作流与 SQLite 持久化；后端已通过 411 项自动化测试。工程结构见 [复赛工程说明](docs/SEMIFINAL_ENGINEERING.md)，技术决策见 [复赛研究](docs/SEMIFINAL_RESEARCH.md)，视频分镜见 [复赛视频脚本](docs/SEMIFINAL_VIDEO.md)。初赛作品说明见 [作品说明书](docs/MateQuill-作品说明书.pdf)。
 
 ## 复赛产品能力
+
+[观看复赛讲解视频](docs/demo/MateQuill-semifinal.mp4) · [实际验收记录](docs/SEMIFINAL_VALIDATION.md)
 
 - **拍照、语音、文字三种入口**：上传场景照片或说出任务，确认转写，只在缺少关键信息时继续追问。
 - **千店千面**：保存门店人群、常见任务与表达习惯；同一推广任务形成不同切角、叙事与视觉规划，再生成各店成稿。
