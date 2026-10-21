@@ -1,4 +1,5 @@
 const API = process.env.API_ORIGIN ?? "http://127.0.0.1:8000";
+import { publicOrigin } from "./publicOrigin";
 type EditorPath =
   | "/api/settings"
   | "/api/knowledge/preview"
@@ -11,9 +12,9 @@ export async function forwardLocalEditor(
   maxLength: number,
 ) {
   const url = new URL(request.url);
-  const publicURL = new URL(
-    `${url.protocol}//${request.headers.get("host") || url.host}`,
-  );
+  const publicURL =
+    publicOrigin(process.env.MATEQUILL_PUBLIC_URL) ||
+    new URL(`${url.protocol}//${request.headers.get("host") || url.host}`);
   const origin = request.headers.get("origin");
   const fetchSite = request.headers.get("sec-fetch-site");
   if (

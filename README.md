@@ -6,7 +6,7 @@
 
 ## 复赛产品能力
 
-[观看复赛讲解视频](docs/demo/MateQuill-semifinal.mp4) · [实际验收记录](docs/SEMIFINAL_VALIDATION.md)
+[观看复赛讲解视频](docs/demo/MateQuill-semifinal.mp4) · [创作能力验收](docs/SEMIFINAL_VALIDATION.md) · [企业与门店协作验收](docs/TENANCY_VALIDATION_20261021.md)
 
 - **拍照、语音、文字三种入口**：上传场景照片或说出任务，确认转写，只在缺少关键信息时继续追问。
 - **千店千面**：保存门店人群、常见任务与表达习惯；同一推广任务形成不同切角、叙事与视觉规划，再生成各店成稿。
@@ -54,6 +54,8 @@ Linux 使用 `.venv/bin/python`。使用下方 Next.js 前端启动步骤打开�
 | `MATEQUILL_ALLOWED_ORIGINS` | 浏览器工作台的完整 Origin 白名单 |
 | `MATEQUILL_COOKIE_SECURE` | HTTPS 入口设为 `1` |
 | `MATEQUILL_DAILY_CREATIONS` | 企业每日创作额度，默认 100 次；失败释放额度 |
+| `MATEQUILL_BUSINESS_TIMEZONE` | 业务日时区，默认 `Asia/Shanghai` |
+| `MATEQUILL_PUBLIC_URL` | 可选的固定 HTTPS 入口，配置后 Next 将其他入口重定向到此地址 |
 
 变量配置模板为 `.env.example`。服务当前从进程环境读取；文件模板不会自动加载，以免误将本地文件当安全秘密管理服务。你可在进程启动器、systemd 受控环境或容器秘密管理中注入。
 

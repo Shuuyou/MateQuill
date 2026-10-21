@@ -18,3 +18,4 @@ argon2-cffi-bindings==26.1.0
 psycopg==3.3.6
 psycopg-binary==3.3.6
 Mako==1.4.3
+tzdata==2026.4

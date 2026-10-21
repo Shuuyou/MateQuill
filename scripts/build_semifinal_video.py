@@ -31,6 +31,26 @@ SCENES=[
   'MateQuill，让销售员少准备一点，让每家店多一点自己的表达。我们是Shuuyou和6TDooo。期待让门店里的好故事，被更多人看见。'),
 ]
 
+MULTITENANT_SCENES = [
+ ('总部有方向，\n门店有表达。','把一次新品推广，接成团队共同完成的工作。','tenant-home.png',
+  '门店每天接待顾客，也要写推广内容。MateQuill连接总部、门店和销售员。总部组织活动，店员从手边的照片和一句话开始，让内容真正进入日常工作。'),
+ ('一份活动，\n到每家门店。','活动版本 · 门店任务 · 执行进度','tenant-headquarters.png',
+  '总部选择准确产品和参与门店，发布一份活动。各店收到自己的任务，领取、创作和审核进度连在一起。产品资料更新时，可以发布新版本。这里的企业和门店，均为真实运行的演示配置。'),
+ SCENES[1], SCENES[2], SCENES[3], SCENES[4],
+ ('从一台设备，\n讲完整一件事。','电脑、手机和平板，围绕同一个顾客任务。','tenant-ecosystem.png',
+  '手机收集活动灵感，电脑编写社团策划，平板通读检查。这份内容由校园店员账号实际生成，保存在本店创作记录中。产品信息各自对应来源，文字和真实官方配图可以一同导出。'),
+ SCENES[6],
+ ('一起修改，\n一起定稿。','店员送审 → 店长批注 → 审核通过','tenant-review.png',
+  '店员送出实际生成的稿件，店长在本店工作台查看文字与配图，留下批注并审核。每次批准对应明确的内容版本。审稿时只开放这篇稿件使用的照片，原始私人素材仍按权限保存。'),
+ ('从完成创作，\n到完成任务。','发布确认与活动进度同步。','tenant-publication.png',
+  '审核通过后，销售员取得可以分享的内容，并登记实际发布情况。活动进度随之更新。人工发布确认保留平台和完成时间，让总部知道任务做到了哪一步。创作、审核和执行记录，形成一条清楚的工作线。'),
+ ('合作一场活动，\n各自经营门店。','定向共享活动，企业独立执行。','tenant-partner.png',
+  '独立合作企业通过定向邀请码接收活动，再分给自己的门店。共享的是活动版本和资料，各自的成员、私有成稿和经营记录分别保存。活动到期或撤回时，相关任务同步更新。'),
+ ('简单的操作，\n完整的支撑。','Next.js 16 · PostgreSQL · 持久化任务与权限','tenant-home.png',
+  '前端保留简洁输入和品牌动效。后台以企业、门店和成员组织权限，生成任务持久保存，刷新可以继续查看，已保存的结果能够恢复。自动化测试覆盖跨企业隔离、协作与任务恢复，让产品持续迭代。'),
+ SCENES[8],
+]
+
 def wrap(text,font,width,draw):
  lines=[]
  for paragraph in text.split('\n'):
@@ -49,8 +69,10 @@ def main():
  parser=argparse.ArgumentParser(description=__doc__)
  parser.add_argument('--screenshots',type=Path,required=True)
  parser.add_argument('--output',type=Path,default=ROOT/'output/semifinal')
+ parser.add_argument('--multitenant',action='store_true',help='Build the verified headquarters-to-store walkthrough')
  args=parser.parse_args();args.output.mkdir(parents=True,exist_ok=True)
- missing=[name for _,_,name,_ in SCENES if not (args.screenshots/name).is_file()]
+ scenes=MULTITENANT_SCENES if args.multitenant else SCENES
+ missing=[name for _,_,name,_ in scenes if not (args.screenshots/name).is_file()]
  if missing:raise SystemExit('Capture required real app screenshots first: '+', '.join(sorted(set(missing))))
  import win32com.client,imageio_ffmpeg
  ffmpeg=imageio_ffmpeg.get_ffmpeg_exe()
@@ -62,10 +84,10 @@ def main():
  title_font=ImageFont.truetype('C:/Windows/Fonts/simsun.ttc',62)
  brand=ImageFont.truetype('C:/Windows/Fonts/msyhbd.ttc',34)
  timeline=[];subtitles=[];elapsed=0
- for number,(title,summary,screenshot,narration) in enumerate(SCENES,1):
+ for number,(title,summary,screenshot,narration) in enumerate(scenes,1):
   image=Image.new('RGB',(1920,1080),'#f8f7f1');draw=ImageDraw.Draw(image)
   draw.text((82,65),'MateQuill',font=brand,fill='#242b23')
-  draw.text((1640,73),f'{number:02} / {len(SCENES):02}',font=small,fill='#52614f')
+  draw.text((1640,73),f'{number:02} / {len(scenes):02}',font=small,fill='#52614f')
   y=260
   for line in wrap(title,title_font,575,draw):draw.text((82,y),line,font=title_font,fill='#242b23');y+=88
   y+=38
@@ -94,7 +116,7 @@ def main():
    '-af','apad=pad_dur=1.8','-t',str(duration),'-c:v','libx264','-preset','veryfast','-tune','stillimage','-crf','23','-r','25','-pix_fmt','yuv420p','-c:a','aac','-b:a','128k',str(clip)],check=True)
   timeline.append({'scene':number,'start':elapsed,'duration':duration,'source':screenshot,'narration':narration});elapsed+=duration
   print('Rendered scene',number,round(duration,1),'seconds',flush=True)
- listing=args.output/'clips.txt';listing.write_text('\n'.join("file '"+f'clip-{n:02}.mp4'+"'" for n in range(1,len(SCENES)+1)),encoding='utf8')
+ listing=args.output/'clips.txt';listing.write_text('\n'.join("file '"+f'clip-{n:02}.mp4'+"'" for n in range(1,len(scenes)+1)),encoding='utf8')
  srt=args.output/'MateQuill-复赛演示.srt'
  srt.write_text('\n\n'.join(f'{i}\n{srt_time(a)} --> {srt_time(b)}\n{text}' for i,(a,b,text) in enumerate(subtitles,1)),encoding='utf8')
  silent=args.output/'narrated-master.mp4'

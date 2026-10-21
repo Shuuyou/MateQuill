@@ -3,7 +3,7 @@ import json
 import time
 from uuid import uuid4
 from fastapi import HTTPException
-from sqlalchemy import select, update
+from sqlalchemy import select, update, cast, func
 from sqlalchemy.exc import IntegrityError
 from .context import require_context, authorize_scope, MANAGERS
 from .database import resources, audit_events, db_connection
@@ -142,6 +142,31 @@ def list_resources(kind, action='read'):
                                   resources.c.tenant_id == context.tenant_id)
                                   .order_by(resources.c.created_at.desc())).mappings().all()
     return [_decode(row) for row in rows if _permitted(context, row, action)]
+
+
+def list_resource_headers(kind, limit=200):
+    """History never transfers embedded poster rasters into the API process."""
+    context = require_context()
+    if context.is_legacy:
+        return []
+    with db_connection() as connection:
+        if connection.dialect.name == 'postgresql':
+            from sqlalchemy.dialects.postgresql import JSONB
+            document = cast(resources.c.body, JSONB)
+            title, state = document['title'].astext, document['status'].astext
+        else:
+            title, state = func.json_extract(resources.c.body, '$.title'), func.json_extract(resources.c.body, '$.status')
+        columns = [column for column in resources.c if column.name != 'body']
+        query = select(*columns, title.label('title'), state.label('status')).where(
+            resources.c.kind == kind, resources.c.tenant_id == context.tenant_id)
+        query = query.order_by(resources.c.created_at.desc(), resources.c.id.desc())
+        result = []
+        for row in connection.execution_options(stream_results=True).execute(query).mappings():
+            if _permitted(context, row, 'read'):
+                result.append(dict(row))
+                if len(result) >= min(max(limit, 1), 200):
+                    break
+        return result
 
 
 def set_resource_visibility(kind, identifier, visibility):

@@ -65,6 +65,7 @@ export interface SourceItem {
 }
 
 export interface RunResult {
+  _poster_task?: RunTask;
   run_id: string;
   status: string;
   title?: string;

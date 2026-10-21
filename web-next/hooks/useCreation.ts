@@ -259,12 +259,17 @@ export function useCreation(scopeKey: string) {
           result: null,
           task: data.history.find((item) => item.id === id)?.task || null,
         });
-      else
+      else {
+        const result = await getRun(id);
         update({
-          result: await getRun(id),
+          result,
           poster: null,
-          task: data.history.find((item) => item.id === id)?.task || null,
+          task:
+            result._poster_task ||
+            data.history.find((item) => item.id === id)?.task ||
+            null,
         });
+      }
     } catch (reason) {
       setError(
         reason instanceof Error ? reason.message : "这份记录暂时无法打开。",

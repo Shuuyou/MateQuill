@@ -12,6 +12,7 @@ import json
 import os
 import time
 from uuid import uuid4
+from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel, Field
@@ -45,7 +46,7 @@ _active_reservation = ContextVar('matequill_active_reservation', default=None)
 
 
 def _day():
-    return datetime.now(timezone.utc).date().isoformat()
+    return datetime.now(ZoneInfo(os.getenv('MATEQUILL_BUSINESS_TIMEZONE', 'Asia/Shanghai'))).date().isoformat()
 
 
 @contextmanager

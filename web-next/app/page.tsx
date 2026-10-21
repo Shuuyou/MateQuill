@@ -53,7 +53,7 @@ export default function Page() {
   const [pendingTask, setPendingTask] = useState<RunTask | null>(null);
   const [expanded, setExpanded] = useState(false);
   const [historyItems, setHistoryItems] = useState<
-    { id: string; kind: string; title: string; created_at: string }[]
+    { id: string; kind: string; title: string; created_at: string | number }[]
   >([]);
   const [historyError, setHistoryError] = useState("");
   const busy = creation.phase !== "idle";
@@ -477,8 +477,18 @@ export default function Page() {
                       }}
                     >
                       <span>{item.title}</span>
-                      <time dateTime={item.created_at}>
-                        {new Date(item.created_at).toLocaleString("zh-CN", {
+                      <time
+                        dateTime={new Date(
+                          typeof item.created_at === "number"
+                            ? item.created_at * 1000
+                            : item.created_at,
+                        ).toISOString()}
+                      >
+                        {new Date(
+                          typeof item.created_at === "number"
+                            ? item.created_at * 1000
+                            : item.created_at,
+                        ).toLocaleString("zh-CN", {
                           month: "long",
                           day: "numeric",
                           hour: "2-digit",
