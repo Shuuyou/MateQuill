@@ -72,3 +72,13 @@ python -m pytest tests/test_tenancy_postgres.py -q
 Next 服务可设置 `MATEQUILL_PUBLIC_URL` 为固定 HTTPS 入口，将其他入口重定向到该地址；认证后端同时配置相同的 Origin 和 Secure cookie。入口必须来自运营配置，不能从任意请求头推导。
 
 2026-10-21 本轮发布仅覆盖本地、GitHub 与阿里云。魔搭创空间保留既有稳定演示版本，独立于新版发布，不执行上传、配置更新或重启。
+
+## 主机服务与凭据
+
+阿里云新版由 `matequill-channel.service` 管理，启用开机启动和失败重启；Python API 仅监听 loopback，Next 入口通过独立的 Tailscale HTTPS Serve 转发。该 HTTPS 地址供同一 tailnet 内的设备访问，HTTP 入口重定向至规范 HTTPS 地址。
+
+入口为 `https://mingcha-aliyun.tailcdb222.ts.net:8443/`，代理到 Next 7860，后端仅监听 `127.0.0.1:8002`。迁移所有者凭据独立保存，不交给应用运行。
+
+服务使用 `LoadCredentialEncrypted` 载入主机密钥加密的 provider 配置，由 `scripts/run_credential_service.py` 在进程内解析受限字段后启动服务。API Key 不写入 systemd 单元、源码或命令参数。加密文件与主机绑定，备份和迁移时须通过安全凭据流程重新配置。
+
+部署使用独立 PostgreSQL 数据库及受限应用角色，保留上一版 release。服务重启后应等待 `/health` 与外部 HTTPS 登录均就绪，再验收历史图片、导出、语音和新创作；`systemctl is-active` 仅代表服务进程已启动。

@@ -20,7 +20,7 @@ EXCLUDED = {"node_modules", ".next", ".git", "__pycache__", "evidence", ".env"}
 def package_source(destination: Path):
     with tarfile.open(destination, "w:gz") as archive:
         for name in ("app", "web", "web-next", "prompts", "data", "docs/PLAN.html", "scripts/run_services.py",
-                     "scripts/tenant_admin.py", "scripts/fetch_official_assets.py", "alembic.ini", "migrations",
+                     "scripts/tenant_admin.py", "scripts/fetch_official_assets.py", "scripts/run_credential_service.py", "alembic.ini", "migrations",
                      "requirements.txt", "constraints-runtime.txt", "Dockerfile"):
             folder = ROOT / name
             candidates = folder.rglob("*") if folder.is_dir() else [folder]

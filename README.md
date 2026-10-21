@@ -6,7 +6,7 @@
 
 ## 复赛产品能力
 
-[观看复赛讲解视频](docs/demo/MateQuill-semifinal.mp4) · [创作能力验收](docs/SEMIFINAL_VALIDATION.md) · [企业与门店协作验收](docs/TENANCY_VALIDATION_20261021.md)
+[观看企业与门店协作视频](docs/demo/MateQuill-multitenant.mp4) · [创作能力视频](docs/demo/MateQuill-semifinal.mp4) · [企业与门店协作验收](docs/TENANCY_VALIDATION_20261021.md) · [演示步骤](docs/TENANCY_DEMO_GUIDE.md)
 
 - **拍照、语音、文字三种入口**：上传场景照片或说出任务，确认转写，只在缺少关键信息时继续追问。
 - **千店千面**：保存门店人群、常见任务与表达习惯；同一推广任务形成不同切角、叙事与视觉规划，再生成各店成稿。
