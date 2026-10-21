@@ -19,7 +19,9 @@ EXCLUDED = {"node_modules", ".next", ".git", "__pycache__", "evidence", ".env"}
 
 def package_source(destination: Path):
     with tarfile.open(destination, "w:gz") as archive:
-        for name in ("app", "web", "web-next", "prompts", "data", "docs/PLAN.html", "scripts/run_services.py", "requirements.txt", "constraints-runtime.txt", "Dockerfile"):
+        for name in ("app", "web", "web-next", "prompts", "data", "docs/PLAN.html", "scripts/run_services.py",
+                     "scripts/tenant_admin.py", "scripts/fetch_official_assets.py", "alembic.ini", "migrations",
+                     "requirements.txt", "constraints-runtime.txt", "Dockerfile"):
             folder = ROOT / name
             candidates = folder.rglob("*") if folder.is_dir() else [folder]
             for path in candidates:
@@ -87,7 +89,7 @@ process=subprocess.Popen([str(root/'.venv/bin/python'),'scripts/run_services.py'
 for attempt in range(100):
     if process.poll() is not None: raise SystemExit('Release exited; inspect private service log')
     try:
-        with urllib.request.urlopen('http://127.0.0.1:{args.port}/api/status',timeout=2) as response:
+        with urllib.request.urlopen('http://127.0.0.1:{args.port}/api/auth/me',timeout=2) as response:
             health=json.load(response)
         with urllib.request.urlopen('http://127.0.0.1:{args.port}/',timeout=2) as response: html=response.read()
         assert b'/_next/' in html

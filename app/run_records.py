@@ -15,6 +15,12 @@ def connect(path=None):
 
 
 def save_run(identifier, record, path=None):
+    from .tenancy import get_context, save_body, audit
+    context = get_context()
+    if context is not None and not context.is_legacy and path is None:
+        save_body('run', identifier, record)
+        audit('creation.saved', 'run', identifier, {'status': record.get('status')})
+        return
     with connect(path) as conn:
         conn.execute('INSERT OR REPLACE INTO runs(id,body) VALUES(?,?)',
                      (identifier, json.dumps(record, ensure_ascii=False)))
@@ -24,6 +30,20 @@ def save_run(identifier, record, path=None):
 def load_run(identifier, path=None):
     if not re.fullmatch(r'[A-Za-z0-9_-]{1,120}', identifier):
         return None
+    from .tenancy import get_context, load_body
+    context = get_context()
+    if context is not None and not context.is_legacy and path is None:
+        return load_body('run', identifier)
     with connect(path) as conn:
         row = conn.execute('SELECT body FROM runs WHERE id=?', (identifier,)).fetchone()
     return json.loads(row[0]) if row else None
+
+
+def get_run(identifier):
+    """Never let the legacy process cache bypass resource ownership."""
+    from .tenancy import get_context
+    context = get_context()
+    if context is None or context.is_legacy:
+        from .api import runs
+        return runs.get(identifier) or load_run(identifier)
+    return load_run(identifier)

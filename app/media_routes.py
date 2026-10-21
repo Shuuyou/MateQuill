@@ -43,9 +43,15 @@ class MediaIntakeResult(BaseModel):
     error: MediaRecognitionError | None = None
 
 
-@lru_cache(maxsize=1)
+@lru_cache(maxsize=64)
+def _scoped_media_store(scope: str) -> MediaStore:
+    return MediaStore(ROOT / 'runtime' / 'media-intake' / scope)
+
+
 def media_store() -> MediaStore:
-    return MediaStore(ROOT / 'runtime' / 'media-intake')
+    from .tenancy import get_context
+    context = get_context()
+    return _scoped_media_store(context.tenant_id if context and not context.is_legacy else 'legacy')
 
 
 async def _bounded_form(request: Request):
@@ -72,7 +78,8 @@ async def _bounded_form(request: Request):
                      'file': {'type': 'string', 'format': 'binary'},
                      'kind': {'type': 'string', 'enum': ['photo', 'audio']}}}}}}})
 async def media_intake(request: Request):
-    identity = request.client.host if request.client else 'local'
+    from .resource_access import request_budget_key
+    identity = request_budget_key(request)
     now = time.monotonic()
     for key in list(_requests):
         _requests[key] = [stamp for stamp in _requests[key] if stamp > now - 60]
@@ -92,7 +99,10 @@ async def media_intake(request: Request):
         if len(raw) > MAX_UPLOAD_BYTES:
             raise HTTPException(413, '文件超过 12 MB，请缩小后上传')
         async with _gate:
-            return await process_media(raw, kind, settings, media_store())
+            result = await process_media(raw, kind, settings, media_store())
+            from .resource_access import ensure_live_context
+            ensure_live_context()
+            return result
     except MediaInputError as exc:
         raise HTTPException(422, str(exc)) from exc
     finally:

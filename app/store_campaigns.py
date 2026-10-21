@@ -76,6 +76,14 @@ MIGRATIONS = (
 
 class StoreRepository:
     def __init__(self, path=None):
+        # Explicit paths retain the pure repository fixture/legacy migration adapter.
+        # Authenticated business traffic always uses the shared tenant database.
+        from .tenancy import get_context
+        context = get_context()
+        self.scoped = path is None and context is not None and not context.is_legacy
+        if self.scoped:
+            self.path = None
+            return
         self.path = Path(path or os.getenv('MATEQUILL_STORE_DB', 'runtime/stores.sqlite3'))
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with self.connection() as connection:
@@ -100,6 +108,9 @@ class StoreRepository:
             connection.close()
 
     def list_stores(self):
+        if self.scoped:
+            from .tenancy import list_resources
+            return [row['body'] for row in list_resources('store')]
         with self.connection() as connection:
             rows = connection.execute('SELECT * FROM stores ORDER BY created_at,id').fetchall()
         return [self._store(row) for row in rows]
@@ -110,6 +121,21 @@ class StoreRepository:
                 'created_at': row['created_at'], 'updated_at': row['updated_at']}
 
     def save_store(self, profile: StoreInput, store_id=None):
+        if self.scoped:
+            from .tenancy import load_body, save_body, require_context
+            context = require_context()
+            roles = set(context.scoped_roles(store_id or context.store_id))
+            allowed = {'admin', 'operator', 'regional_manager', 'store_manager'} if store_id else {'admin', 'operator'}
+            if not roles.intersection(allowed):
+                from fastapi import HTTPException
+                raise HTTPException(403, '当前角色不能维护门店资料')
+            previous = load_body('store', store_id, action='edit') if store_id else None
+            now = datetime.now(timezone.utc).isoformat()
+            identifier = store_id or uuid4().hex
+            body = {**profile.model_dump(), 'id': identifier, 'tenant_id': context.tenant_id,
+                    'created_at': previous['created_at'] if previous else now, 'updated_at': now}
+            save_body('store', identifier, body, store_id=identifier, visibility='store')
+            return body
         now = datetime.now(timezone.utc).isoformat()
         body = json.dumps(profile.model_dump(), ensure_ascii=False)
         with self.connection() as connection:
@@ -124,6 +150,12 @@ class StoreRepository:
             return self._store(connection.execute('SELECT * FROM stores WHERE id=?', (store_id,)).fetchone())
 
     def save_campaign(self, plan):
+        if self.scoped:
+            from .tenancy import save_body, authorize_scope
+            for variant in plan.get('variants', []):
+                authorize_scope(variant['store_id'])
+            save_body('campaign_plan', plan['campaign_id'], plan, visibility='private')
+            return
         with self.connection() as connection:
             connection.execute('INSERT INTO campaigns VALUES (?,?,?)',
                                (plan['campaign_id'], json.dumps(plan, ensure_ascii=False),
@@ -134,6 +166,9 @@ class StoreRepository:
                                     json.dumps(variant, ensure_ascii=False)))
 
     def get_campaign(self, campaign_id):
+        if self.scoped:
+            from .tenancy import load_body
+            return load_body('campaign_plan', campaign_id)
         with self.connection() as connection:
             row = connection.execute('SELECT payload FROM campaigns WHERE id=?', (campaign_id,)).fetchone()
         if not row:

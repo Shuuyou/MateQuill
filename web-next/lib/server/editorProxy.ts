@@ -4,50 +4,41 @@ type EditorPath =
   | "/api/knowledge/preview"
   | "/api/knowledge/confirm";
 
-/** A closed set of local editor operations; ordinary API requests use rewrites. */
+/** Closed editor routes retain the browser session; the backend authorizes roles. */
 export async function forwardLocalEditor(
   request: Request,
   path: EditorPath,
   maxLength: number,
 ) {
   const url = new URL(request.url);
-  function loopback(host: string) {
-    const value = host.toLowerCase().replace(/^\[|\]$/g, "");
-    if (value === "localhost" || value === "::1") return true;
-    const ipv4 = value.replace(/^::ffff:/, "");
-    return isIP(ipv4) === 4 && ipv4.split(".")[0] === "127";
-  }
   const publicURL = new URL(
     `${url.protocol}//${request.headers.get("host") || url.host}`,
   );
   const origin = request.headers.get("origin");
-  const forwarded = request.headers.get("x-forwarded-for");
   const fetchSite = request.headers.get("sec-fetch-site");
   if (
-    !loopback(publicURL.hostname) ||
     !origin ||
     origin !== publicURL.origin ||
-    (fetchSite && fetchSite !== "same-origin") ||
-    (forwarded && forwarded.split(",").some((peer) => !loopback(peer.trim())))
+    (fetchSite && fetchSite !== "same-origin")
   ) {
     return Response.json(
-      { detail: "这项维护操作仅支持本机同源访问。" },
+      { detail: "请从当前工作空间提交这项操作。" },
       { status: 403 },
     );
   }
-  const upstream = new URL(API);
-  if (!loopback(upstream.hostname))
-    return Response.json(
-      { detail: "请通过本机工作空间维护资料与连接。" },
-      { status: 403 },
-    );
   const body = await request.text();
   if (body.length > maxLength)
     return Response.json({ detail: "内容过长，请分开保存。" }, { status: 413 });
   try {
     const response = await fetch(`${API}${path}`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Origin: upstream.origin },
+      headers: {
+        "Content-Type": "application/json",
+        Origin: origin,
+        Cookie: request.headers.get("cookie") || "",
+        "X-MateQuill-Workspace":
+          request.headers.get("x-matequill-workspace") || "",
+      },
       body,
       cache: "no-store",
     });
@@ -65,4 +56,3 @@ export async function forwardLocalEditor(
     );
   }
 }
-import { isIP } from "node:net";

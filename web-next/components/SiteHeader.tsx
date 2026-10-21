@@ -6,7 +6,7 @@ import { usePathname } from "next/navigation";
 const NAV = [
   { href: "/", label: "创作" },
   { href: "/catalog", label: "产品资料" },
-  { href: "/settings", label: "设置" },
+  { href: "/settings", label: "创作服务" },
 ];
 
 export default function SiteHeader() {

@@ -35,6 +35,22 @@ class LocalKnowledgeProvider(DemoProvider):
         expected = self._asset_digests.get(asset_id)
         if path and expected and path.is_file() and hashlib.sha256(path.read_bytes()).hexdigest()==expected:
             return path
+        # Persisted creations outlive the process-local retrieval cache. Restore
+        # only a public, hash-pinned official asset, never a caller-supplied path.
+        for row in self._records(self.assets_file, 'assets'):
+            digest = row.get('sha256', '')
+            if asset_id != 'official-' + digest[:20] or not official_url(row.get('source_url', '')):
+                continue
+            target = (ROOT / str(row.get('path') or row.get('local_path') or '')).resolve()
+            if not target.is_relative_to((ROOT / 'runtime/official-assets').resolve()) or not target.is_file():
+                continue
+            if target.suffix.lower() not in ('.png', '.jpg', '.jpeg', '.webp'):
+                continue
+            if hashlib.sha256(target.read_bytes()).hexdigest() != digest:
+                continue
+            self._assets[asset_id] = target
+            self._asset_digests[asset_id] = digest
+            return target
         return None
 
     @staticmethod

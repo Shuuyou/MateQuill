@@ -8,6 +8,7 @@ import type {
   StoreProfile,
 } from "@/lib/types";
 import Character from "./Character";
+import { useWorkspace } from "./WorkspaceProvider";
 
 export default function StoreCampaign({
   products,
@@ -16,6 +17,8 @@ export default function StoreCampaign({
   products: CatalogItem[];
   onGenerate: (task: RunTask) => void;
 }) {
+  const { scopeKey } = useWorkspace();
+  const savedKey = `matequill-campaign-v2:${scopeKey}`;
   const [profiles, setProfiles] = useState<StoreProfile[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
   const [adding, setAdding] = useState(false);
@@ -31,9 +34,7 @@ export default function StoreCampaign({
       .then((data) => setProfiles(data.stores))
       .catch((reason) => setError(reason.message));
     try {
-      const saved = JSON.parse(
-        sessionStorage.getItem("matequill-campaign-v1") || "null",
-      );
+      const saved = JSON.parse(sessionStorage.getItem(savedKey) || "null");
       if (saved) {
         setProduct(saved.product || "");
         setBrief(saved.brief || "");
@@ -45,19 +46,19 @@ export default function StoreCampaign({
       /* Start with an empty brief when the previous session is unavailable. */
     }
     setRestored(true);
-  }, []);
+  }, [savedKey]);
   useEffect(() => {
     if (restored) {
       try {
         sessionStorage.setItem(
-          "matequill-campaign-v1",
+          savedKey,
           JSON.stringify({ product, brief, platform, selected, plan }),
         );
       } catch {
         /* Keep the active plan in component state. */
       }
     }
-  }, [restored, product, brief, platform, selected, plan]);
+  }, [restored, product, brief, platform, selected, plan, savedKey]);
   async function add(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setBusy(true);
@@ -75,6 +76,7 @@ export default function StoreCampaign({
           .filter(Boolean),
       });
       setProfiles((previous) => [...previous, response]);
+      window.dispatchEvent(new Event("matequill-stores-updated"));
       setSelected((previous) => [...previous, response.id]);
       setAdding(false);
     } catch (reason) {

@@ -19,6 +19,8 @@ class TaskInput(BaseModel):
     mode: Literal['local', 'demo', 'live'] = 'local'
     ecosystem_products: list[str] = Field(default_factory=list, max_length=4)
     media_ids: list[str] = Field(default_factory=list, max_length=12)
+    store_id: str = Field(default='', max_length=100)
+    assignment_id: str = Field(default='', max_length=160)
 
 
 class Fact(BaseModel):

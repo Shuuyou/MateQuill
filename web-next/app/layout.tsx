@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import "./globals.css";
 import "./product.css";
+import "./workspace.css";
+import WorkspaceProvider from "@/components/WorkspaceProvider";
 
 export const metadata: Metadata = {
   title: "MateQuill · 场景有据",
@@ -17,7 +19,7 @@ export default function RootLayout({
       <body>
         <link rel="stylesheet" href="/fonts/mingcha-ui.css" />
         <link rel="stylesheet" href="/legacy/motion.css" />
-        {children}
+        <WorkspaceProvider>{children}</WorkspaceProvider>
       </body>
     </html>
   );

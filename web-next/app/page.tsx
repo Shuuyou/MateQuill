@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import IntakeComposer from "@/components/IntakeComposer";
 import Clarification from "@/components/Clarification";
 import ResultWorkbench from "@/components/ResultWorkbench";
@@ -12,28 +11,51 @@ import Character from "@/components/Character";
 import { Icon } from "@/components/Icons";
 import { catalog } from "@/lib/api";
 import { useCreation } from "@/hooks/useCreation";
-import type { CatalogItem, RunTask } from "@/lib/types";
+import type { CatalogItem, RunTask, StoreProfile } from "@/lib/types";
+import type { StoreAssignment } from "@/lib/channel";
+import { workspaceRequest } from "@/lib/workspace";
+import { useWorkspace } from "@/components/WorkspaceProvider";
+import WorkspaceMenu from "@/components/WorkspaceMenu";
+import ChannelWorkspace from "@/components/ChannelWorkspace";
+import TeamWorkspace from "@/components/TeamWorkspace";
+import CreationSubmission from "@/components/CreationSubmission";
+import ChooseCreationStore from "@/components/ChooseCreationStore";
 
-type View = "create" | "history" | "campaign" | "catalog";
+type View = "create" | "history" | "campaign" | "catalog" | "planning" | "team";
 const NAV: {
   view: View;
   icon: "write" | "history" | "store" | "book";
   label: string;
 }[] = [
   { view: "create", icon: "write", label: "开始创作" },
-  { view: "campaign", icon: "store", label: "千店千面" },
+  { view: "campaign", icon: "store", label: "团队活动" },
+  { view: "planning", icon: "write", label: "门店策划" },
   { view: "catalog", icon: "book", label: "产品与生态" },
   { view: "history", icon: "history", label: "创作记录" },
 ];
 
 export default function Page() {
-  const creation = useCreation();
-  const [view, setView] = useState<View>("create");
+  const { session, scopeKey, switchWorkspace } = useWorkspace();
+  const creation = useCreation(scopeKey);
+  const roles = session.workspace!.roles;
+  const canManage = roles.some((role) =>
+    ["admin", "operator", "regional_manager"].includes(role),
+  );
+  const canTeam = roles.some((role) => ["admin", "operator"].includes(role));
+  const [view, setView] = useState<View>(
+    canManage && !session.workspace!.store_id ? "campaign" : "create",
+  );
+  const [viewReady, setViewReady] = useState(false);
   const [items, setItems] = useState<CatalogItem[]>([]);
   const [catalogError, setCatalogError] = useState("");
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [product, setProduct] = useState("");
+  const [pendingTask, setPendingTask] = useState<RunTask | null>(null);
   const [expanded, setExpanded] = useState(false);
+  const [historyItems, setHistoryItems] = useState<
+    { id: string; kind: string; title: string; created_at: string }[]
+  >([]);
+  const [historyError, setHistoryError] = useState("");
   const busy = creation.phase !== "idle";
   async function refreshCatalog() {
     setCatalogLoading(true);
@@ -53,22 +75,145 @@ export default function Page() {
     const product = params.get("product");
     if (product) setProduct(product);
     if (params.get("view") === "catalog") setView("catalog");
+    try {
+      const savedView = sessionStorage.getItem(
+        `matequill-view-v1:${scopeKey}`,
+      ) as View | null;
+      if (
+        savedView &&
+        [
+          "create",
+          "history",
+          "campaign",
+          "catalog",
+          "planning",
+          "team",
+        ].includes(savedView)
+      )
+        setView(savedView);
+      const pending = sessionStorage.getItem(`matequill-pending:${scopeKey}`);
+      if (pending) {
+        const value = JSON.parse(pending) as {
+          task?: RunTask | null;
+          product?: string;
+          assignmentId: string;
+          generate?: boolean;
+        };
+        if (value.task && value.generate) void creation.direct(value.task);
+        else if (value.task)
+          creation.startAssignment(value.task, value.assignmentId);
+        setProduct(value.task?.product || value.product || "");
+        setView("create");
+        sessionStorage.removeItem(`matequill-pending:${scopeKey}`);
+      }
+    } catch {
+      /* An interrupted switch can start a fresh task. */
+    }
+    setViewReady(true);
   }, []);
+  useEffect(() => {
+    if (viewReady)
+      sessionStorage.setItem(`matequill-view-v1:${scopeKey}`, view);
+  }, [view, viewReady, scopeKey]);
+  useEffect(() => {
+    if (view !== "history") return;
+    workspaceRequest<{ items: typeof historyItems }>("/api/creations")
+      .then((value) => {
+        setHistoryItems(value.items);
+        setHistoryError("");
+      })
+      .catch((reason: Error) => setHistoryError(reason.message));
+  }, [view]);
   useEffect(() => {
     const body = document.body;
     body.classList.add("mq-next");
     return () => body.classList.remove("mq-next");
   }, []);
   function generate(task: RunTask) {
+    if (!session.workspace!.store_id && !task.store_id) {
+      setPendingTask(task);
+      setView("create");
+      return;
+    }
+    if (task.store_id && task.store_id !== session.workspace!.store_id) {
+      const key = [
+        session.user!.id,
+        session.workspace!.tenant_id,
+        task.store_id,
+      ].join(":");
+      sessionStorage.setItem(
+        `matequill-pending:${key}`,
+        JSON.stringify({ task, assignmentId: "", generate: true }),
+      );
+      void switchWorkspace(session.workspace!.tenant_id, task.store_id).catch(
+        (reason: Error) => {
+          sessionStorage.removeItem(`matequill-pending:${key}`);
+          setCatalogError(reason.message);
+        },
+      );
+      return;
+    }
     setView("create");
     void creation.direct(task);
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
+  async function chooseStore(store: StoreProfile) {
+    const key = [session.user!.id, session.workspace!.tenant_id, store.id].join(
+      ":",
+    );
+    sessionStorage.setItem(
+      `matequill-pending:${key}`,
+      JSON.stringify({
+        product,
+        task: pendingTask ? { ...pendingTask, store_id: store.id } : null,
+        assignmentId: "",
+        generate: !!pendingTask,
+      }),
+    );
+    try {
+      await switchWorkspace(session.workspace!.tenant_id, store.id);
+    } catch (reason) {
+      sessionStorage.removeItem(`matequill-pending:${key}`);
+      throw reason;
+    }
+  }
   function selectProduct(name: string) {
     setProduct(name);
-    creation.update({ result: null, poster: null, answers: {} });
+    creation.update({
+      result: null,
+      poster: null,
+      answers: {},
+      assignmentId: "",
+    });
     creation.clearQuestions();
     setView("create");
+  }
+  async function startAssignment(task: RunTask, assignment: StoreAssignment) {
+    if (session.workspace!.store_id !== assignment.store_id) {
+      const key = [
+        session.user!.id,
+        session.workspace!.tenant_id,
+        assignment.store_id,
+      ].join(":");
+      sessionStorage.setItem(
+        `matequill-pending:${key}`,
+        JSON.stringify({ task, assignmentId: assignment.id }),
+      );
+      try {
+        await switchWorkspace(
+          session.workspace!.tenant_id,
+          assignment.store_id,
+        );
+      } catch (reason) {
+        sessionStorage.removeItem(`matequill-pending:${key}`);
+        throw reason;
+      }
+      return;
+    }
+    creation.startAssignment(task, assignment.id);
+    setProduct(task.product);
+    setView("create");
+    window.scrollTo({ top: 0, behavior: "smooth" });
   }
   return (
     <div className={`mq-app ${expanded ? "mq-nav-expanded" : ""}`}>
@@ -85,49 +230,76 @@ export default function Page() {
           </span>
         </button>
         <nav>
-          {NAV.map((item) => (
-            <button
-              key={item.view}
-              className={view === item.view ? "is-selected" : ""}
-              aria-current={view === item.view ? "page" : undefined}
-              aria-label={item.label}
-              title={item.label}
-              disabled={busy}
-              onClick={() => {
-                if (item.view === "create") {
-                  creation.reset();
-                  setProduct("");
-                }
-                setView(item.view);
-              }}
-            >
-              <Icon name={item.icon} />
-              <span>{item.label}</span>
-            </button>
-          ))}
+          {NAV.filter((item) => item.view !== "planning" || canManage).map(
+            (item) => (
+              <button
+                key={item.view}
+                className={view === item.view ? "is-selected" : ""}
+                aria-current={view === item.view ? "page" : undefined}
+                aria-label={item.label}
+                title={item.label}
+                disabled={busy}
+                onClick={() => {
+                  if (item.view === "create") {
+                    creation.reset();
+                    setProduct("");
+                  }
+                  setView(item.view);
+                }}
+              >
+                <Icon name={item.icon} />
+                <span>{item.label}</span>
+              </button>
+            ),
+          )}
         </nav>
-        <Link
-          href="/settings"
-          className="mq-settings-link"
-          aria-label="连接设置"
-          title="连接设置"
-        >
-          <Icon name="settings" />
-          <span>连接设置</span>
-        </Link>
+        {canTeam && (
+          <button
+            type="button"
+            className="mq-settings-link"
+            aria-label="团队成员"
+            title="团队成员"
+            disabled={busy}
+            onClick={() => setView("team")}
+          >
+            <Icon name="settings" />
+            <span>团队成员</span>
+          </button>
+        )}
       </aside>
       <div className="mq-topline">
         <span>
           MateQuill<span className="mq-topline-name">场景有据</span>
         </span>
-        <span>门店里的好故事，有据可讲。</span>
+        <WorkspaceMenu disabled={busy} />
       </div>
       <main
         className={`mq-main ${view === "create" && !creation.result && !creation.poster && !creation.questions.length ? "mq-main-intake" : ""}`}
       >
         {view === "create" && (
           <>
-            {busy ? (
+            {creation.assignmentId &&
+              !busy &&
+              !creation.result &&
+              !creation.poster && (
+                <div className="mq-active-assignment">
+                  <span>团队活动 · {product || creation.task?.product}</span>
+                  <button
+                    className="mq-text-button"
+                    onClick={() => setView("campaign")}
+                  >
+                    查看活动
+                  </button>
+                </div>
+              )}
+            {!session.workspace!.store_id &&
+            !creation.result &&
+            !creation.poster ? (
+              <ChooseCreationStore
+                onSelect={chooseStore}
+                onManage={() => setView("planning")}
+              />
+            ) : busy ? (
               <section
                 className="mq-generating"
                 role="status"
@@ -179,7 +351,11 @@ export default function Page() {
               <IntakeComposer
                 query={creation.query}
                 onQuery={(query) =>
-                  creation.update({ query, answers: {}, task: null })
+                  creation.update({
+                    query,
+                    answers: {},
+                    ...(creation.assignmentId ? {} : { task: null }),
+                  })
                 }
                 media={creation.media}
                 onMedia={(media, replaceId) =>
@@ -204,17 +380,30 @@ export default function Page() {
                 busy={busy}
               />
             )}
+            {creation.assignmentId && creation.result?.status === "ready" && (
+              <CreationSubmission
+                key={`submission:${creation.result.run_id}`}
+                assignmentId={creation.assignmentId}
+                runId={creation.result.run_id}
+                onOpenTeam={() => setView("campaign")}
+              />
+            )}
             {creation.error && (
               <div className="mq-error" role="alert">
                 <p>{creation.error}</p>
                 <button
                   className="mq-text-button"
                   onClick={() => {
-                    if (creation.task) void creation.direct(creation.task);
+                    if (creation.pendingJob) void creation.resume();
+                    else if (creation.task)
+                      void creation.direct(
+                        creation.task,
+                        creation.assignmentId,
+                      );
                     else void creation.resolve();
                   }}
                 >
-                  重新尝试
+                  {creation.pendingJob ? "继续查看这次创作" : "重新尝试"}
                 </button>
               </div>
             )}
@@ -232,8 +421,12 @@ export default function Page() {
           </>
         )}
         {view === "campaign" && (
+          <ChannelWorkspace products={items} onStart={startAssignment} />
+        )}
+        {view === "planning" && canManage && (
           <StoreCampaign products={items} onGenerate={generate} />
         )}
+        {view === "team" && canTeam && <TeamWorkspace />}
         {view === "catalog" && catalogLoading && !items.length ? (
           <p className="mq-catalog-error" role="status">
             正在取回产品资料…
@@ -264,19 +457,28 @@ export default function Page() {
               <p className="mq-section-label">好内容，也值得再打开</p>
               <h1>这次的创作记录。</h1>
             </header>
-            {creation.history.length ? (
+            {historyError && (
+              <p role="alert" className="mq-error">
+                {historyError}
+              </p>
+            )}
+            {historyItems.length ? (
               <ol>
-                {creation.history.map((item) => (
+                {historyItems.map((item) => (
                   <li key={item.id}>
                     <button
                       onClick={() => {
-                        void creation.reopen(item.id);
+                        void creation.reopen(
+                          item.kind === "poster"
+                            ? `poster:${item.id}`
+                            : item.id,
+                        );
                         setView("create");
                       }}
                     >
                       <span>{item.title}</span>
-                      <time dateTime={item.at}>
-                        {new Date(item.at).toLocaleString("zh-CN", {
+                      <time dateTime={item.created_at}>
+                        {new Date(item.created_at).toLocaleString("zh-CN", {
                           month: "long",
                           day: "numeric",
                           hour: "2-digit",

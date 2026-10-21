@@ -2,7 +2,7 @@
 
 拍一张，说一句，把门店里的好故事讲给对的人。MateQuill 为华为门店销售员连接自然输入、门店选题、产品知识、图文创作与可编辑海报，覆盖电脑、手机和平板生态。
 
-由 Shuuyou 与 6TDooo 面向浙客松华为产业赛道构建。复赛采用 Next.js 16 + React 19 前端、FastAPI 工作流与 SQLite 持久化；后端已通过 411 项自动化测试。工程结构见 [复赛工程说明](docs/SEMIFINAL_ENGINEERING.md)，技术决策见 [复赛研究](docs/SEMIFINAL_RESEARCH.md)，视频分镜见 [复赛视频脚本](docs/SEMIFINAL_VIDEO.md)。初赛作品说明见 [作品说明书](docs/MateQuill-作品说明书.pdf)。
+由 Shuuyou 与 6TDooo 面向浙客松华为产业赛道构建。复赛采用 Next.js 16 + React 19 前端、FastAPI 工作流与 PostgreSQL 18 企业资源库，连接代理总部、门店、店员与合作企业。工程结构见 [复赛工程说明](docs/SEMIFINAL_ENGINEERING.md)，身份、迁移与部署见 [多租户运行手册](docs/TENANCY_OPERATIONS.md)，设计依据见 [多门店方案](docs/MULTITENANCY_PROPOSAL_20261021.md)。初赛作品说明见 [作品说明书](docs/MateQuill-作品说明书.pdf)。
 
 ## 复赛产品能力
 
@@ -14,6 +14,9 @@
 - **华为生态内容**：电脑、手机与平板围绕同一个任务组织内容，参数归属到设备，协同功能关联具体操作条件。
 - **图文与海报交付**：正文、分镜、配图、修改与导出；海报支持文字、字体、颜色、位置、撤销重做及 PNG / SVG / JSON。
 - **可维护的工作流**：类型化 API、分离的媒体／产品／门店模块、版本化创意连接器、独立审校、持久化记录和前后端 CI。
+- **企业与门店协作**：真实账号、单次邀请、多店任职和工作区切换；成稿、素材、海报与导出关联所属企业和门店。
+- **总部活动到本店成稿**：版本化活动包、分发领取、差异化创作、批注审核、人工发布确认与进度回收；独立合作企业通过定向邀请接收活动。
+- **持久化任务与用量**：排队、幂等提交、租约与心跳、进程恢复、企业创作额度和审计；成员权限变化在任务执行与读取时重新核验。
 
 ## 来源口径更新（2026 年 10 月 18 日）
 
@@ -30,7 +33,7 @@ python -m venv .venv
 .venv\Scripts\python -m uvicorn app.api:app --host 127.0.0.1 --port 8000 --no-proxy-headers
 ```
 
-Linux 使用 `.venv/bin/python`。打开 `http://127.0.0.1:8000`。本机“连接设置”可配置模型和可选的 ima 连接，配置只留在当前进程内存，重启失效；云端服务须设置 `ALLOW_LOCAL_SETTINGS=0` 并通过服务端秘密配置注入。不要将真实密钥写入本文件、命令行参数、公开仓库或录屏。
+Linux 使用 `.venv/bin/python`。使用下方 Next.js 前端启动步骤打开工作台。首次使用先通过 `scripts/tenant_admin.py bootstrap` 创建企业管理员；PostgreSQL 生产库先运行迁移并使用受限应用角色。模型和 ima 配置由服务端环境注入，企业用户的“团队设置”管理成员与门店，不更改全平台连接。不要将真实密钥写入命令行参数、公开仓库或录屏。
 
 | 环境变量 | 用途 |
 | --- | --- |
@@ -46,6 +49,11 @@ Linux 使用 `.venv/bin/python`。打开 `http://127.0.0.1:8000`。本机“连�
 | `IMAGE_MODEL` | 服务商提供的模型 ID，本轮实测 `gpt-image-2.5` |
 | `IMAGE_REVIEW_MODEL` | 可选的多模态成品审稿模型，本轮实测 `gpt-4o` |
 | `ALLOW_LOCAL_SETTINGS` | 本地为 `1`；服务器必须为 `0` |
+| `MATEQUILL_DATABASE_URL` | 受限 PostgreSQL 应用角色连接；未配置时 SQLite 仅用于本地开发 |
+| `MATEQUILL_MIGRATION_DATABASE_URL` | 独立迁移所有者连接，只供 Alembic 使用 |
+| `MATEQUILL_ALLOWED_ORIGINS` | 浏览器工作台的完整 Origin 白名单 |
+| `MATEQUILL_COOKIE_SECURE` | HTTPS 入口设为 `1` |
+| `MATEQUILL_DAILY_CREATIONS` | 企业每日创作额度，默认 100 次；失败释放额度 |
 
 变量配置模板为 `.env.example`。服务当前从进程环境读取；文件模板不会自动加载，以免误将本地文件当安全秘密管理服务。你可在进程启动器、systemd 受控环境或容器秘密管理中注入。
 
@@ -53,7 +61,7 @@ Linux 使用 `.venv/bin/python`。打开 `http://127.0.0.1:8000`。本机“连�
 
 界面延续 Mingcha 的暖纸、墨色字形与角色视觉语言。创作从一个统一输入区开始，顾客需求、产品和顾客信息保持可见。产品资料页可搜索实际目录并将型号带入当前任务；生成后进入文稿工作区，按实际结果提供创作思路、客户方案和资料检查。
 
-当前标签页的需求草稿、最近十次内容任务及导航展开偏好保存在浏览器 sessionStorage，刷新可恢复，关闭会话后由浏览器清理。连接密钥不进入这份存储。历史中的导出和图片仍依赖对应服务会话有效，不把浏览器记录当作长期项目数据库。
+当前标签页的草稿与导航按用户、企业、门店隔离保存在 sessionStorage；切换工作区重新加载所属草稿。企业资源、成稿、海报、任务和审核记录在数据库持久化，浏览器仅保存体验状态。会话使用 HttpOnly cookie；连接密钥不进入浏览器存储。
 
 ## 如何使用
 
@@ -88,7 +96,7 @@ Linux 使用 `.venv/bin/python`。打开 `http://127.0.0.1:8000`。本机“连�
 
 选择海报后，填写投放用途、画布尺寸、视觉方向与风格。支持竖版、方形、故事竖屏、横屏、A4 比例和自定义像素；A4 比例输出尚不等同印刷交付。
 
-海报以独立图层保存真实产品图、标题、副标题、卖点、行动引导和必要限定。产品和草稿标记锁定；文字、位置、字号、字体族、字距、行距与颜色可编辑，支持保存、撤销和版本冲突检查。成品可导出指定尺寸 PNG、安全 SVG 及包含素材的 JSON 源文档；记录保存在私有 `runtime/posters/`。
+海报以独立图层保存真实产品图、标题、副标题、卖点、行动引导和必要限定。产品和草稿标记锁定；文字、位置、字号、字体族、字距、行距与颜色可编辑，支持保存、撤销和版本冲突检查。成品可导出指定尺寸 PNG、安全 SVG 及包含素材的 JSON 源文档；新企业海报保存在受租户权限约束的资源库。
 
 背景可以使用品牌色设计，或调用已配置的图像服务生成。生成背景不会重新绘制产品主体，也不会伪装为实拍；服务返回尺寸与请求不同会按实际像素处理。模型列表是服务商返回的候选，不等于每个模型都能通过生图端点调用。
 
@@ -143,9 +151,9 @@ docker run --name matequill --restart unless-stopped -p 7860:7860 \
   -v /secure/knowledge:/app/research/knowledge:ro matequill
 ```
 
-`/secure/matequill.env` 由部署环境管理，内容不进入仓库。若挂载空的 runtime 卷，先在容器中运行 `/app/.venv/bin/python scripts/fetch_official_assets.py` 初始化官方图片。门店档案、活动方案、导入产品、媒体与生成记录均保存在该持久目录。生产端口由 `PORT` 控制，默认 7860；后端端口由 `API_PORT` 控制，默认 8000，需要与构建时 `API_ORIGIN` 一致。
+`/secure/matequill.env` 由部署环境管理，内容不进入仓库；其中提供已迁移 PostgreSQL 的应用连接、模型配置及浏览器 Origin。发布前使用独立所有者执行 Alembic；应用进程不修改数据库策略。若挂载空的 runtime 卷，先运行 `/app/.venv/bin/python scripts/fetch_official_assets.py` 初始化官方图片。业务记录在数据库，照片与录音按企业保存在私有持久目录。生产端口由 `PORT` 控制，默认 7860；`API_PORT` 默认 8000，与构建时 `API_ORIGIN` 一致。
 
-语音识别配置使用 `ASR_BASE_URL`、`ASR_API_KEY`、`ASR_MODEL`；未单独配置时启动器复用图像服务网关，默认模型为 `gpt-4o-mini-transcribe`。公网部署设置 `ALLOW_LOCAL_SETTINGS=0`，连接配置由服务端管理；Next.js 本地编辑接口只在本机开发环境开放。
+语音识别配置使用 `ASR_BASE_URL`、`ASR_API_KEY`、`ASR_MODEL`；未单独配置时启动器复用图像服务网关，默认模型为 `gpt-4o-mini-transcribe`。公网部署设置 `ALLOW_LOCAL_SETTINGS=0`，连接配置由服务端管理；新品维护接口使用会话、角色与同源校验。
 
 ### 版本化 SSH 部署
 

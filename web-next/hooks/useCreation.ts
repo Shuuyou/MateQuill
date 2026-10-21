@@ -1,6 +1,14 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createPoster, getPoster, getRun, intake, runTask } from "@/lib/api";
+import {
+  createPoster,
+  GenerationJobError,
+  getPoster,
+  getRun,
+  intake,
+  runTask,
+  waitForRunJob,
+} from "@/lib/api";
 import type {
   MediaIntake,
   PosterResponse,
@@ -9,6 +17,8 @@ import type {
   RunTask,
 } from "@/lib/types";
 interface SavedCreation {
+  assignmentId: string;
+  pendingJob: string;
   query: string;
   answers: Record<string, string>;
   media: MediaIntake[];
@@ -17,8 +27,9 @@ interface SavedCreation {
   poster: PosterResponse | null;
   history: { id: string; title: string; at: string; task?: RunTask }[];
 }
-const KEY = "matequill-creation-v2";
 const initial: SavedCreation = {
+  assignmentId: "",
+  pendingJob: "",
   query: "",
   answers: {},
   media: [],
@@ -27,7 +38,8 @@ const initial: SavedCreation = {
   poster: null,
   history: [],
 };
-export function useCreation() {
+export function useCreation(scopeKey: string) {
+  const KEY = `matequill-creation-v3:${scopeKey}`;
   const [data, setData] = useState<SavedCreation>(initial);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [phase, setPhase] = useState<"idle" | "understanding" | "generating">(
@@ -49,7 +61,7 @@ export function useCreation() {
       /* A damaged draft should not prevent a new creation. */
     }
     setHydrated(true);
-  }, []);
+  }, [KEY]);
   useEffect(() => {
     if (hydrated) {
       try {
@@ -58,7 +70,7 @@ export function useCreation() {
         /* The current draft stays available in memory. */
       }
     }
-  }, [data, hydrated]);
+  }, [data, hydrated, KEY]);
   const update = useCallback(
     (
       patch:
@@ -75,6 +87,7 @@ export function useCreation() {
     setData((previous) => ({
       ...previous,
       result,
+      pendingJob: "",
       task,
       history: [
         {
@@ -108,10 +121,40 @@ export function useCreation() {
       return;
     }
     update({ poster: null });
-    const result = await runTask(task);
+    let result: RunResult;
+    try {
+      result = await runTask(task, (pendingJob) => update({ pendingJob }));
+    } catch (reason) {
+      if (reason instanceof GenerationJobError) update({ pendingJob: "" });
+      throw reason;
+    }
     remember(result, task);
   }
+  async function resume() {
+    if (active.current || !data.pendingJob || !data.task) return;
+    active.current = true;
+    setError("");
+    setPhase("generating");
+    try {
+      remember(await waitForRunJob(data.pendingJob), data.task);
+    } catch (reason) {
+      if (reason instanceof GenerationJobError) update({ pendingJob: "" });
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : "创作还在处理中，稍后可以继续查看。",
+      );
+    } finally {
+      active.current = false;
+      setPhase("idle");
+    }
+  }
+  useEffect(() => {
+    if (hydrated && data.pendingJob && data.task && !active.current)
+      void resume();
+  }, [hydrated, data.pendingJob]);
   async function resolve(extra: Record<string, string> = {}) {
+    if (data.pendingJob) return resume();
     if (active.current || (!data.query.trim() && !data.media.length)) return;
     active.current = true;
     setError("");
@@ -132,7 +175,20 @@ export function useCreation() {
         ]
           .filter(Boolean)
           .join("\n") || "请根据上传的门店素材创作一篇推广内容";
-      const response = await intake(query, "local", answers);
+      const response =
+        data.assignmentId && data.task
+          ? {
+              status: "ready",
+              task: {
+                ...data.task,
+                scene: query,
+                requirements: [data.task.requirements, data.query.trim()]
+                  .filter(Boolean)
+                  .join("\n"),
+              },
+              questions: [],
+            }
+          : await intake(query, "local", answers);
       if (response.status === "clarify") {
         setQuestions(response.questions);
         return;
@@ -156,12 +212,18 @@ export function useCreation() {
       setPhase("idle");
     }
   }
-  async function direct(task: RunTask) {
+  async function direct(task: RunTask, assignmentId = "") {
     if (active.current) return;
     active.current = true;
     setError("");
     setQuestions([]);
-    update({ task, query: task.scene, result: null, poster: null });
+    update({
+      task,
+      assignmentId,
+      query: task.scene,
+      result: null,
+      poster: null,
+    });
     try {
       await generate(task);
     } catch (reason) {
@@ -177,15 +239,19 @@ export function useCreation() {
   }
   async function revise(instruction: string) {
     if (!data.task) return;
-    await direct({
-      ...data.task,
-      requirements: [data.task.requirements, `本次修改：${instruction}`]
-        .filter(Boolean)
-        .join("\n"),
-    });
+    await direct(
+      {
+        ...data.task,
+        requirements: [data.task.requirements, `本次修改：${instruction}`]
+          .filter(Boolean)
+          .join("\n"),
+      },
+      data.assignmentId,
+    );
   }
   async function reopen(id: string) {
     setError("");
+    update({ assignmentId: "" });
     try {
       if (id.startsWith("poster:"))
         update({
@@ -215,6 +281,8 @@ export function useCreation() {
       result: null,
       poster: null,
       task: null,
+      assignmentId: "",
+      pendingJob: "",
     });
   }
   return {
@@ -229,6 +297,20 @@ export function useCreation() {
     revise,
     reopen,
     reset,
+    resume,
+    startAssignment: (task: RunTask, assignmentId: string) => {
+      setQuestions([]);
+      setError("");
+      update({
+        task,
+        assignmentId,
+        query: task.scene || "",
+        answers: {},
+        media: [],
+        result: null,
+        poster: null,
+      });
+    },
     clearQuestions: () => setQuestions([]),
     clearError: () => setError(""),
   };

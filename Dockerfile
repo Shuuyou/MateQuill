@@ -19,6 +19,9 @@ COPY docs ./docs
 COPY data ./data
 COPY scripts/run_services.py ./scripts/run_services.py
 COPY scripts/fetch_official_assets.py ./scripts/fetch_official_assets.py
+COPY scripts/tenant_admin.py ./scripts/tenant_admin.py
+COPY alembic.ini ./alembic.ini
+COPY migrations ./migrations
 RUN /app/.venv/bin/python scripts/fetch_official_assets.py
 COPY --from=frontend /build/.next/standalone ./frontend
 COPY --from=frontend /build/.next/static ./frontend/.next/static

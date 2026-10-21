@@ -18,7 +18,13 @@ async def embed_card_assets(record):
         if not re.fullmatch(r'[A-Za-z0-9_-]{1,120}',str(aid)):
             continue
         try:
-            response = await asset(aid)
+            from .tenancy import get_context
+            context = get_context()
+            if context and not context.is_legacy and record.get('run_id'):
+                from .api import run_asset
+                response = await run_asset(record['run_id'], aid)
+            else:
+                response = await asset(aid)
             raw = Path(response.path).read_bytes() if hasattr(response,'path') else response.body
             mime = response.media_type
             if mime not in ('image/png','image/jpeg','image/webp') or len(raw)>12*1024*1024 or total+len(raw)>24*1024*1024:

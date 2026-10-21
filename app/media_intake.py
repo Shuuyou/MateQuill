@@ -105,9 +105,23 @@ class MediaStore:
             db.execute('INSERT INTO media VALUES (?, ?, ?, ?, ?, ?)',
                        (identifier, suffix, mime, time.time(), len(raw), '{}'))
         self.prune()
+        from .tenancy import get_context, register_resource
+        context = get_context()
+        if context and not context.is_legacy:
+            register_resource('media', identifier, body={'mime': mime, 'suffix': suffix})
         return identifier
 
     def get(self, identifier: str):
+        if not re.fullmatch(r'[0-9a-f]{32}', identifier):
+            return None
+        from .tenancy import get_context, authorize_resource
+        context = get_context()
+        if context and not context.is_legacy:
+            authorize_resource('media', identifier)
+        return self._read(identifier)
+
+    def _read(self, identifier: str):
+        """Internal byte access after an owning or explicit parent-resource check."""
         if not re.fullmatch(r'[0-9a-f]{32}', identifier):
             return None
         with self.connect() as db:

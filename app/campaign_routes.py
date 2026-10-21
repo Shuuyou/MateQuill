@@ -1,5 +1,6 @@
 """Store/campaign HTTP contracts; generation reuses /api/run unchanged."""
 from fastapi import APIRouter, HTTPException
+from .tenancy import require_context
 
 from .store_campaigns import CampaignInput, StoreInput, StoreRepository, plan_campaign
 
@@ -7,6 +8,7 @@ router = APIRouter(prefix='/api', tags=['stores-and-campaigns'])
 
 
 def get_repository():
+    require_context()
     return StoreRepository()
 
 

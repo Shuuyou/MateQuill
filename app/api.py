@@ -5,6 +5,7 @@ import ipaddress
 import json
 import time
 from collections import OrderedDict, defaultdict, deque
+from contextlib import asynccontextmanager
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -17,7 +18,17 @@ from .config import ROOT, settings
 from .ima import ImaProvider, ImaError
 from .models import TaskInput
 
-app = FastAPI(title='场景有据 · 华为 PC 营销智能体', docs_url=None, redoc_url=None)
+@asynccontextmanager
+async def lifespan(application):
+    from .generation_jobs import start_workers, stop_workers
+    await start_workers()
+    try:
+        yield
+    finally:
+        await stop_workers()
+
+
+app = FastAPI(title='场景有据 · 华为 PC 营销智能体', docs_url=None, redoc_url=None, lifespan=lifespan)
 ima = ImaProvider(settings)
 runs = OrderedDict()
 semaphore = asyncio.Semaphore(2)
@@ -27,6 +38,10 @@ local_provider = None
 
 
 def local_settings_allowed(request):
+    from .tenancy import get_context
+    context = get_context()
+    if context and not context.is_legacy and 'platform_admin' not in context.roles:
+        return False
     if not settings.allow_local_settings:
         return False
     try:
@@ -139,7 +154,8 @@ class NaturalIntakeInput(BaseModel):
 async def natural_intake(payload: NaturalIntakeInput, request: Request):
     from .intake import resolve_intake
     from .llm import OpenAICompatibleLLM
-    key = 'intake:' + (request.client.host if request.client else 'unknown')
+    from .resource_access import request_budget_key
+    key = 'intake:' + request_budget_key(request)
     now = time.monotonic()
     history = requests_by_client[key]
     while history and now - history[0] > 60:
@@ -167,16 +183,26 @@ async def natural_intake(payload: NaturalIntakeInput, request: Request):
 
 @app.post('/api/run')
 async def run_task(task: TaskInput, request: Request):
+    from .resource_access import validate_task_resources
+    from .generation_jobs import generation_budget
+    validate_task_resources(task)
+    with generation_budget():
+        return await _execute_run_task(task, request)
+
+
+async def _execute_run_task(task: TaskInput, request: Request):
     from .workflow import AgentWorkflow
     from .llm import OpenAICompatibleLLM
     from .creative_connectors import get_connector
     from .models import EvidenceBundle
+    from .resource_access import validate_task_resources, request_budget_key
+    validate_task_resources(task)
     try:
         connector=get_connector(task.platform,task.creative_connector)
         connector.build_brief(task,EvidenceBundle(product=task.product),{})
     except (KeyError,ValueError):
         raise HTTPException(422,'创意连接器或风格与所选平台不匹配') from None
-    key = request.client.host if request.client else 'unknown'
+    key = request_budget_key(request)
     now = time.monotonic()
     history = requests_by_client[key]
     while history and now-history[0] > 60:
@@ -196,6 +222,9 @@ async def run_task(task: TaskInput, request: Request):
     try:
         async with semaphore:
             result = await asyncio.wait_for(AgentWorkflow(provider,llm).run(task),timeout=150)
+        validate_task_resources(task)
+    except HTTPException:
+        raise
     except asyncio.TimeoutError:
         raise HTTPException(504,'生成超时；未放行未经核验的内容') from None
     except ImaError as exc:
@@ -219,8 +248,8 @@ async def run_task(task: TaskInput, request: Request):
     run_id = record.get('id') or record.get('run_id')
     if run_id:
         runs[run_id] = record
-        from .run_records import save_run
-        save_run(run_id, record)
+        from .generation_jobs import persist_generation_result
+        persist_generation_result(run_id, record)
         while len(runs)>100:
             runs.popitem(last=False)
     return JSONResponse(record)
@@ -228,11 +257,28 @@ async def run_task(task: TaskInput, request: Request):
 
 @app.get('/api/runs/{run_id}')
 async def read_run(run_id: str):
-    from .run_records import load_run
-    record = runs.get(run_id) or load_run(run_id)
+    from .run_records import get_run
+    record = get_run(run_id)
     if record is None:
         raise HTTPException(404, '没有找到这次创作，可以用保留的需求重新开始')
-    return JSONResponse(record, headers={'Cache-Control':'private, no-store'})
+    return JSONResponse(run_view(record, run_id), headers={'Cache-Control':'private, no-store'})
+
+
+def run_view(record, run_id):
+    from .tenancy import get_context
+    context = get_context()
+    if context is None or context.is_legacy:
+        return record
+    return {**record, 'assets': [{**item, 'url': f'/api/runs/{run_id}/assets/{item["id"]}' if item['id'].startswith('upload-') else item.get('url', '')}
+                                for item in record.get('assets', [])]}
+
+
+@app.get('/api/runs/{run_id}/assets/{asset_id}')
+async def run_asset(run_id: str, asset_id: str):
+    from .tenancy import authorize_resource
+    from .parent_assets import read_parent_asset
+    meta = authorize_resource('run', run_id)
+    return await read_parent_asset(meta, meta.get('body') or {}, asset_id)
 
 
 @app.get('/api/assets/{asset_id}')
@@ -241,6 +287,8 @@ async def asset(asset_id: str):
         raise HTTPException(404,'素材不存在')
     try:
         if asset_id.startswith('upload-'):
+            from .resource_access import authorize_if_scoped
+            authorize_if_scoped('media', asset_id.removeprefix('upload-'))
             from .media_routes import media_store
             record = media_store().get(asset_id.removeprefix('upload-'))
             if record and record[1].startswith('image/'):
@@ -305,16 +353,20 @@ def markdown_export(record):
 
 @app.get('/api/runs/{run_id}/export')
 async def export(run_id:str,format:str='md'):
-    from .run_records import load_run
-    record = runs.get(run_id) or load_run(run_id)
+    from .run_records import get_run
+    record = get_run(run_id)
     if not record:
         raise HTTPException(404,'运行记录不存在或服务已重启')
     if format not in ('md','html','json'):
         raise HTTPException(422,'format 必须是 md、html 或 json')
     if record.get('status') in ('blocked','error','needs_input'):
         raise HTTPException(409,'任务被阻断或需要补充信息，不能导出为营销稿')
+    from .tenancy import get_context, audit
+    if get_context() is not None:
+        audit('creation.exported', 'run', run_id, {'format': format})
     headers={'Content-Disposition':f'attachment; filename="zhijing-{run_id}.{format}"',
              'Cache-Control':'no-store'}
+    record = run_view(record, run_id)
     text=markdown_export(record)
     if format=='json':
         return JSONResponse({**record,'export_notice':'草稿不可发布' if record.get('status')!='ready' else '已通过系统核验，发布前人工确认'},headers=headers)
@@ -350,6 +402,16 @@ from .product_routes import router as product_router
 app.include_router(media_router)
 app.include_router(campaign_router)
 app.include_router(product_router)
+from .tenant_routes import router as tenant_router
+from .resource_routes import router as resource_router
+from .channel_routes import router as channel_router
+from .tenancy import install_tenancy
+app.include_router(tenant_router)
+app.include_router(resource_router)
+app.include_router(channel_router)
+from .generation_jobs import router as jobs_router
+app.include_router(jobs_router)
+install_tenancy(app)
 
 if (ROOT/'web').is_dir():
     app.mount('/',StaticFiles(directory=ROOT/'web',html=True),name='web')

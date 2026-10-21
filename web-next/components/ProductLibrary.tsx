@@ -3,6 +3,7 @@ import { useState } from "react";
 import { confirmKnowledge, planEcosystem, previewKnowledge } from "@/lib/api";
 import type { KnowledgeDraft } from "@/lib/api";
 import type { CatalogItem, RunTask } from "@/lib/types";
+import { useWorkspace } from "./WorkspaceProvider";
 
 const CATEGORY: Record<string, string> = {
   computer: "电脑",
@@ -21,6 +22,10 @@ export default function ProductLibrary({
   onGenerate: (task: RunTask) => void;
   onRefresh: () => void;
 }) {
+  const { session } = useWorkspace();
+  const canEdit = session.workspace!.roles.some((role) =>
+    ["admin", "operator", "reviewer"].includes(role),
+  );
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
   const [adding, setAdding] = useState(false);
@@ -109,12 +114,14 @@ export default function ProductLibrary({
         <p className="mq-section-label">从一台设备，到一起工作的华为生态</p>
         <div className="mq-section-heading">
           <h1>好内容，从了解产品开始。</h1>
-          <button
-            className="mq-text-button"
-            onClick={() => setAdding((value) => !value)}
-          >
-            {adding ? "收起新品资料" : "+ 录入新品"}
-          </button>
+          {canEdit && (
+            <button
+              className="mq-text-button"
+              onClick={() => setAdding((value) => !value)}
+            >
+              {adding ? "收起新品资料" : "+ 录入新品"}
+            </button>
+          )}
         </div>
         <p>选择产品开始创作，或组合设备，讲一个真实的跨设备任务。</p>
       </header>

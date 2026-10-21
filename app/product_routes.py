@@ -17,6 +17,11 @@ def products():
 
 
 def require_editor(request):
+    from .tenancy import get_context, require_role
+    context = get_context()
+    if context and not context.is_legacy:
+        require_role('admin', 'operator')
+        return
     from .api import local_settings_allowed
     if not local_settings_allowed(request):
         raise HTTPException(403, '请在门店管理端确认产品资料')

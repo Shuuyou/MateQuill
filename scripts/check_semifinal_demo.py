@@ -6,16 +6,18 @@ Use --run-id to check the export of a result that was created in the application
 from __future__ import annotations
 
 import argparse
+import getpass
 import sys
 from urllib.parse import quote
 
 import httpx
 
 
-def check(base_url, frontend_url=None, run_id=None):
+def check(base_url, frontend_url=None, run_id=None, session_cookie=None):
     failures = []
     rows = []
-    with httpx.Client(base_url=base_url.rstrip('/'), timeout=30, follow_redirects=True) as client:
+    with httpx.Client(base_url=base_url.rstrip('/'), timeout=30, follow_redirects=True, trust_env=False,
+                      cookies={'matequill_session': session_cookie} if session_cookie else None) as client:
         def read(path, label):
             try:
                 response = client.get(path)
@@ -86,9 +88,11 @@ def main():
     parser.add_argument('--base-url', default='http://127.0.0.1:8000')
     parser.add_argument('--frontend-url')
     parser.add_argument('--run-id')
+    parser.add_argument('--cookie-stdin', action='store_true', help='Read an existing session cookie using hidden input')
     args = parser.parse_args()
     try:
-        return check(args.base_url, args.frontend_url, args.run_id)
+        cookie = getpass.getpass('Existing session cookie (hidden): ') if args.cookie_stdin else None
+        return check(args.base_url, args.frontend_url, args.run_id, cookie)
     except (ValueError, httpx.HTTPError) as exc:
         print('Read-only check failed: ' + type(exc).__name__)
         return 1

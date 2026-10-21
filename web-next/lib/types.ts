@@ -34,6 +34,7 @@ export interface RunTask extends IntakeTask {
   creative_style?: string;
   media_ids?: string[];
   store_id?: string;
+  assignment_id?: string;
   ecosystem_products?: string[];
 }
 

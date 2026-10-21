@@ -10,10 +10,13 @@ import type {
   PosterResponse,
   PosterDocument,
 } from "./types";
+import { sessionScopeKey, workspaceFetch as fetch } from "./workspace";
 
 async function read(res: Response) {
   const data = await res.json().catch(() => ({}));
   if (!res.ok) {
+    if (res.status === 401 && typeof window !== "undefined")
+      window.dispatchEvent(new Event("matequill-session-expired"));
     const detail = (data as { detail?: string }).detail;
     throw new Error(
       typeof detail === "string" ? detail : `请求失败（${res.status}）`,
@@ -115,14 +118,100 @@ export async function intake(
   );
 }
 
-export async function runTask(task: RunTask): Promise<RunResult> {
-  return read(
-    await fetch("/api/run", {
+export class GenerationJobError extends Error {}
+interface PendingGeneration {
+  task: string;
+  idempotency_key: string;
+  job_id?: string;
+}
+const pendingGenerations = new Map<string, PendingGeneration>();
+function generationKey() {
+  return `matequill-job-v1:${sessionScopeKey()}`;
+}
+function savedGeneration(key: string): PendingGeneration | null {
+  try {
+    return JSON.parse(
+      sessionStorage.getItem(key) || "null",
+    ) as PendingGeneration | null;
+  } catch {
+    return pendingGenerations.get(key) || null;
+  }
+}
+function saveGeneration(key: string, value: PendingGeneration) {
+  pendingGenerations.set(key, value);
+  try {
+    sessionStorage.setItem(key, JSON.stringify(value));
+  } catch {
+    /* Keep retry state in this tab. */
+  }
+}
+function clearGeneration(key: string, id: string) {
+  if (savedGeneration(key)?.job_id !== id) return;
+  pendingGenerations.delete(key);
+  try {
+    sessionStorage.removeItem(key);
+  } catch {
+    /* The completed result remains available. */
+  }
+}
+export async function runTask(
+  task: RunTask,
+  onQueued?: (id: string) => void,
+): Promise<RunResult> {
+  const key = generationKey();
+  const fingerprint = JSON.stringify(
+    Object.fromEntries(
+      Object.entries(task).sort(([a], [b]) => a.localeCompare(b)),
+    ),
+  );
+  let pending = savedGeneration(key);
+  if (pending?.task !== fingerprint) {
+    const random =
+      crypto.randomUUID?.() ||
+      Array.from(crypto.getRandomValues(new Uint8Array(16)), (value) =>
+        value.toString(16).padStart(2, "0"),
+      ).join("");
+    pending = { task: fingerprint, idempotency_key: random };
+    saveGeneration(key, pending);
+  }
+  if (pending.job_id) {
+    onQueued?.(pending.job_id);
+    return waitForRunJob(pending.job_id, key);
+  }
+  const job: { id: string } = await read(
+    await fetch("/api/jobs", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(task),
+      body: JSON.stringify({ task, idempotency_key: pending.idempotency_key }),
     }),
   );
+  saveGeneration(key, { ...pending, job_id: job.id });
+  onQueued?.(job.id);
+  return waitForRunJob(job.id, key);
+}
+export async function waitForRunJob(
+  id: string,
+  key = generationKey(),
+): Promise<RunResult> {
+  for (let attempt = 0; attempt < 300; attempt++) {
+    const status = await read(
+      await fetch(`/api/jobs/${encodeURIComponent(id)}`, {
+        cache: "no-store",
+      }),
+    );
+    if (status.status === "succeeded" && status.result) {
+      clearGeneration(key, id);
+      return status.result as RunResult;
+    }
+    if (["failed", "cancelled"].includes(status.status)) {
+      clearGeneration(key, id);
+      throw new GenerationJobError(
+        status.error?.message || "这次创作没有完成，需求已保留，可以重新尝试。",
+      );
+    }
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+  }
+  throw new Error("这次创作仍在处理，请稍后到创作记录中查看。");
 }
 
 export async function catalog(

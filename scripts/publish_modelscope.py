@@ -24,7 +24,8 @@ def stage(destination: Path) -> int:
     names = ("app", "web", "web-next", "prompts", "data", "docs/PLAN.html",
              "docs/SEMIFINAL_ENGINEERING.md", "docs/SEMIFINAL_RESEARCH.md", "docs/SEMIFINAL_VIDEO.md", "README.md",
              "Dockerfile", ".dockerignore", ".gitattributes", "requirements.txt", "constraints-runtime.txt",
-             "scripts/run_services.py", "scripts/fetch_official_assets.py")
+             "scripts/run_services.py", "scripts/fetch_official_assets.py", "scripts/tenant_admin.py",
+             "alembic.ini", "migrations")
     count = 0
     for name in names:
         source = ROOT / name

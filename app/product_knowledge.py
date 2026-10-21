@@ -50,6 +50,11 @@ def read_products(path):
 
 class ProductRepository:
     def __init__(self, path=None):
+        from .tenancy import get_context
+        context = get_context()
+        self.scoped = path is None and context is not None and not context.is_legacy
+        if self.scoped:
+            return
         self.path = Path(path) if path else ROOT/'runtime/knowledge/products.sqlite3'
         self.path.parent.mkdir(parents=True, exist_ok=True)
         with self.connect() as conn:
@@ -68,12 +73,31 @@ class ProductRepository:
     def create_draft(self, body):
         draft_id = 'product-draft-'+uuid4().hex
         body = {**body, 'draft_id': draft_id}
+        if self.scoped:
+            from .tenancy import save_body
+            save_body('product_draft', draft_id, body, visibility='tenant')
+            return body
         with self.connect() as conn:
             conn.execute('INSERT INTO product_drafts VALUES(?,?,?)',
                          (draft_id, json.dumps(body, ensure_ascii=False), utc_now()))
         return body
 
     def confirm(self, draft_id):
+        if self.scoped:
+            from .tenancy import load_body, save_body
+            product = load_body('product_draft', draft_id, action='write')
+            if not product:
+                raise KeyError(draft_id)
+            if product.get('status') == 'confirmed':
+                raise KeyError(draft_id)
+            product.update(reviewed=True, reviewed_at=utc_now(), status='confirmed')
+            identifier = 'product-' + hashlib.sha256(product['name'].encode()).hexdigest()[:24]
+            # Same product names in different enterprises remain separate objects.
+            from .tenancy import require_context
+            identifier = require_context().tenant_id + '-' + identifier
+            save_body('product', identifier, product, visibility='tenant')
+            save_body('product_draft', draft_id, product, visibility='tenant')
+            return product
         with self.connect() as conn:
             row = conn.execute('SELECT body FROM product_drafts WHERE id=?', (draft_id,)).fetchone()
             if not row:
@@ -86,6 +110,9 @@ class ProductRepository:
         return product
 
     def list_products(self):
+        if self.scoped:
+            from .tenancy import list_resources
+            return [row['body'] for row in list_resources('product')]
         with self.connect() as conn:
             rows = conn.execute('SELECT body FROM products ORDER BY updated_at DESC').fetchall()
         return [json.loads(row[0]) for row in rows]
@@ -166,6 +193,11 @@ async def source_preview(payload: ProductPreviewInput, repository=None):
             'facts': records, 'excerpt': text, 'conditions': conditions,
             'source_sha256': hashlib.sha256(original.encode()).hexdigest(), 'captured_at': utc_now(),
             'reviewed': False, 'status': 'review', 'aliases': [payload.name.replace('HUAWEI ', '')]}
+    from .resource_access import ensure_live_context
+    context = ensure_live_context()
+    if context and not context.is_legacy:
+        from .tenancy import require_role
+        require_role('admin', 'operator')
     return (repository or ProductRepository()).create_draft(body)
 
 

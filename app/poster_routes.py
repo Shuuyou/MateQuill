@@ -66,10 +66,22 @@ def _path(pid):
     return ROOT/'runtime'/'posters'/(pid+'.json')
 
 
-def _save(doc):
+def _save(doc, expected_document_version=None):
     serialized=doc.model_dump_json()
     if len(serialized.encode('utf-8'))>40_000_000:
         raise HTTPException(422,'海报素材总量超过保存预算，请改用较小的产品素材')
+    from .tenancy import get_context, save_body
+    context = get_context()
+    if context and not context.is_legacy:
+        if expected_document_version is None:
+            save_body('poster', doc.id, doc.model_dump(mode='json'))
+        else:
+            from .tenancy import authorize_resource, service_update_body
+            meta = authorize_resource('poster', doc.id, 'write')
+            if (meta.get('body') or {}).get('version') != expected_document_version:
+                raise HTTPException(409, '海报刚刚已更新，请刷新后重试')
+            service_update_body('poster', doc.id, doc.model_dump(mode='json'), expected_version=meta['version'])
+        return
     documents[doc.id]=doc
     while len(documents)>20:
         documents.popitem(last=False)
@@ -81,6 +93,14 @@ def _save(doc):
 
 
 def _get(pid):
+    from .tenancy import get_context, load_body
+    context = get_context()
+    if context and not context.is_legacy:
+        _path(pid)  # Validate the external identifier before any lookup.
+        body = load_body('poster', pid)
+        if body is None:
+            raise HTTPException(404, '海报不存在')
+        return PosterDocument.model_validate(body)
     if pid in documents:
         return documents[pid]
     path=_path(pid)
@@ -132,7 +152,10 @@ async def poster_source(task,request,brief=None):
     from . import api
     from .poster_copy import create_poster_copy
     from .llm import OpenAICompatibleLLM
-    key='poster:'+(request.client.host if request.client else 'unknown')
+    from .resource_access import validate_task_resources
+    validate_task_resources(task)
+    from .resource_access import request_budget_key
+    key='poster:'+request_budget_key(request)
     history=api.requests_by_client[key]
     now=time.monotonic()
     while history and now-history[0]>60:
@@ -144,6 +167,7 @@ async def poster_source(task,request,brief=None):
     llm=OpenAICompatibleLLM(settings.llm_base_url,settings.llm_api_key,settings.llm_model)
     try:
         result=await asyncio.wait_for(create_poster_copy(task,provider,llm,brief),timeout=150)
+        validate_task_resources(task)
     except asyncio.TimeoutError:
         raise HTTPException(504,'单屏海报文案生成超时，请重试') from None
     record=result.model_dump(mode='json')
@@ -154,6 +178,8 @@ async def poster_source(task,request,brief=None):
         source['excerpt']='\n\n'.join(dict.fromkeys(f.get('quote','') for f in record.get('facts',[])
             if f.get('source_id')==source.get('id')))[:8000]
     record['_poster_task']=task.model_dump()
+    from .run_records import save_run
+    save_run(record['run_id'], record)
     api.runs[record['run_id']]=record
     while len(api.runs)>100:
         api.runs.popitem(last=False)
@@ -162,14 +188,23 @@ async def poster_source(task,request,brief=None):
 
 @router.post('/api/posters')
 async def create_poster(payload: PosterRequest, request: Request):
+    from .generation_jobs import generation_budget
+    with generation_budget():
+        return await _create_poster(payload, request)
+
+
+async def _create_poster(payload: PosterRequest, request: Request):
     from . import api
     task=payload.task.model_copy(update={'platform':'poster'})
+    from .resource_access import validate_task_resources
+    validate_task_resources(task)
     brief=payload.brief.model_copy(deep=True)
     brief.background_asset_id=''
     if task.mode=='live' and brief.background_mode=='generate':
         raise HTTPException(422,'ima 严格图源模式请使用纯色设计背景；AI 背景可在独立商业设计模式使用')
     async with poster_gate:
-        source=api.runs.get(payload.source_run_id) if payload.source_run_id else None
+        from .run_records import get_run
+        source=get_run(payload.source_run_id) if payload.source_run_id else None
         if source is not None:
             if source.get('_poster_task') != task.model_dump():
                 raise HTTPException(409,'原任务已变化，请重新生成文案')
@@ -202,6 +237,7 @@ async def create_poster(payload: PosterRequest, request: Request):
                 raise HTTPException(422,'产品素材不是有效的可嵌入图片')
             doc.assets[layer.asset_id]['data_url']=data_url
         if doc.status=='blocked':
+            validate_task_resources(task)
             _save(doc)
             return _response(doc)
         if brief.background_mode=='generate':
@@ -236,12 +272,20 @@ async def create_poster(payload: PosterRequest, request: Request):
         await _visual_review(doc)
         doc.audit.append({'severity':'warning','category':'ocr',
                           'message':'程序已检查图层边界；独立 OCR 逐字核验尚未完成，发布前请核对价格、型号与必要声明。'})
+        validate_task_resources(task)
         _save(doc)
         return _response(doc)
 
 
+@router.get('/api/posters/{pid}')
+def read_poster(pid: str):
+    return _response(_get(pid))
+
+
 @router.patch('/api/posters/{pid}')
 async def update_poster(pid: str, payload: PosterUpdate):
+    from .resource_access import authorize_if_scoped
+    authorize_if_scoped('poster', pid, 'write')
     old=_get(pid)
     edits=payload.edits
     if payload.document is not None:
@@ -268,7 +312,7 @@ async def update_poster(pid: str, payload: PosterUpdate):
         raise HTTPException(422,'修改无效：请保留锁定图层，避免文字溢出或元素超出画布') from None
     doc.status='draft'
     doc.audit.append({'severity':'warning','category':'edited','message':'手动修改后的文案与成品需重新核验，草稿标识保留。'})
-    _save(doc)
+    _save(doc, expected_document_version=old.version)
     return _response(doc)
 
 
@@ -298,4 +342,7 @@ async def export_poster(pid: str, format: str='png'):
             data=await asyncio.wait_for(asyncio.to_thread(render_png,svg,doc.width,doc.height),timeout=60)
     except Exception:
         raise HTTPException(503,'PNG 渲染不可用，请安装 Chromium 渲染依赖；SVG 和设计文档仍可导出') from None
+    from .resource_access import ensure_live_context, authorize_if_scoped
+    ensure_live_context()
+    authorize_if_scoped('poster', pid)
     return Response(data,media_type='image/png',headers=headers)
