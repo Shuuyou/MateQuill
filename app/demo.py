@@ -14,6 +14,7 @@ class DemoProvider:
     def __init__(self, root=None):
         self.root=Path(root) if root else Path(__file__).resolve().parent.parent/'research'/'knowledge'
         self._assets={}
+        self._archive_digests={}
 
     def _products(self):
         found=[]
@@ -41,10 +42,37 @@ class DemoProvider:
         return await self.status()
 
     async def get_asset(self, asset_id):
+        if not re.fullmatch(r'demo-[0-9a-f]{16}', asset_id):
+            return None
         path=self._assets.get(asset_id)
-        if path and path.is_file():
-            return path
+        expected=self._archive_digests.get(asset_id)
+        if path and expected:
+            if self._safe_image(path) and hashlib.sha256(path.read_bytes()).hexdigest()==expected:
+                return path
+            # A known image changing in place must not be re-approved by a
+            # fresh scan of the same index during this provider's lifetime.
+            return None
+        # IDs are deliberately unchanged: persisted creations use the original
+        # lexical path hash, not a new hash of the resolved file or its bytes.
+        if self.root.exists():
+            for index in self.root.rglob('图片索引.csv'):
+                if not index.resolve().is_relative_to(self.root.resolve()) or not index.is_file():
+                    continue
+                with index.open(encoding='utf-8-sig',newline='') as stream:
+                    for row in csv.DictReader(stream):
+                        local=index.parent/'images'/row.get('文件名','')
+                        if ('demo-'+hashlib.sha256(str(local).encode()).hexdigest()[:16])!=asset_id:
+                            continue
+                        if not self._safe_image(local):
+                            return None
+                        self._assets[asset_id]=local
+                        self._archive_digests[asset_id]=hashlib.sha256(local.read_bytes()).hexdigest()
+                        return local
         return None
+
+    def _safe_image(self, path):
+        return (path.suffix.lower() in ('.png','.jpg','.jpeg','.webp')
+                and path.resolve().is_relative_to(self.root.resolve()) and path.is_file())
 
     async def retrieve(self, product, query=''):
         rows=self._products()
@@ -70,10 +98,11 @@ class DemoProvider:
                     if norm(row.get('产品型号',''))!=norm(title):
                         continue
                     local=path.parent/'images'/row.get('文件名','')
-                    if not local.is_file():
+                    if not self._safe_image(local):
                         continue
                     aid='demo-'+hashlib.sha256(str(local).encode()).hexdigest()[:16]
                     self._assets[aid]=local
+                    self._archive_digests[aid]=hashlib.sha256(local.read_bytes()).hexdigest()
                     caption=row.get('官网图片说明','产品素材')
                     reviewed=review_asset_bytes(local.read_bytes(),caption)
                     if not reviewed.get('usable',True):

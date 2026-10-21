@@ -33,8 +33,12 @@ class LocalKnowledgeProvider(DemoProvider):
     async def get_asset(self, asset_id):
         path = self._assets.get(asset_id)
         expected = self._asset_digests.get(asset_id)
-        if path and expected and path.is_file() and hashlib.sha256(path.read_bytes()).hexdigest()==expected:
-            return path
+        if expected:
+            if path and path.is_file() and hashlib.sha256(path.read_bytes()).hexdigest()==expected:
+                return path
+            # Never let an archive-index fallback accept bytes which failed an
+            # already-known official/archive digest in this process.
+            return None
         # Persisted creations outlive the process-local retrieval cache. Restore
         # only a public, hash-pinned official asset, never a caller-supplied path.
         for row in self._records(self.assets_file, 'assets'):
@@ -51,7 +55,10 @@ class LocalKnowledgeProvider(DemoProvider):
             self._assets[asset_id] = target
             self._asset_digests[asset_id] = digest
             return target
-        return None
+        archived = await super().get_asset(asset_id)
+        if archived:
+            self._asset_digests[asset_id] = hashlib.sha256(archived.read_bytes()).hexdigest()
+        return archived
 
     @staticmethod
     def _records(path, key):
