@@ -71,16 +71,33 @@ class EditorialConnector:
         if self.platform != 'xiaohongshu' and self.playbooks:
             return self.playbooks[0]
         return {'id': f'{self.platform}_task_first', 'platform': self.platform,
-                'device': '任务冲突、清单兑现、结尾回扣',
-                'promise': '把用户输入的具体任务转成有依据的核对方法',
+                'device': '具体动作、细节发现、结果兑现、自然回扣',
+                'promise': '从眼前的物件或任务讲出一个值得了解的产品细节',
                 'cards': [{'role': 'cover', 'headline': '用你的任务，提出具体选择问题'},
-                          {'role': 'tension', 'headline': '把卡点拆成需要核对的条件'},
-                          {'role': 'method', 'headline': '给出可执行的核对步骤'},
-                          {'role': 'evidence', 'headline': '已知与待实测，分别列清'},
-                          {'role': 'summary', 'headline': '留下能保存的任务清单'}]}
+                          {'role': 'tension', 'headline': '聚焦这个任务里让人在意的一个瞬间'},
+                          {'role': 'method', 'headline': '用一个具体动作展开产品如何参与'},
+                          {'role': 'evidence', 'headline': '用来源明确的细节解释这个发现'},
+                          {'role': 'summary', 'headline': '兑现开头的问题，留下自然的交流入口'}]}
 
     def build_brief(self, task, bundle, strategy=None):
         book = deepcopy(self._select(task))
+        # Selection is server-resolved and frozen in the brief; examples remain methods,
+        # never product facts. Publisher context can be supplied by campaign execution.
+        from ..strategy_registry import strategy_for_task
+        snapshot = strategy_for_task(task, bundle, strategy) if self.platform in PLATFORM_PLAYBOOKS else None
+        if snapshot:
+            pack = snapshot['pack']
+            recipe = pack['recipe']
+            book.update(strategy_id=pack['id'], strategy_version=pack['version'],
+                        publisher_identity=snapshot['context']['publisher_identity'],
+                        store_context=deepcopy(snapshot['context'].get('store_context', {})),
+                        objective=snapshot['context'].get('objective', ''),
+                        narrative_sequence=deepcopy(recipe['narrative']),
+                        visual_sequence=deepcopy(recipe['visual_sequence']),
+                        device=' → '.join(recipe['narrative']),
+                        promise=pack['title'])
+            for index, card in enumerate(book.get('cards', [])):
+                card['visual_intent'] = recipe['visual_sequence'][min(index, len(recipe['visual_sequence']) - 1)]
         platform_rule = deepcopy(self.profile.get('platform_rule') or REGISTRY_DATA.get('platform_rules',{}).get(self.platform,{}))
         required = {'name','min_images','max_images','structure','tone','cta'}
         if not isinstance(platform_rule,dict) or not required.issubset(platform_rule):
@@ -88,10 +105,22 @@ class EditorialConnector:
         if not isinstance(platform_rule['min_images'],int) or not isinstance(platform_rule['max_images'],int) or not 0 <= platform_rule['min_images'] <= platform_rule['max_images'] <= 12:
             raise ValueError('Invalid connector image limits')
         schema = CreativePlan.model_json_schema()
+        schema['required'] = sorted(set(schema.get('required', [])) | {'cards', 'reader_tension', 'reader_gain'})
         limits = REGISTRY_DATA.get('card_limits',{}).get(self.platform, {'min':1,'max':12})
         schema['properties']['cards'].update(minItems=limits['min'], maxItems=limits['max'])
+        from ..account_voice import build_account_voice
+        from ..cultural_context import build_cultural_context
+        execution_context = {**(strategy or {}), 'strategy_snapshot': snapshot}
+        if snapshot:
+            execution_context['strategy_context'] = deepcopy(snapshot['context'])
+        voice = build_account_voice(task, execution_context)
+        culture = build_cultural_context(task, execution_context)
+        from ..gtm_agent.place_context import local_editorial_context
+        local_context = local_editorial_context(task)
         # Examples are composition references, never factual audience biographies.
         return {**self.describe(), 'fact_budget': self.profile['fact_budget'], 'platform_rule': platform_rule,
+                'strategy_snapshot': snapshot, 'account_voice': voice, 'cultural_context': culture,
+                'local_editorial_context': local_context,
                 'playbook': deepcopy(self.profile), 'creative_playbook': book,
                 'task_context': {k: _get(task, k, '') for k in ('product','audience','scene','stage','goal','requirements')},
                 'adaptation': '按task_context重写示例主题与动作；研究样例不是用户经历，不照搬不相符的课表、转接线或最终版。',
@@ -100,7 +129,14 @@ class EditorialConnector:
                                  'text_cards_allowed': True, 'force_nine_images': False,
                                  'truth_statuses': ['official_material','real_photo','illustrative','diagram','pending_capture','hypothetical'],
                                  'no_asset_fallback': '使用明确标注的任务卡/文字卡；不得编造实拍、软件截图或任意引用其他型号'},
-                'narrative_rules': ['标题交代对象与阅读收益，封面补充一个具体动作或冲突',
+                'narrative_rules': ([
+                    'local_editorial_context若存在，正文与至少一个分镜必须兑现本次scene中的具体生活动作；仅店名落款、通用参数或泛化出门续航不算。',
+                    '先选本次场景里的一个动作、物件或时间冲突，再选择支撑它的事实与画面，不能让产品资料表挤掉人物正在做的事。'] if local_context else []) + ([f"本次策略：{snapshot['pack']['title']}；按creative_playbook.narrative_sequence与visual_sequence组织图文。",
+                                     '本店位置用于选择任务和场景；标题无需机械堆入地名。',
+                                     '结尾服从本次策略的任务：可以兑现问题、提供方法或邀请讨论，不强制每篇邀请到店。',
+                                     snapshot['pack']['recipe']['truth_rule']] if snapshot else []) + ['从playbook.narrative_entrypoints选择与本次素材相符的叙事入口，再用任务和画面展开策略；没有亲历素材时使用公开事件或直接建议的开头。',
+                                    '按playbook.condition_placement安放必要适用条件，让具体发现与动作承担正文主线。',
+                                    '标题交代对象与阅读收益，封面补充一个具体动作或冲突',
                                     '每页只完成一个信息任务，伏笔对应promise_payoff中的实际兑现页',
                                     '无记录不编造亲测、顾客聊天、用户口碑、效果数字',
                                     'test_variants是固定事实底稿的候选，不含预测CTR或爆款概率'],

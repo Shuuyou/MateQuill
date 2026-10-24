@@ -24,6 +24,14 @@ async function read(res: Response) {
   }
   return data;
 }
+export async function reviseCreation(runId: string, instruction: string): Promise<RunResult> {
+  return read(await fetch(`/api/agent/runs/${encodeURIComponent(runId)}/revise`, {
+    method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({instruction}),
+  }));
+}
+export async function adoptCreation(runId: string): Promise<void> {
+  await read(await fetch(`/api/agent/runs/${encodeURIComponent(runId)}/adopt`, {method: "POST"}));
+}
 export async function createPoster(task: RunTask): Promise<PosterResponse> {
   const response = await read(
     await fetch("/api/posters", {

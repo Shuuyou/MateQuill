@@ -99,6 +99,17 @@ async def media_intake(request: Request):
         if len(raw) > MAX_UPLOAD_BYTES:
             raise HTTPException(413, '文件超过 12 MB，请缩小后上传')
         async with _gate:
+            from .tenancy import get_context
+            from .tenancy.auth import guest_state
+            context = get_context()
+            if context and not context.is_legacy and guest_state(context.user_id, context.tenant_id)['is_guest']:
+                from sqlalchemy import select, func
+                from .tenancy.database import db_connection, resources
+                with db_connection() as connection:
+                    count = connection.execute(select(func.count()).select_from(resources).where(
+                        resources.c.tenant_id == context.tenant_id, resources.c.kind == 'media')).scalar_one()
+                if count >= 8:
+                    raise HTTPException(429, '保存到你的门店后，可以继续添加照片和录音')
             result = await process_media(raw, kind, settings, media_store())
             from .resource_access import ensure_live_context
             ensure_live_context()

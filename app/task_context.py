@@ -52,4 +52,5 @@ class TaskContextProvider:
                     visual_role='scene', semantic_basis='user_photo_context', visual_group=identifier,
                     claim_scope='用户选择的场景素材，产品规格与兼容性仍使用产品资料中的事实。'))
                 bundle.user_materials.append({'id':identifier, 'kind':'photo', 'observations':observations})
-        return bundle
+        from .campaign_evidence import append_campaign_evidence
+        return append_campaign_evidence(self.task, bundle)

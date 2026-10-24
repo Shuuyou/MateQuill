@@ -71,6 +71,49 @@ def rank_assets_for_scene(assets, query: str):
     return sorted(assets, key=lambda asset: -asset_scene_match(title_of(asset), query)['score'])
 
 
+def _compound_fields(body: str, section: str):
+    """Split only repeated, source-authored section-prefix field headings.
+
+    Unknown prose stays verbatim. No inferred assertion or rewritten condition.
+    Short field suffixes are structural words, never product/model names.
+    """
+    prefix = re.sub(r'(摄像头|相机)$', '', section)
+    if len(prefix) < 2:
+        prefix = section
+    field_endings = ('模式', '方式', '分辨率', '功能', '闪光灯', '类型', '接口', '参数')
+    headings = []
+    for match in re.finditer(r'(?m)^([^\r\n]+)', body):
+        line = match.group(1).strip()
+        if (line == section or
+                (line.startswith(prefix) and len(line) <= 24 and
+                 line.endswith(field_endings) and
+                 not re.search(r'[\d\s，。；：:（）()*×/]', line))):
+            headings.append((match.start(), match.end(), line))
+    # A lone repeated title is not evidence of a composite chapter.
+    if len(headings) < 2 or not any(h[2] != section for h in headings):
+        return []
+    # Never silently discard preamble. Fall back to section-wide extraction.
+    if body[:headings[0][0]].strip():
+        return []
+    fields = []
+    for index, (start, end, label) in enumerate(headings):
+        stop = headings[index + 1][0] if index + 1 < len(headings) else len(body)
+        span = body[start:stop].strip()
+        content = body[end:stop]
+        rows = list(re.finditer(r'(?m)^([^\r\n]+)', content))
+        values = [m for m in rows if m.group(1).strip() and
+                  not m.group(1).strip().startswith(('*', '>', 'http', '#'))]
+        if not values:
+            continue
+        # Include interleaved conditions in verbatim value; qualifiers retain
+        # adjacent source notes separately. A value is always a source slice.
+        value = content[values[0].start():values[-1].end()].strip()
+        notes = [m.group(1).strip().lstrip('* ').strip() for m in rows
+                 if m.group(1).strip().startswith('*')]
+        fields.append((label, value, span, notes))
+    return fields
+
+
 def extract_product_facts(text: str, product: str, source_id: str, max_facts: int = 18) -> list[Fact]:
     buckets = []
     headings = list(re.finditer(r'(?m)^#{2,3}\s+([^\r\n]+)\r?$', text))
@@ -94,7 +137,12 @@ def extract_product_facts(text: str, product: str, source_id: str, max_facts: in
         notes = [line.lstrip('* ').strip() for line in rows if line.startswith('*')]
         content = [line for line in rows if not line.startswith(('*','>','http','#'))]
         candidates = []
-        if any(line.startswith('|') for line in content):
+        compound = _compound_fields(body, section)
+        scoped = {}
+        if compound:
+            candidates = [(label, value) for label, value, _, _ in compound]
+            scoped = {(label, value): (span, notes) for label, value, span, notes in compound}
+        elif any(line.startswith('|') for line in content):
             for line in content:
                 if not line.startswith('|'):
                     continue
@@ -143,8 +191,9 @@ def extract_product_facts(text: str, product: str, source_id: str, max_facts: in
         for label,value in candidates:
             if value not in quote or excluded.search(label):
                 continue
+            fact_quote, fact_notes = scoped.get((label, value), (quote, notes))
             selected_notes=[]
-            for note in notes:
+            for note in fact_notes:
                 # Specific screen-version notes apply to screen type; typical-value
                 # notes apply to the explicitly named metrics. Other notes stay intact.
                 if '柔光' in note and not ('柔光' in value or '类型' in label):
@@ -152,13 +201,11 @@ def extract_product_facts(text: str, product: str, source_id: str, max_facts: in
                 if '亮度、色域、对比度、可视角度' in note and not any(x in label for x in ['亮度','色域','对比度','可视角度']):
                     continue
                 selected_notes.append(note)
-            # Keep lexical qualifiers from the value itself without inventing facts.
-            for qualifier in ['约','典型值','额定容量','最高','最大','仅']:
-                if qualifier in value and qualifier not in selected_notes:
-                    selected_notes.append(qualifier)
+            # Lexical modifiers already remain in the exact value. Standalone
+            # fragments such as '最大' are not independently usable conditions.
             fid='F'+hashlib.sha256((source_id+section+label+value).encode()).hexdigest()[:14]
             section_facts.append(Fact(id=fid,product=product,label=section+' / '+label if section!=label else section,
-                value=value,quote=quote,source_id=source_id,qualifiers=selected_notes,
+                value=value,quote=fact_quote,source_id=source_id,qualifiers=selected_notes,
                 system=value if section=='操作系统' else ''))
         if section_facts:
             # Within dimensions prefer weight, rather than consuming the budget on length.

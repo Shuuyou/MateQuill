@@ -45,8 +45,7 @@
           "source_id": "official-1473054d596d6811",
           "qualifiers": [
             "电池额定容量为 5620 mAh。",
-            "电池内置不可拆卸。",
-            "典型值"
+            "电池内置不可拆卸。"
           ],
           "system": "",
           "source_url": "https://consumer.huawei.com/cn/phones/mate80/specs/"
@@ -59,8 +58,7 @@
           "quote": "## 尺寸与重量\n\n长度\n161.85 mm\n宽度\n76 mm\n厚度\n7.95 mm\n重量\n约 217 g（含电池）\n*实际尺寸与重量依配置、制造工艺、测量方法的不同可能有所差异。\n\n",
           "source_id": "official-1473054d596d6811",
           "qualifiers": [
-            "实际尺寸与重量依配置、制造工艺、测量方法的不同可能有所差异。",
-            "约"
+            "实际尺寸与重量依配置、制造工艺、测量方法的不同可能有所差异。"
           ],
           "system": "",
           "source_url": "https://consumer.huawei.com/cn/phones/mate80/specs/"
@@ -106,34 +104,27 @@
           "source_url": "https://consumer.huawei.com/cn/phones/mate80/specs/"
         },
         {
-          "id": "F124d36234a4ede",
+          "id": "F54eda7a90f761a",
           "product": "HUAWEI Mate 80",
           "label": "后置摄像头",
-          "value": "后置摄像头\n5000 万像素超光变摄像头（F1.4-F4.0 光圈，OIS 光学防抖，RYYB 传感器）\n4000 万像素超广角摄像头（F2.2 光圈）\n1200 万像素潜望式长焦摄像头（F3.4 光圈，OIS 光学防抖，RYYB 传感器）\n第二代红枫原色摄像头\n*不同拍照模式的照片像素可能有差异，请以实际为准。\n后置摄像头变焦模式\n支持 5.5 倍光学变焦（5.5 倍变焦为近似值，镜头焦段分别为 24 mm，13 mm，125 mm）、50 倍数字变焦\n后置摄像头对焦方式\n自动对焦\n后置摄像头照片分辨率\n最大可支持 8192 × 6144 像素\n*不同拍照模式的照片像素可能有差异，请以实际为准。\n后置摄像头摄像分辨率\n最大支持 4K（3840 x 2160）视频录制\n*不同拍摄模式的视频像素可能有差异，请以实际为准。\n后置闪光灯\nLED 闪光灯\n后置摄像头拍摄功能\nXMAGE 风格、AI 辅助构图、电影效果*、舞台模式、超清全景、AI 超清增强、超级夜景、寰宇追月、绚丽星空、星空人像、AI 动态照片、视频 HDR Vivid、视频 Log、拍照 RAW 格式、闪拍、运动防抖、高画质模式、超级微距、微距视频、微距画中画、长焦画中画、高像素模式、延时摄影、超大广角、大光圈虚化、人像模式、专业模式、慢动作、流光快门、水印、AI 摄影大师、笑脸抓拍、声控拍照、定时拍照、连拍",
-          "quote": "## 后置摄像头\n\n后置摄像头\n5000 万像素超光变摄像头（F1.4-F4.0 光圈，OIS 光学防抖，RYYB 传感器）\n4000 万像素超广角摄像头（F2.2 光圈）\n1200 万像素潜望式长焦摄像头（F3.4 光圈，OIS 光学防抖，RYYB 传感器）\n第二代红枫原色摄像头\n*不同拍照模式的照片像素可能有差异，请以实际为准。\n后置摄像头变焦模式\n支持 5.5 倍光学变焦（5.5 倍变焦为近似值，镜头焦段分别为 24 mm，13 mm，125 mm）、50 倍数字变焦\n后置摄像头对焦方式\n自动对焦\n后置摄像头照片分辨率\n最大可支持 8192 × 6144 像素\n*不同拍照模式的照片像素可能有差异，请以实际为准。\n后置摄像头摄像分辨率\n最大支持 4K（3840 x 2160）视频录制\n*不同拍摄模式的视频像素可能有差异，请以实际为准。\n后置闪光灯\nLED 闪光灯\n后置摄像头拍摄功能\nXMAGE 风格、AI 辅助构图、电影效果*、舞台模式、超清全景、AI 超清增强、超级夜景、寰宇追月、绚丽星空、星空人像、AI 动态照片、视频 HDR Vivid、视频 Log、拍照 RAW 格式、闪拍、运动防抖、高画质模式、超级微距、微距视频、微距画中画、长焦画中画、高像素模式、延时摄影、超大广角、大光圈虚化、人像模式、专业模式、慢动作、流光快门、水印、AI 摄影大师、笑脸抓拍、声控拍照、定时拍照、连拍\n*需 HOTA 升级支持。\n\n",
+          "value": "5000 万像素超光变摄像头（F1.4-F4.0 光圈，OIS 光学防抖，RYYB 传感器）\n4000 万像素超广角摄像头（F2.2 光圈）\n1200 万像素潜望式长焦摄像头（F3.4 光圈，OIS 光学防抖，RYYB 传感器）\n第二代红枫原色摄像头",
+          "quote": "后置摄像头\n5000 万像素超光变摄像头（F1.4-F4.0 光圈，OIS 光学防抖，RYYB 传感器）\n4000 万像素超广角摄像头（F2.2 光圈）\n1200 万像素潜望式长焦摄像头（F3.4 光圈，OIS 光学防抖，RYYB 传感器）\n第二代红枫原色摄像头\n*不同拍照模式的照片像素可能有差异，请以实际为准。",
           "source_id": "official-1473054d596d6811",
           "qualifiers": [
-            "不同拍照模式的照片像素可能有差异，请以实际为准。",
-            "不同拍照模式的照片像素可能有差异，请以实际为准。",
-            "不同拍摄模式的视频像素可能有差异，请以实际为准。",
-            "需 HOTA 升级支持。",
-            "最大"
+            "不同拍照模式的照片像素可能有差异，请以实际为准。"
           ],
           "system": "",
           "source_url": "https://consumer.huawei.com/cn/phones/mate80/specs/"
         },
         {
-          "id": "F29b3de38367904",
+          "id": "Fe38e83ba866d17",
           "product": "HUAWEI Mate 80",
           "label": "前置摄像头",
-          "value": "前置摄像头\n1300 万像素超广角摄像头（F2.0 光圈，自动对焦）\n3D 深感摄像头\n*不同拍照模式的照片像素可能有差异，请以实际为准。\n前置摄像头照片分辨率\n最大可支持 4160 × 3120 像素\n*不同拍照模式的照片像素可能有差异，请以实际为准。\n前置摄像头摄像分辨率\n最大可支持 3840 × 2160 像素\n*不同拍摄模式的视频像素可能有差异，请以实际为准。\n前置摄像头拍摄功能\nXMAGE 风格、AI 动态照片、视频 HDR Vivid、慢动作、人像模式、延时摄影、笑脸抓拍、自拍镜像、声控拍照、定时拍照",
-          "quote": "## 前置摄像头\n\n前置摄像头\n1300 万像素超广角摄像头（F2.0 光圈，自动对焦）\n3D 深感摄像头\n*不同拍照模式的照片像素可能有差异，请以实际为准。\n前置摄像头照片分辨率\n最大可支持 4160 × 3120 像素\n*不同拍照模式的照片像素可能有差异，请以实际为准。\n前置摄像头摄像分辨率\n最大可支持 3840 × 2160 像素\n*不同拍摄模式的视频像素可能有差异，请以实际为准。\n前置摄像头拍摄功能\nXMAGE 风格、AI 动态照片、视频 HDR Vivid、慢动作、人像模式、延时摄影、笑脸抓拍、自拍镜像、声控拍照、定时拍照\n\n",
+          "value": "1300 万像素超广角摄像头（F2.0 光圈，自动对焦）\n3D 深感摄像头",
+          "quote": "前置摄像头\n1300 万像素超广角摄像头（F2.0 光圈，自动对焦）\n3D 深感摄像头\n*不同拍照模式的照片像素可能有差异，请以实际为准。",
           "source_id": "official-1473054d596d6811",
           "qualifiers": [
-            "不同拍照模式的照片像素可能有差异，请以实际为准。",
-            "不同拍照模式的照片像素可能有差异，请以实际为准。",
-            "不同拍摄模式的视频像素可能有差异，请以实际为准。",
-            "最大"
+            "不同拍照模式的照片像素可能有差异，请以实际为准。"
           ],
           "system": "",
           "source_url": "https://consumer.huawei.com/cn/phones/mate80/specs/"
@@ -148,8 +139,7 @@
           "qualifiers": [
             "最大支持 66 W 华为有线超级快充，需搭配 66 W 及以上的华为超级快充充电套装使用。最大支持 5 W 有线反向充电，支持对通过华为实验室测试的设备进行反向充电。",
             "最大支持 50 W 华为无线超级快充，需单独购买华为超级快充立式无线充电器（Max 50 W / 80 W）或华为超级快充无线车充（Max 50 W / 80 W），并搭配特定 66 W 及以上的华为超级快充充电套装使用。无线反向充电，支持对通过华为实验室测试的设备进行反向充电。",
-            "实际充电功率会随不同场景智能变化，请以实际使用情况为准。",
-            "最大"
+            "实际充电功率会随不同场景智能变化，请以实际使用情况为准。"
           ],
           "system": "",
           "source_url": "https://consumer.huawei.com/cn/phones/mate80/specs/"
@@ -294,6 +284,30 @@
           "source_url": "https://consumer.huawei.com/cn/phones/mate80/specs/"
         },
         {
+          "id": "F816abd4fe92aae",
+          "product": "HUAWEI Mate 80",
+          "label": "后置摄像头 / 后置摄像头变焦模式",
+          "value": "支持 5.5 倍光学变焦（5.5 倍变焦为近似值，镜头焦段分别为 24 mm，13 mm，125 mm）、50 倍数字变焦",
+          "quote": "后置摄像头变焦模式\n支持 5.5 倍光学变焦（5.5 倍变焦为近似值，镜头焦段分别为 24 mm，13 mm，125 mm）、50 倍数字变焦",
+          "source_id": "official-1473054d596d6811",
+          "qualifiers": [],
+          "system": "",
+          "source_url": "https://consumer.huawei.com/cn/phones/mate80/specs/"
+        },
+        {
+          "id": "F6a2549cebb0128",
+          "product": "HUAWEI Mate 80",
+          "label": "前置摄像头 / 前置摄像头照片分辨率",
+          "value": "最大可支持 4160 × 3120 像素",
+          "quote": "前置摄像头照片分辨率\n最大可支持 4160 × 3120 像素\n*不同拍照模式的照片像素可能有差异，请以实际为准。",
+          "source_id": "official-1473054d596d6811",
+          "qualifiers": [
+            "不同拍照模式的照片像素可能有差异，请以实际为准。"
+          ],
+          "system": "",
+          "source_url": "https://consumer.huawei.com/cn/phones/mate80/specs/"
+        },
+        {
           "id": "F2976aeea77f04e",
           "product": "HUAWEI Mate 80",
           "label": "防尘抗水 / IP68 级防水测试条件为",
@@ -362,6 +376,30 @@
           "source_url": "https://consumer.huawei.com/cn/phones/mate80/specs/"
         },
         {
+          "id": "Fca199efe31862d",
+          "product": "HUAWEI Mate 80",
+          "label": "后置摄像头 / 后置摄像头对焦方式",
+          "value": "自动对焦",
+          "quote": "后置摄像头对焦方式\n自动对焦",
+          "source_id": "official-1473054d596d6811",
+          "qualifiers": [],
+          "system": "",
+          "source_url": "https://consumer.huawei.com/cn/phones/mate80/specs/"
+        },
+        {
+          "id": "F553ce5bfd35f8c",
+          "product": "HUAWEI Mate 80",
+          "label": "前置摄像头 / 前置摄像头摄像分辨率",
+          "value": "最大可支持 3840 × 2160 像素",
+          "quote": "前置摄像头摄像分辨率\n最大可支持 3840 × 2160 像素\n*不同拍摄模式的视频像素可能有差异，请以实际为准。",
+          "source_id": "official-1473054d596d6811",
+          "qualifiers": [
+            "不同拍摄模式的视频像素可能有差异，请以实际为准。"
+          ],
+          "system": "",
+          "source_url": "https://consumer.huawei.com/cn/phones/mate80/specs/"
+        },
+        {
           "id": "Fdcacaabecfc6f2",
           "product": "HUAWEI Mate 80",
           "label": "防尘抗水 / IP69 级防水测试条件为",
@@ -386,8 +424,7 @@
             "本机为北斗卫星消息提供移动终端硬件，需在空旷无遮蔽处使用。首次使用前需在有地面网络的环境下，通过畅连应用激活或者开通运营商北斗卫星短信相关业务。此功能仅限中国大陆地区（不含港澳台地区）。华为将配合公众测试验证，功能及活动规则详情请以官方信息为准。",
             "USB 3.1 Gen 1 功能需搭配支持 USB 3.1 Gen 1 的数据线使用。",
             "标配数据线支持 USB 2.0。",
-            "仅支持 USB Type-C 数字耳机，其它耳机需要搭配“华为 USB Type-C 转 3.5 毫米数字音频转换器”使用。",
-            "仅"
+            "仅支持 USB Type-C 数字耳机，其它耳机需要搭配“华为 USB Type-C 转 3.5 毫米数字音频转换器”使用。"
           ],
           "system": "",
           "source_url": "https://consumer.huawei.com/cn/phones/mate80/specs/"
@@ -401,6 +438,67 @@
           "source_id": "official-1473054d596d6811",
           "qualifiers": [
             "实际尺寸与重量依配置、制造工艺、测量方法的不同可能有所差异。"
+          ],
+          "system": "",
+          "source_url": "https://consumer.huawei.com/cn/phones/mate80/specs/"
+        },
+        {
+          "id": "F79265acad68d0b",
+          "product": "HUAWEI Mate 80",
+          "label": "后置摄像头 / 后置摄像头照片分辨率",
+          "value": "最大可支持 8192 × 6144 像素",
+          "quote": "后置摄像头照片分辨率\n最大可支持 8192 × 6144 像素\n*不同拍照模式的照片像素可能有差异，请以实际为准。",
+          "source_id": "official-1473054d596d6811",
+          "qualifiers": [
+            "不同拍照模式的照片像素可能有差异，请以实际为准。"
+          ],
+          "system": "",
+          "source_url": "https://consumer.huawei.com/cn/phones/mate80/specs/"
+        },
+        {
+          "id": "Fb907587a9dec69",
+          "product": "HUAWEI Mate 80",
+          "label": "前置摄像头 / 前置摄像头拍摄功能",
+          "value": "XMAGE 风格、AI 动态照片、视频 HDR Vivid、慢动作、人像模式、延时摄影、笑脸抓拍、自拍镜像、声控拍照、定时拍照",
+          "quote": "前置摄像头拍摄功能\nXMAGE 风格、AI 动态照片、视频 HDR Vivid、慢动作、人像模式、延时摄影、笑脸抓拍、自拍镜像、声控拍照、定时拍照",
+          "source_id": "official-1473054d596d6811",
+          "qualifiers": [],
+          "system": "",
+          "source_url": "https://consumer.huawei.com/cn/phones/mate80/specs/"
+        },
+        {
+          "id": "F8209a95dfe2cbc",
+          "product": "HUAWEI Mate 80",
+          "label": "后置摄像头 / 后置摄像头摄像分辨率",
+          "value": "最大支持 4K（3840 x 2160）视频录制",
+          "quote": "后置摄像头摄像分辨率\n最大支持 4K（3840 x 2160）视频录制\n*不同拍摄模式的视频像素可能有差异，请以实际为准。",
+          "source_id": "official-1473054d596d6811",
+          "qualifiers": [
+            "不同拍摄模式的视频像素可能有差异，请以实际为准。"
+          ],
+          "system": "",
+          "source_url": "https://consumer.huawei.com/cn/phones/mate80/specs/"
+        },
+        {
+          "id": "F0ed044c4dba8c6",
+          "product": "HUAWEI Mate 80",
+          "label": "后置摄像头 / 后置闪光灯",
+          "value": "LED 闪光灯",
+          "quote": "后置闪光灯\nLED 闪光灯",
+          "source_id": "official-1473054d596d6811",
+          "qualifiers": [],
+          "system": "",
+          "source_url": "https://consumer.huawei.com/cn/phones/mate80/specs/"
+        },
+        {
+          "id": "Ff407950a775f88",
+          "product": "HUAWEI Mate 80",
+          "label": "后置摄像头 / 后置摄像头拍摄功能",
+          "value": "XMAGE 风格、AI 辅助构图、电影效果*、舞台模式、超清全景、AI 超清增强、超级夜景、寰宇追月、绚丽星空、星空人像、AI 动态照片、视频 HDR Vivid、视频 Log、拍照 RAW 格式、闪拍、运动防抖、高画质模式、超级微距、微距视频、微距画中画、长焦画中画、高像素模式、延时摄影、超大广角、大光圈虚化、人像模式、专业模式、慢动作、流光快门、水印、AI 摄影大师、笑脸抓拍、声控拍照、定时拍照、连拍",
+          "quote": "后置摄像头拍摄功能\nXMAGE 风格、AI 辅助构图、电影效果*、舞台模式、超清全景、AI 超清增强、超级夜景、寰宇追月、绚丽星空、星空人像、AI 动态照片、视频 HDR Vivid、视频 Log、拍照 RAW 格式、闪拍、运动防抖、高画质模式、超级微距、微距视频、微距画中画、长焦画中画、高像素模式、延时摄影、超大广角、大光圈虚化、人像模式、专业模式、慢动作、流光快门、水印、AI 摄影大师、笑脸抓拍、声控拍照、定时拍照、连拍\n*需 HOTA 升级支持。",
+          "source_id": "official-1473054d596d6811",
+          "qualifiers": [
+            "需 HOTA 升级支持。"
           ],
           "system": "",
           "source_url": "https://consumer.huawei.com/cn/phones/mate80/specs/"
@@ -511,7 +609,15 @@
         "价格仅供参考，具体价格请以华为商城展示为⁠准。",
         "本产品出厂搭载 HarmonyOS\n6，配合其他华为设备使用的部分功能及体验正在逐步适配中；如您对本产品功能、与其他设备协同体验等有疑问，建议您购买前咨询华为客服（950800）了解详⁠情。"
       ],
-      "marketing_conditions_source_url": "https://consumer.huawei.com/cn/phones/mate80/"
+      "marketing_conditions_source_url": "https://consumer.huawei.com/cn/phones/mate80/",
+      "fact_extraction": {
+        "version": "2026-10-23.source-fields-v2",
+        "reextracted_at": "2026-10-22T18:19:09.227176+00:00",
+        "source_sha256": "08ff43633e984b12628b6b7be88837806305a304f99407ad0f75611ba4bddc5b",
+        "source_text_sha256": "3010148e616f246869587c3a7278892b621fd9848fdb73444d665651c2a3112f",
+        "previous_facts_sha256": "2a058efcdc38f197e9d775beaf6cc285b6746b5ff0b8292b43edf82e059a6945",
+        "capture_time_unchanged": true
+      }
     },
     {
       "name": "HUAWEI Pura 90",
@@ -557,8 +663,7 @@
           "source_id": "official-6108eed1d49c441e",
           "qualifiers": [
             "电池额定容量为 6370 mAh。",
-            "电池内置不可拆卸。",
-            "典型值"
+            "电池内置不可拆卸。"
           ],
           "system": "",
           "source_url": "https://consumer.huawei.com/cn/phones/pura90/specs/"
@@ -571,8 +676,7 @@
           "quote": "## 尺寸与重量\n\n长度\n163.1 mm\n宽度\n78.1 mm\n厚度\n7.0 mm\n重量\n约 210 g（含电池）\n*实际尺寸与重量依配置、制造工艺、测量方法的不同可能有所差异。\n\n",
           "source_id": "official-6108eed1d49c441e",
           "qualifiers": [
-            "实际尺寸与重量依配置、制造工艺、测量方法的不同可能有所差异。",
-            "约"
+            "实际尺寸与重量依配置、制造工艺、测量方法的不同可能有所差异。"
           ],
           "system": "",
           "source_url": "https://consumer.huawei.com/cn/phones/pura90/specs/"
@@ -617,35 +721,27 @@
           "source_url": "https://consumer.huawei.com/cn/phones/pura90/specs/"
         },
         {
-          "id": "F3eb0617044179c",
+          "id": "F4c1856d74fe349",
           "product": "HUAWEI Pura 90",
           "label": "后置摄像头",
-          "value": "后置摄像头\n5000 万像素超聚光摄像头（F1.8 光圈，OIS 光学防抖）\n1250 万像素超广角摄像头（F2.2 光圈）\n5000 万像素超聚光潜望长焦摄像头（F2.2 光圈，OIS 光学防抖）\n红枫原色摄像头\n*不同模式的照片和视频像素可能有差异，请以实际为准。\n后置摄像头变焦模式\n支持 3.7 倍光学变焦（3.7 倍变焦为近似值，镜头焦段分别为 24 mm，13 mm，88 mm）\n支持 100 倍数字变焦\n后置摄像头对焦方式\n自动对焦\n后置摄像头照片分辨率\n最大可支持 8192 × 6144 像素\n*不同拍照模式的照片像素可能有差异，请以实际为准。\n后置摄像头摄像分辨率\n最大可支持 4K（3840 × 2160）视频录制，支持 AIS 防抖；\n支持 1080p@480fps 超级慢动作视频\n*不同拍摄模式的视频像素可能有差异，请以实际为准。\n后置闪光灯\nLED 闪光灯\n后置摄像头拍摄功能\nAI 智拍*、AI 姿势推荐*、个性色卡*、AI 辅助构图*、AI 动态照片、视频 HDR Vivid、闪拍、高画质模式、夜景模式、超级微距、微距视频、微距画中画、长焦画中画、高像素模式、延时摄影、超大广角、大光圈虚化、人像模式、专业模式、慢动作、全景模式、流光快门、水印、AI 摄影大师、笑脸抓拍、声控拍照、定时拍照、连拍",
-          "quote": "## 后置摄像头\n\n后置摄像头\n5000 万像素超聚光摄像头（F1.8 光圈，OIS 光学防抖）\n1250 万像素超广角摄像头（F2.2 光圈）\n5000 万像素超聚光潜望长焦摄像头（F2.2 光圈，OIS 光学防抖）\n红枫原色摄像头\n*不同模式的照片和视频像素可能有差异，请以实际为准。\n后置摄像头变焦模式\n支持 3.7 倍光学变焦（3.7 倍变焦为近似值，镜头焦段分别为 24 mm，13 mm，88 mm）\n支持 100 倍数字变焦\n后置摄像头对焦方式\n自动对焦\n后置摄像头照片分辨率\n最大可支持 8192 × 6144 像素\n*不同拍照模式的照片像素可能有差异，请以实际为准。\n后置摄像头摄像分辨率\n最大可支持 4K（3840 × 2160）视频录制，支持 AIS 防抖；\n支持 1080p@480fps 超级慢动作视频\n*不同拍摄模式的视频像素可能有差异，请以实际为准。\n后置闪光灯\nLED 闪光灯\n后置摄像头拍摄功能\nAI 智拍*、AI 姿势推荐*、个性色卡*、AI 辅助构图*、AI 动态照片、视频 HDR Vivid、闪拍、高画质模式、夜景模式、超级微距、微距视频、微距画中画、长焦画中画、高像素模式、延时摄影、超大广角、大光圈虚化、人像模式、专业模式、慢动作、全景模式、流光快门、水印、AI 摄影大师、笑脸抓拍、声控拍照、定时拍照、连拍\n*需 HOTA 升级支持。\n\n",
+          "value": "5000 万像素超聚光摄像头（F1.8 光圈，OIS 光学防抖）\n1250 万像素超广角摄像头（F2.2 光圈）\n5000 万像素超聚光潜望长焦摄像头（F2.2 光圈，OIS 光学防抖）\n红枫原色摄像头",
+          "quote": "后置摄像头\n5000 万像素超聚光摄像头（F1.8 光圈，OIS 光学防抖）\n1250 万像素超广角摄像头（F2.2 光圈）\n5000 万像素超聚光潜望长焦摄像头（F2.2 光圈，OIS 光学防抖）\n红枫原色摄像头\n*不同模式的照片和视频像素可能有差异，请以实际为准。",
           "source_id": "official-6108eed1d49c441e",
           "qualifiers": [
-            "不同模式的照片和视频像素可能有差异，请以实际为准。",
-            "不同拍照模式的照片像素可能有差异，请以实际为准。",
-            "不同拍摄模式的视频像素可能有差异，请以实际为准。",
-            "需 HOTA 升级支持。",
-            "最大"
+            "不同模式的照片和视频像素可能有差异，请以实际为准。"
           ],
           "system": "",
           "source_url": "https://consumer.huawei.com/cn/phones/pura90/specs/"
         },
         {
-          "id": "F1595e650a76bb5",
+          "id": "Fd047c2cfd6d15a",
           "product": "HUAWEI Pura 90",
           "label": "前置摄像头",
-          "value": "前置摄像头\n5000 万像素超聚光人像摄像头（F2.0 光圈，自动对焦）\n红枫原色摄像头\n*不同模式的照片和视频像素可能有差异，请以实际为准。\n前置摄像头照片分辨率\n最大可支持 8192 × 6144 像素\n*不同拍照模式的照片像素可能有差异，请以实际为准。\n前置摄像头摄像分辨率\n最大可支持 4K（3840 × 2160）视频录制，支持 AIS 防抖；\n支持 1080p@120fps 超级慢动作视频\n*不同拍摄模式的视频像素可能有差异，请以实际为准。\n前置摄像头拍摄功能\nAI 姿势推荐*、个性色卡*、AI 动态照片、视频 HDR Vivid、慢动作、人像模式、延时摄影、笑脸抓拍、自拍镜像、声控拍照、定时拍照",
-          "quote": "## 前置摄像头\n\n前置摄像头\n5000 万像素超聚光人像摄像头（F2.0 光圈，自动对焦）\n红枫原色摄像头\n*不同模式的照片和视频像素可能有差异，请以实际为准。\n前置摄像头照片分辨率\n最大可支持 8192 × 6144 像素\n*不同拍照模式的照片像素可能有差异，请以实际为准。\n前置摄像头摄像分辨率\n最大可支持 4K（3840 × 2160）视频录制，支持 AIS 防抖；\n支持 1080p@120fps 超级慢动作视频\n*不同拍摄模式的视频像素可能有差异，请以实际为准。\n前置摄像头拍摄功能\nAI 姿势推荐*、个性色卡*、AI 动态照片、视频 HDR Vivid、慢动作、人像模式、延时摄影、笑脸抓拍、自拍镜像、声控拍照、定时拍照\n*需 HOTA 升级支持。\n\n",
+          "value": "5000 万像素超聚光人像摄像头（F2.0 光圈，自动对焦）\n红枫原色摄像头",
+          "quote": "前置摄像头\n5000 万像素超聚光人像摄像头（F2.0 光圈，自动对焦）\n红枫原色摄像头\n*不同模式的照片和视频像素可能有差异，请以实际为准。",
           "source_id": "official-6108eed1d49c441e",
           "qualifiers": [
-            "不同模式的照片和视频像素可能有差异，请以实际为准。",
-            "不同拍照模式的照片像素可能有差异，请以实际为准。",
-            "不同拍摄模式的视频像素可能有差异，请以实际为准。",
-            "需 HOTA 升级支持。",
-            "最大"
+            "不同模式的照片和视频像素可能有差异，请以实际为准。"
           ],
           "system": "",
           "source_url": "https://consumer.huawei.com/cn/phones/pura90/specs/"
@@ -660,8 +756,7 @@
           "qualifiers": [
             "最大支持 100 W 华为有线超级快充，需搭配 100 W 华为超级快充充电套装使用。最大支持 5 W 有线反向充电，支持对通过华为实验室测试的设备进行反向充电。",
             "最大支持 50 W 华为无线超级快充，需单独购买华为超级快充立式无线充电器（Max 50 W / 80 W）或华为超级快充无线车充（Max 50 W / 80 W），并搭配特定 66 W 及以上的华为超级快充充电套装使用。",
-            "实际充电功率会随不同场景智能变化，请以实际使用情况为准。",
-            "最大"
+            "实际充电功率会随不同场景智能变化，请以实际使用情况为准。"
           ],
           "system": "",
           "source_url": "https://consumer.huawei.com/cn/phones/pura90/specs/"
@@ -783,6 +878,30 @@
           "source_url": "https://consumer.huawei.com/cn/phones/pura90/specs/"
         },
         {
+          "id": "F2e3bc97675ff5d",
+          "product": "HUAWEI Pura 90",
+          "label": "后置摄像头 / 后置摄像头变焦模式",
+          "value": "支持 3.7 倍光学变焦（3.7 倍变焦为近似值，镜头焦段分别为 24 mm，13 mm，88 mm）\n支持 100 倍数字变焦",
+          "quote": "后置摄像头变焦模式\n支持 3.7 倍光学变焦（3.7 倍变焦为近似值，镜头焦段分别为 24 mm，13 mm，88 mm）\n支持 100 倍数字变焦",
+          "source_id": "official-6108eed1d49c441e",
+          "qualifiers": [],
+          "system": "",
+          "source_url": "https://consumer.huawei.com/cn/phones/pura90/specs/"
+        },
+        {
+          "id": "F8329bb2601d2f7",
+          "product": "HUAWEI Pura 90",
+          "label": "前置摄像头 / 前置摄像头照片分辨率",
+          "value": "最大可支持 8192 × 6144 像素",
+          "quote": "前置摄像头照片分辨率\n最大可支持 8192 × 6144 像素\n*不同拍照模式的照片像素可能有差异，请以实际为准。",
+          "source_id": "official-6108eed1d49c441e",
+          "qualifiers": [
+            "不同拍照模式的照片像素可能有差异，请以实际为准。"
+          ],
+          "system": "",
+          "source_url": "https://consumer.huawei.com/cn/phones/pura90/specs/"
+        },
+        {
           "id": "Fa278077fbb7ec4",
           "product": "HUAWEI Pura 90",
           "label": "防尘抗水 / IP69 级防水测试条件为",
@@ -839,6 +958,30 @@
           "source_url": "https://consumer.huawei.com/cn/phones/pura90/specs/"
         },
         {
+          "id": "F07c2ffc996c0a7",
+          "product": "HUAWEI Pura 90",
+          "label": "后置摄像头 / 后置摄像头对焦方式",
+          "value": "自动对焦",
+          "quote": "后置摄像头对焦方式\n自动对焦",
+          "source_id": "official-6108eed1d49c441e",
+          "qualifiers": [],
+          "system": "",
+          "source_url": "https://consumer.huawei.com/cn/phones/pura90/specs/"
+        },
+        {
+          "id": "F4b8a0062870feb",
+          "product": "HUAWEI Pura 90",
+          "label": "前置摄像头 / 前置摄像头摄像分辨率",
+          "value": "最大可支持 4K（3840 × 2160）视频录制，支持 AIS 防抖；\n支持 1080p@120fps 超级慢动作视频",
+          "quote": "前置摄像头摄像分辨率\n最大可支持 4K（3840 × 2160）视频录制，支持 AIS 防抖；\n支持 1080p@120fps 超级慢动作视频\n*不同拍摄模式的视频像素可能有差异，请以实际为准。",
+          "source_id": "official-6108eed1d49c441e",
+          "qualifiers": [
+            "不同拍摄模式的视频像素可能有差异，请以实际为准。"
+          ],
+          "system": "",
+          "source_url": "https://consumer.huawei.com/cn/phones/pura90/specs/"
+        },
+        {
           "id": "F73bc5ac30168d4",
           "product": "HUAWEI Pura 90",
           "label": "数据连接 / 蓝牙",
@@ -848,8 +991,7 @@
           "qualifiers": [
             "需要相应的路由器支持。",
             "本机为北斗卫星消息提供移动终端硬件，需在空旷无遮蔽处使用。首次使用前需在有地面网络的环境下，通过畅连应用激活或者开通运营商北斗卫星短信相关业务。此功能仅限中国大陆地区（不含港澳台地区）。华为将配合公众测试验证，功能及活动规则详情请以官方信息为准。",
-            "仅支持 USB Type-C 数字耳机，其它耳机需要搭配“华为 USB Type-C 转 3.5 毫米数字音频转换器”使用。",
-            "仅"
+            "仅支持 USB Type-C 数字耳机，其它耳机需要搭配“华为 USB Type-C 转 3.5 毫米数字音频转换器”使用。"
           ],
           "system": "",
           "source_url": "https://consumer.huawei.com/cn/phones/pura90/specs/"
@@ -863,6 +1005,69 @@
           "source_id": "official-6108eed1d49c441e",
           "qualifiers": [
             "实际尺寸与重量依配置、制造工艺、测量方法的不同可能有所差异。"
+          ],
+          "system": "",
+          "source_url": "https://consumer.huawei.com/cn/phones/pura90/specs/"
+        },
+        {
+          "id": "F741c91dceb4776",
+          "product": "HUAWEI Pura 90",
+          "label": "后置摄像头 / 后置摄像头照片分辨率",
+          "value": "最大可支持 8192 × 6144 像素",
+          "quote": "后置摄像头照片分辨率\n最大可支持 8192 × 6144 像素\n*不同拍照模式的照片像素可能有差异，请以实际为准。",
+          "source_id": "official-6108eed1d49c441e",
+          "qualifiers": [
+            "不同拍照模式的照片像素可能有差异，请以实际为准。"
+          ],
+          "system": "",
+          "source_url": "https://consumer.huawei.com/cn/phones/pura90/specs/"
+        },
+        {
+          "id": "Fbe33cee01f557c",
+          "product": "HUAWEI Pura 90",
+          "label": "前置摄像头 / 前置摄像头拍摄功能",
+          "value": "AI 姿势推荐*、个性色卡*、AI 动态照片、视频 HDR Vivid、慢动作、人像模式、延时摄影、笑脸抓拍、自拍镜像、声控拍照、定时拍照",
+          "quote": "前置摄像头拍摄功能\nAI 姿势推荐*、个性色卡*、AI 动态照片、视频 HDR Vivid、慢动作、人像模式、延时摄影、笑脸抓拍、自拍镜像、声控拍照、定时拍照\n*需 HOTA 升级支持。",
+          "source_id": "official-6108eed1d49c441e",
+          "qualifiers": [
+            "需 HOTA 升级支持。"
+          ],
+          "system": "",
+          "source_url": "https://consumer.huawei.com/cn/phones/pura90/specs/"
+        },
+        {
+          "id": "F01b54d38371b2e",
+          "product": "HUAWEI Pura 90",
+          "label": "后置摄像头 / 后置摄像头摄像分辨率",
+          "value": "最大可支持 4K（3840 × 2160）视频录制，支持 AIS 防抖；\n支持 1080p@480fps 超级慢动作视频",
+          "quote": "后置摄像头摄像分辨率\n最大可支持 4K（3840 × 2160）视频录制，支持 AIS 防抖；\n支持 1080p@480fps 超级慢动作视频\n*不同拍摄模式的视频像素可能有差异，请以实际为准。",
+          "source_id": "official-6108eed1d49c441e",
+          "qualifiers": [
+            "不同拍摄模式的视频像素可能有差异，请以实际为准。"
+          ],
+          "system": "",
+          "source_url": "https://consumer.huawei.com/cn/phones/pura90/specs/"
+        },
+        {
+          "id": "F2e03acb832ebe6",
+          "product": "HUAWEI Pura 90",
+          "label": "后置摄像头 / 后置闪光灯",
+          "value": "LED 闪光灯",
+          "quote": "后置闪光灯\nLED 闪光灯",
+          "source_id": "official-6108eed1d49c441e",
+          "qualifiers": [],
+          "system": "",
+          "source_url": "https://consumer.huawei.com/cn/phones/pura90/specs/"
+        },
+        {
+          "id": "Ff1dcded8b8ff8a",
+          "product": "HUAWEI Pura 90",
+          "label": "后置摄像头 / 后置摄像头拍摄功能",
+          "value": "AI 智拍*、AI 姿势推荐*、个性色卡*、AI 辅助构图*、AI 动态照片、视频 HDR Vivid、闪拍、高画质模式、夜景模式、超级微距、微距视频、微距画中画、长焦画中画、高像素模式、延时摄影、超大广角、大光圈虚化、人像模式、专业模式、慢动作、全景模式、流光快门、水印、AI 摄影大师、笑脸抓拍、声控拍照、定时拍照、连拍",
+          "quote": "后置摄像头拍摄功能\nAI 智拍*、AI 姿势推荐*、个性色卡*、AI 辅助构图*、AI 动态照片、视频 HDR Vivid、闪拍、高画质模式、夜景模式、超级微距、微距视频、微距画中画、长焦画中画、高像素模式、延时摄影、超大广角、大光圈虚化、人像模式、专业模式、慢动作、全景模式、流光快门、水印、AI 摄影大师、笑脸抓拍、声控拍照、定时拍照、连拍\n*需 HOTA 升级支持。",
+          "source_id": "official-6108eed1d49c441e",
+          "qualifiers": [
+            "需 HOTA 升级支持。"
           ],
           "system": "",
           "source_url": "https://consumer.huawei.com/cn/phones/pura90/specs/"
@@ -964,7 +1169,15 @@
         "HUAWEI Pura 90\n为北斗卫星消息提供移动终端硬件，需在空旷无遮蔽处使用。首次使用前需在有地面网络的环境下，通过畅连应用激活或者开通运营商北斗卫星短信相关业务。仅支持通过畅连应用发送北斗卫星图片消息和生成轨迹地图功能，图片经有损压缩，压缩效果受卫星网络带宽限制；自由编辑消息文本长度也受卫星网络带宽限制，请以实际体验为准。此功能仅限中国大陆地区（不含港澳台地区）。华为将配合公众测试验证，功能及活动规则详情请以官方信息为⁠准。",
         "手机的通话效果和连网稳定性与运营商网络建设和信号覆盖情况有关，请以实际体验为⁠准。"
       ],
-      "marketing_conditions_source_url": "https://consumer.huawei.com/cn/phones/pura90/"
+      "marketing_conditions_source_url": "https://consumer.huawei.com/cn/phones/pura90/",
+      "fact_extraction": {
+        "version": "2026-10-23.source-fields-v2",
+        "reextracted_at": "2026-10-22T18:19:09.236169+00:00",
+        "source_sha256": "d8c6e05781e152da38fe5f467e1f38f29bf8117e48fb9fbb9fa29d0f0f3183cf",
+        "source_text_sha256": "e759b7b3d999e7ea8046d20955b6158e7cdd81f2937cab7142e5b46e49a2987e",
+        "previous_facts_sha256": "0c25401ea3011b15006d001559b18cd7889a2c028423bd9900cb49fa0dc3491b",
+        "capture_time_unchanged": true
+      }
     },
     {
       "name": "HUAWEI MatePad Edge",
@@ -1021,8 +1234,7 @@
           "source_id": "official-1c6b7f32a6ca5fae",
           "qualifiers": [
             "数据来源于华为实验室。实际机身尺寸依配置、制造工艺、测量方法的不同可能有所差异。",
-            "数据来源于华为实验室。实际机身重量依配置、制造工艺、测量方法的不同可能有所差异。",
-            "约"
+            "数据来源于华为实验室。实际机身重量依配置、制造工艺、测量方法的不同可能有所差异。"
           ],
           "system": "",
           "source_url": "https://consumer.huawei.com/cn/tablets/matepad-edge/specs/"
@@ -1073,9 +1285,7 @@
           "value": "后置摄像头配置\n5000 万像素主摄像头（F1.8 光圈）\n800 万像素广角微距摄像头（F2.2 光圈）\n后置单 LED 闪光灯\n后置主摄像头照片分辨率\n最大可支持 8192 × 6144 像素\n后置主摄像头摄像分辨率\n最大可支持 3840 × 2160 像素\n前置摄像头配置\n3200 万像素广角摄像头（F2.4 光圈）\n前置摄像头照片分辨率\n最大可支持 6258 × 4896 像素\n前置摄像头摄像分辨率\n最大可支持 1920 × 1080 像素",
           "quote": "## 摄像头\n\n后置摄像头配置\n5000 万像素主摄像头（F1.8 光圈）\n800 万像素广角微距摄像头（F2.2 光圈）\n后置单 LED 闪光灯\n后置主摄像头照片分辨率\n最大可支持 8192 × 6144 像素\n后置主摄像头摄像分辨率\n最大可支持 3840 × 2160 像素\n前置摄像头配置\n3200 万像素广角摄像头（F2.4 光圈）\n前置摄像头照片分辨率\n最大可支持 6258 × 4896 像素\n前置摄像头摄像分辨率\n最大可支持 1920 × 1080 像素\n\n",
           "source_id": "official-1c6b7f32a6ca5fae",
-          "qualifiers": [
-            "最大"
-          ],
+          "qualifiers": [],
           "system": "",
           "source_url": "https://consumer.huawei.com/cn/tablets/matepad-edge/specs/"
         },
@@ -1371,7 +1581,15 @@
         "仅部分应用支持，请以实际体验为⁠准。",
         "价格仅供参考，具体价格请以华为商城展示为准。"
       ],
-      "marketing_conditions_source_url": "https://consumer.huawei.com/cn/tablets/matepad-edge/"
+      "marketing_conditions_source_url": "https://consumer.huawei.com/cn/tablets/matepad-edge/",
+      "fact_extraction": {
+        "version": "2026-10-23.source-fields-v2",
+        "reextracted_at": "2026-10-22T18:19:09.248307+00:00",
+        "source_sha256": "c6182821498353139de620b0017314011cf333ec582fbe58d497e5f3abc3b775",
+        "source_text_sha256": "307a58e9e04b6709f5c71622a1cb0f0c9821df6b028324be8830227a448eeb15",
+        "previous_facts_sha256": "52b1b01cd64619bb374d1c86a0a62fb6603934fd65753396d853c730982afbf1",
+        "capture_time_unchanged": true
+      }
     }
   ]
 }

@@ -110,6 +110,10 @@ def choose_preview_images(task, bundle, blocks):
 def editorial_review(task, result):
     """Actionable heuristics, not a fabricated popularity or conversion score."""
     findings = []
+    from .reader_value import reader_intent
+    execution = result.strategy.get('creative_execution') or {}
+    selected = (execution.get('exploration') or {}).get('selected_concept') if isinstance(execution, dict) else None
+    intent = reader_intent(task, selected)
     def warn(message):
         findings.append(AuditItem(severity='warning', category='editorial', message=message))
     if not result.title.strip():
@@ -118,7 +122,7 @@ def editorial_review(task, result):
         if len(result.title) > 20:
             warn('小红书标题偏长，建议压缩为一个具体问题或阅读收益')
         invitation=re.search(r'(?:评论|留言|告诉我|私信).{0,24}(?:专业|软件|需求|问题|顾虑|哪|什么)',result.cta)
-        if not invitation and '收藏' not in result.cta and not any(('？' in b.text or '?' in b.text) for b in result.blocks) and not re.search(r'什么|哪|？|\?', result.cta):
+        if intent not in {'aesthetic_emotion', 'everyday_observation'} and not invitation and '收藏' not in result.cta and not any(('？' in b.text or '?' in b.text) for b in result.blocks) and not re.search(r'什么|哪|？|\?', result.cta):
             warn('笔记缺少与选购问题有关的具体互动问题')
         if any(len(b.text) > 240 for b in result.blocks):
             warn('笔记段落偏长，建议拆成一屏能读完的小段')
@@ -129,7 +133,7 @@ def editorial_review(task, result):
         if len(result.tags) > 1:
             warn('朋友圈不宜直接套用小红书的话题标签串')
     elif task.platform == 'wechat':
-        if len(result.blocks) < 3:
+        if len(result.blocks) < 3 and intent not in {'aesthetic_emotion', 'everyday_observation'}:
             warn('公众号缺少展开论证，建议补上场景、方案解释和选购边界')
     elif task.platform == 'poster':
         if len(result.title) > 18 or len(result.intro) > 45:
@@ -163,6 +167,38 @@ def preview_content_plan(task):
     }
 
 
+def deduplicate_public_footnotes(result, bundle):
+    """Remove verbatim standalone repetitions, retaining the adjacent footnote.
+
+    Only long source-backed qualifications already present in disclosures qualify.
+    No paraphrase or arbitrary disclaimer is removed, and no condition is added.
+    All edited text still passes the regular fact and semantic audit afterward.
+    """
+    facts = {fact.id: fact for fact in bundle.facts}
+    edited = 0
+    targets = [(block, 'text') for block in result.blocks]
+    targets += [(card, 'body') for card in result.creative_plan.get('cards', [])]
+    for target, key in targets:
+        is_dict = isinstance(target, dict)
+        get = target.get if is_dict else lambda field, default=None: getattr(target, field, default)
+        text = get(key, '')
+        supported = {q for fid in get('fact_ids', []) if fid in facts for q in facts[fid].qualifiers}
+        for qualifier in get('disclosures', []):
+            if qualifier not in supported or len(qualifier) < 20:
+                continue
+            exact = qualifier.strip().rstrip('。.!！')
+            pattern = r'(^|[。！？\n])\s*' + re.escape(exact) + r'[。.!！](?=$|[^\w]|[\u4e00-\u9fff])'
+            candidate, count = re.subn(pattern, r'\1', text)
+            if candidate.strip(' 。.!！\n\t'):
+                text = candidate
+                edited += count
+        if is_dict:
+            target[key] = text.strip()
+        else:
+            setattr(target, key, text.strip())
+    return edited
+
+
 def finalize_editorial_layout(task, result, bundle):
     """Bound the channel layout before the same fact and semantic audits run.
 
@@ -171,6 +207,8 @@ def finalize_editorial_layout(task, result, bundle):
     Unrelated pictures become explicit production gaps, never substitute photos.
     """
     changes=[]
+    if deduplicate_public_footnotes(result, bundle):
+        changes.append('正文与分镜去掉重复的长脚注，原文条件保留在对应公开脚注，随后重新核验')
     if task.platform=='moments':
         if result.intro and not re.search(r'亲测|我用了|保证|支持|搭载|配备|\d+\s*(?:GB|TB|元|英寸)',result.intro,re.I):
             result.intro=''

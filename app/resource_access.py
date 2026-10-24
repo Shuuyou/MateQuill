@@ -26,6 +26,8 @@ def validate_task_resources(task):
     from fastapi import HTTPException
     from .generation_jobs import assert_job_lease
     assert_job_lease()
+    from .gtm_agent.effects import assert_agent_lease
+    assert_agent_lease()
     context = ensure_live_context()
     if context and not context.is_legacy and task.store_id and task.store_id != context.store_id:
         raise HTTPException(409, '请先切换到这家门店，再开始创作')

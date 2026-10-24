@@ -73,14 +73,19 @@ def _save(doc, expected_document_version=None):
     from .tenancy import get_context, save_body
     context = get_context()
     if context and not context.is_legacy:
-        if expected_document_version is None:
-            save_body('poster', doc.id, doc.model_dump(mode='json'))
-        else:
-            from .tenancy import authorize_resource, service_update_body
-            meta = authorize_resource('poster', doc.id, 'write')
-            if (meta.get('body') or {}).get('version') != expected_document_version:
-                raise HTTPException(409, '海报刚刚已更新，请刷新后重试')
-            service_update_body('poster', doc.id, doc.model_dump(mode='json'), expected_version=meta['version'])
+        from .tenancy import transaction_context
+        from .gtm_agent.effects import checkpoint_generated_artifact, assert_agent_lease
+        with transaction_context():
+            assert_agent_lease()
+            if expected_document_version is None:
+                save_body('poster', doc.id, doc.model_dump(mode='json'))
+            else:
+                from .tenancy import authorize_resource, service_update_body
+                meta = authorize_resource('poster', doc.id, 'write')
+                if (meta.get('body') or {}).get('version') != expected_document_version:
+                    raise HTTPException(409, '海报刚刚已更新，请刷新后重试')
+                service_update_body('poster', doc.id, doc.model_dump(mode='json'), expected_version=meta['version'])
+            checkpoint_generated_artifact('poster', doc.id, doc.model_dump(mode='json'))
         return
     documents[doc.id]=doc
     while len(documents)>20:

@@ -2,6 +2,9 @@
 import { useState } from "react";
 import type { RunResult, RunTask } from "@/lib/types";
 import Character from "./Character";
+import MomentsDraft from "./MomentsDraft";
+import PublicationActions from "./PublicationActions";
+import { DesignLauncher } from "./DesignWorkspace";
 
 const LABELS: Record<string, string> = {
   audience: "这次写给谁",
@@ -94,6 +97,9 @@ export default function ResultWorkbench({
     }))
     .filter((image) => image.asset);
   const publishable = result.status === "ready" || result.status === "draft";
+  if (task?.platform === "moments" && publishable) {
+    return <><MomentsDraft result={result} task={task} busy={busy} onRevise={onRevise} onBack={onBack} /><DesignLauncher sourceRunId={result.run_id} platform={task?.platform} /></>;
+  }
   async function copyText() {
     try {
       await navigator.clipboard.writeText(documentText(result));
@@ -111,9 +117,12 @@ export default function ResultWorkbench({
           </p>
           <h1>{result.title || "这次内容还需要调整"}</h1>
         </div>
+        <div className="mq-workbench-actions">
         <button type="button" className="mq-text-button" onClick={onBack}>
           修改需求
         </button>
+        {publishable && <DesignLauncher sourceRunId={result.run_id} platform={task?.platform} />}
+        </div>
       </header>
       <div className="mq-document-grid">
         <article className="mq-document">
@@ -140,15 +149,18 @@ export default function ResultWorkbench({
                 创作思路
               </button>
             )}
-            <button
+            {task?.platform !== "wechat" && <button
               className="mq-copy"
               disabled={!publishable}
               onClick={() => void copyText()}
             >
               {copy || "复制全文"}
-            </button>
+            </button>}
           </nav>
-          {tab === "article" && (
+          {tab === "article" && task?.platform === "wechat" && result.status === "ready" && (
+            <PublicationActions runId={result.run_id} ready platform="wechat" preview disabled={busy} />
+          )}
+          {tab === "article" && !(task?.platform === "wechat" && result.status === "ready") && (
             <div className="mq-article">
               {result.intro && <p className="mq-lead">{result.intro}</p>}
               {result.blocks?.map((block, index) => (
@@ -261,7 +273,7 @@ export default function ResultWorkbench({
             </dl>
           )}
           <footer className="mq-document-footer">
-            <a
+            {task?.platform !== "wechat" && <><a
               aria-disabled={!publishable}
               href={
                 publishable
@@ -280,7 +292,7 @@ export default function ResultWorkbench({
               }
             >
               导出图文网页 ↗
-            </a>
+            </a></>}
             <button
               onClick={() => setSources((value) => !value)}
               aria-expanded={sources}
@@ -316,8 +328,7 @@ export default function ResultWorkbench({
         </article>
         <aside className="mq-editor-note">
           <Character state={busy ? "thinking" : "done"} />
-          <h2>再添一点你的口吻。</h2>
-          <p>可以更口语一点，也可以换一个顾客关心的角度。</p>
+          <h2>再改一点。</h2>
           <form
             onSubmit={(event) => {
               event.preventDefault();

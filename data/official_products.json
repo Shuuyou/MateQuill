@@ -59,9 +59,7 @@
           "value": "70 Wh（额定容量）",
           "quote": "## 电池\n\n材料\n锂聚合物\n容量\n70 Wh（额定容量）\n\n",
           "source_id": "official-34e1610420619a2f",
-          "qualifiers": [
-            "额定容量"
-          ],
+          "qualifiers": [],
           "system": "",
           "source_url": "https://consumer.huawei.com/cn/harmonyos-computer/matebook-14-harmonyos-version/specs/"
         },
@@ -73,8 +71,7 @@
           "quote": "## 尺寸与重量\n\n长度\n312.6 mm\n宽度\n226.8 mm\n厚度\n14.5 mm\n重量\n约 1.33 kg（圆键盘含电池）\n约 1.32 kg（方键盘含电池）\n*实际机身重量根据配置、制造工艺、测量方法的不同可能有所差异。\n\n",
           "source_id": "official-34e1610420619a2f",
           "qualifiers": [
-            "实际机身重量根据配置、制造工艺、测量方法的不同可能有所差异。",
-            "约"
+            "实际机身重量根据配置、制造工艺、测量方法的不同可能有所差异。"
           ],
           "system": "",
           "source_url": "https://consumer.huawei.com/cn/harmonyos-computer/matebook-14-harmonyos-version/specs/"
@@ -429,8 +426,7 @@
           "source_id": "official-34e1610420619a2f",
           "qualifiers": [
             "显示屏采用圆角设计，按照标准矩形测量时，屏幕的对角线长度是 14.2 英寸（实际可视区域略小）。",
-            "多屏同色，根据应用软件、屏幕设置、使用习惯、环境等因素不同，可能略有差异，请以实际体验为准。购买时最新支持的设备机型请见官网或咨询华为商用客户服务专线（950803）。",
-            "典型值"
+            "多屏同色，根据应用软件、屏幕设置、使用习惯、环境等因素不同，可能略有差异，请以实际体验为准。购买时最新支持的设备机型请见官网或咨询华为商用客户服务专线（950803）。"
           ],
           "system": "",
           "source_url": "https://consumer.huawei.com/cn/harmonyos-computer/matebook-14-harmonyos-version/specs/"
@@ -458,8 +454,7 @@
           "source_id": "official-34e1610420619a2f",
           "qualifiers": [
             "显示屏采用圆角设计，按照标准矩形测量时，屏幕的对角线长度是 14.2 英寸（实际可视区域略小）。",
-            "多屏同色，根据应用软件、屏幕设置、使用习惯、环境等因素不同，可能略有差异，请以实际体验为准。购买时最新支持的设备机型请见官网或咨询华为商用客户服务专线（950803）。",
-            "典型值"
+            "多屏同色，根据应用软件、屏幕设置、使用习惯、环境等因素不同，可能略有差异，请以实际体验为准。购买时最新支持的设备机型请见官网或咨询华为商用客户服务专线（950803）。"
           ],
           "system": "",
           "source_url": "https://consumer.huawei.com/cn/harmonyos-computer/matebook-14-harmonyos-version/specs/"
@@ -473,8 +468,7 @@
           "source_id": "official-34e1610420619a2f",
           "qualifiers": [
             "显示屏采用圆角设计，按照标准矩形测量时，屏幕的对角线长度是 14.2 英寸（实际可视区域略小）。",
-            "多屏同色，根据应用软件、屏幕设置、使用习惯、环境等因素不同，可能略有差异，请以实际体验为准。购买时最新支持的设备机型请见官网或咨询华为商用客户服务专线（950803）。",
-            "典型值"
+            "多屏同色，根据应用软件、屏幕设置、使用习惯、环境等因素不同，可能略有差异，请以实际体验为准。购买时最新支持的设备机型请见官网或咨询华为商用客户服务专线（950803）。"
           ],
           "system": "",
           "source_url": "https://consumer.huawei.com/cn/harmonyos-computer/matebook-14-harmonyos-version/specs/"
@@ -590,7 +584,15 @@
         "该功能需手动开启。AI 换脸检测目前仅支持畅连、QQ⁠、微信视频通话和钉钉；基于 AI 技术提供的辅助预警通话风险的功能，仅作为风险提示参考，不构成任何安全承诺和保证，请结合实际情况甄别核⁠⁠⁠⁠⁠实。",
         "价格仅供参考，具体价格请以华为商城展示为⁠⁠准。"
       ],
-      "marketing_conditions_source_url": "https://consumer.huawei.com/cn/harmonyos-computer/matebook-14-harmonyos-version/"
+      "marketing_conditions_source_url": "https://consumer.huawei.com/cn/harmonyos-computer/matebook-14-harmonyos-version/",
+      "fact_extraction": {
+        "version": "2026-10-23.source-fields-v2",
+        "reextracted_at": "2026-10-22T18:19:09.137030+00:00",
+        "source_sha256": "7b5e38f26573f09af76246bbc17fdad0f70b32b5b22441e45b179437f77a9c67",
+        "source_text_sha256": "6a6e2f90462316a1c9211ba13922711ad3aaf73907b761dc30ae6129a08efea0",
+        "previous_facts_sha256": "191c9db06308c6bc303db2cc5e3405f3aa3e20b6f2bbeb19241260593e6f5bba",
+        "capture_time_unchanged": true
+      }
     },
     {
       "name": "HUAWEI MateBook Fold 非凡大师",
@@ -660,8 +662,7 @@
           "quote": "## 电池\n\n材料\n锂聚合物\n容量\n74.69 Wh（额定容量）\n*电池使用时间依使用情况和设置的不同可能有所差异。\n\n",
           "source_id": "official-db8dc8504eb506cd",
           "qualifiers": [
-            "电池使用时间依使用情况和设置的不同可能有所差异。",
-            "额定容量"
+            "电池使用时间依使用情况和设置的不同可能有所差异。"
           ],
           "system": "",
           "source_url": "https://consumer.huawei.com/cn/harmonyos-computer/matebook-fold-ultimate-design/specs/"
@@ -675,8 +676,7 @@
           "source_id": "official-db8dc8504eb506cd",
           "qualifiers": [
             "左是指摄像头所在的左半屏，右是指非摄像头所在的右半屏。",
-            "实际尺寸和重量依配置、制造工艺、测量方法的不同可能有所差异。",
-            "约"
+            "实际尺寸和重量依配置、制造工艺、测量方法的不同可能有所差异。"
           ],
           "system": "",
           "source_url": "https://consumer.huawei.com/cn/harmonyos-computer/matebook-fold-ultimate-design/specs/"
@@ -1243,7 +1243,15 @@
         "部分功能需升级到 HarmonyOS 7 体验，请确保当前系统版本已升级到最新。如您选购时对本产品功能、与其他设备协同体验等有疑问的，建议您可先咨询华为客服了解详⁠情⁠。",
         "价格仅供参考，具体价格请以华为商城展示为⁠准⁠。"
       ],
-      "marketing_conditions_source_url": "https://consumer.huawei.com/cn/harmonyos-computer/matebook-fold-ultimate-design/"
+      "marketing_conditions_source_url": "https://consumer.huawei.com/cn/harmonyos-computer/matebook-fold-ultimate-design/",
+      "fact_extraction": {
+        "version": "2026-10-23.source-fields-v2",
+        "reextracted_at": "2026-10-22T18:19:09.147526+00:00",
+        "source_sha256": "b88981074b0806c351aafa01680f893ef3a7733d590e228579d4e5db036bf84a",
+        "source_text_sha256": "831acbc6f5cb94a0a37dd66f9ac6ce15eb94beaf7ba1d3cf95c6c6c0ca958f08",
+        "previous_facts_sha256": "d2bb8c974511d33462e57d6ed19dc43b0e4d94a9dffe5cd6ce159f35995ccbbc",
+        "capture_time_unchanged": true
+      }
     },
     {
       "name": "HUAWEI MateBook Pro",
@@ -1312,9 +1320,7 @@
           "value": "70 Wh（额定容量）",
           "quote": "## 电池\n\n材料\n锂聚合物\n容量\n70 Wh（额定容量）\n\n",
           "source_id": "official-b1bbf601adc2a575",
-          "qualifiers": [
-            "额定容量"
-          ],
+          "qualifiers": [],
           "system": "",
           "source_url": "https://consumer.huawei.com/cn/harmonyos-computer/matebook-pro/specs/"
         },
@@ -1439,9 +1445,7 @@
           "value": "USB-C （USB3.2 Gen1）× 1，支持最大对外供电 66 W（20V3.3A）",
           "quote": "## 接口\n\n左侧：USB-C （USB3.2 Gen1）× 2\n右侧：USB-C （USB3.2 Gen1）× 1，支持最大对外供电 66 W（20V3.3A）\n右侧：超级隐私开关 × 1\n\n",
           "source_id": "official-b1bbf601adc2a575",
-          "qualifiers": [
-            "最大"
-          ],
+          "qualifiers": [],
           "system": "",
           "source_url": "https://consumer.huawei.com/cn/harmonyos-computer/matebook-pro/specs/"
         },
@@ -1608,8 +1612,7 @@
           "quote": "## 屏幕\n\n尺寸\n14.2 英寸\n类型\nOLED 云晰柔光屏\n*仅 HUAWEI MateBook Pro 柔光版支持云晰柔光屏。云晰柔光屏是华为对屏幕设计的定义，屏幕形成漫反射，减轻灯光、阳光等光照的影响，让屏幕观感更舒适；不同使用条件、环境下体验可能略有差异，请以实际为⁠准。\n屏占比\n93%\n屏幕比例\n3:2\n分辨率\n3120（长）× 2080（宽）\n亮度\n典型亮度：600 nits\n峰值亮度：1000 nits\n色域\n100% sRGB色域（典型值）、P3 广色域（典型值）\n对比度\n1000000:1（典型值）\n可视角度\n178°（典型值）\n触摸屏\n多点触控触摸屏，最多支持 10 点触控\n*屏幕亮度、色域、对比度、可视角度等数据为典型值。\n\n",
           "source_id": "official-b1bbf601adc2a575",
           "qualifiers": [
-            "屏幕亮度、色域、对比度、可视角度等数据为典型值。",
-            "典型值"
+            "屏幕亮度、色域、对比度、可视角度等数据为典型值。"
           ],
           "system": "",
           "source_url": "https://consumer.huawei.com/cn/harmonyos-computer/matebook-pro/specs/"
@@ -1621,9 +1624,7 @@
           "value": "1（典型值）",
           "quote": "## 屏幕\n\n尺寸\n14.2 英寸\n类型\nOLED 云晰柔光屏\n*仅 HUAWEI MateBook Pro 柔光版支持云晰柔光屏。云晰柔光屏是华为对屏幕设计的定义，屏幕形成漫反射，减轻灯光、阳光等光照的影响，让屏幕观感更舒适；不同使用条件、环境下体验可能略有差异，请以实际为⁠准。\n屏占比\n93%\n屏幕比例\n3:2\n分辨率\n3120（长）× 2080（宽）\n亮度\n典型亮度：600 nits\n峰值亮度：1000 nits\n色域\n100% sRGB色域（典型值）、P3 广色域（典型值）\n对比度\n1000000:1（典型值）\n可视角度\n178°（典型值）\n触摸屏\n多点触控触摸屏，最多支持 10 点触控\n*屏幕亮度、色域、对比度、可视角度等数据为典型值。\n\n",
           "source_id": "official-b1bbf601adc2a575",
-          "qualifiers": [
-            "典型值"
-          ],
+          "qualifiers": [],
           "system": "",
           "source_url": "https://consumer.huawei.com/cn/harmonyos-computer/matebook-pro/specs/"
         },
@@ -1635,8 +1636,7 @@
           "quote": "## 屏幕\n\n尺寸\n14.2 英寸\n类型\nOLED 云晰柔光屏\n*仅 HUAWEI MateBook Pro 柔光版支持云晰柔光屏。云晰柔光屏是华为对屏幕设计的定义，屏幕形成漫反射，减轻灯光、阳光等光照的影响，让屏幕观感更舒适；不同使用条件、环境下体验可能略有差异，请以实际为⁠准。\n屏占比\n93%\n屏幕比例\n3:2\n分辨率\n3120（长）× 2080（宽）\n亮度\n典型亮度：600 nits\n峰值亮度：1000 nits\n色域\n100% sRGB色域（典型值）、P3 广色域（典型值）\n对比度\n1000000:1（典型值）\n可视角度\n178°（典型值）\n触摸屏\n多点触控触摸屏，最多支持 10 点触控\n*屏幕亮度、色域、对比度、可视角度等数据为典型值。\n\n",
           "source_id": "official-b1bbf601adc2a575",
           "qualifiers": [
-            "屏幕亮度、色域、对比度、可视角度等数据为典型值。",
-            "典型值"
+            "屏幕亮度、色域、对比度、可视角度等数据为典型值。"
           ],
           "system": "",
           "source_url": "https://consumer.huawei.com/cn/harmonyos-computer/matebook-pro/specs/"
@@ -1758,7 +1758,15 @@
         "HUAWEI M-Pen 3（即 HUAWEI M-Pen 3 多功能笔）需单独购买。",
         "仅部分搭载 HarmonyOS 5 及以上版本的华为手机、平板、电脑支持该功能。如在选购或使用时对功能体验、使用限制、支持机⁠型等有疑问，请咨询华为客服（950800）⁠。"
       ],
-      "marketing_conditions_source_url": "https://consumer.huawei.com/cn/harmonyos-computer/matebook-pro/"
+      "marketing_conditions_source_url": "https://consumer.huawei.com/cn/harmonyos-computer/matebook-pro/",
+      "fact_extraction": {
+        "version": "2026-10-23.source-fields-v2",
+        "reextracted_at": "2026-10-22T18:19:09.155527+00:00",
+        "source_sha256": "8029f3cb0830cdddd24d941e1c18611383fbad11c4e70c58e2a454e755310afb",
+        "source_text_sha256": "2894ed2fe7816e5ed3cf10e694139350c969d4c7deefc6f78fc6c55eb4741896",
+        "previous_facts_sha256": "9996ee23ad09e6cb5a73932351e7013ac3c0d93b4620a7882c0fd5cf646e32b9",
+        "capture_time_unchanged": true
+      }
     },
     {
       "name": "HUAWEI MateBook Pro S",
@@ -1825,9 +1833,7 @@
           "value": "54 Wh（额定容量）",
           "quote": "## 电池\n\n材料\n锂聚合物\n容量\n54 Wh（额定容量）\n\n",
           "source_id": "official-c361d3002216757e",
-          "qualifiers": [
-            "额定容量"
-          ],
+          "qualifiers": [],
           "system": "",
           "source_url": "https://consumer.huawei.com/cn/harmonyos-computer/matebook-pro-s/specs/"
         },
@@ -1955,9 +1961,7 @@
           "value": "USB Type-C（USB 3.2 Gen 1）× 1，支持 DisplayPort 1.2（最大分辨率 4K@60 Hz）",
           "quote": "## 接口\n\n左侧：USB Type-C（USB 3.2 Gen 1）× 1\n右侧：USB Type-C（USB 3.2 Gen 1）× 1，支持 DisplayPort 1.2（最大分辨率 4K@60 Hz）\n右侧：隐私开关* × 1\n*标准屏版、柔光屏版机型支持一键开启/关闭摄像头、麦克风及定位权限；防窥屏版、典藏版机型支持一键开启/关闭防窥功能。\n\n",
           "source_id": "official-c361d3002216757e",
-          "qualifiers": [
-            "最大"
-          ],
+          "qualifiers": [],
           "system": "",
           "source_url": "https://consumer.huawei.com/cn/harmonyos-computer/matebook-pro-s/specs/"
         },
@@ -2287,7 +2291,15 @@
         "加密分享文件仅支持在 HarmonyOS 5 及以上版本的设备进行查看。仅 HarmonyOS 6.1 及以上版本的设备支持限时查看功能。仅\nHarmonyOS\n6.1\n及以上版本的系统可以显示文件水⁠印。",
         "价格仅供参考，具体价格请以华为商城展示为⁠⁠准。"
       ],
-      "marketing_conditions_source_url": "https://consumer.huawei.com/cn/harmonyos-computer/matebook-pro-s/"
+      "marketing_conditions_source_url": "https://consumer.huawei.com/cn/harmonyos-computer/matebook-pro-s/",
+      "fact_extraction": {
+        "version": "2026-10-23.source-fields-v2",
+        "reextracted_at": "2026-10-22T18:19:09.164527+00:00",
+        "source_sha256": "cdb1abb37f9fb410b9212fa3fc8d0662b4d57a34ddbe45babcb42cc31af2d8fc",
+        "source_text_sha256": "071515eae42ec5026fe488fc8949d173356be2dc8b475490ece8dcb6f0bb36ab",
+        "previous_facts_sha256": "13be2af6adccfbb830fcd8b60054d2a405c9f409aa868a5183841931987249d6",
+        "capture_time_unchanged": true
+      }
     },
     {
       "name": "HUAWEI MateBook 14 酷睿 Ultra",
@@ -2356,9 +2368,7 @@
           "value": "70 Wh（额定容量）",
           "quote": "## 电池\n\n材料\n锂聚合物\n容量\n70 Wh（额定容量）\n\n",
           "source_id": "official-9490c788e039db3e",
-          "qualifiers": [
-            "额定容量"
-          ],
+          "qualifiers": [],
           "system": "",
           "source_url": "https://consumer.huawei.com/cn/laptops/matebook-14-2024/specs/"
         },
@@ -2397,8 +2407,7 @@
           "quote": "## 处理器\n\n英特尔® 酷睿™ Ultra 7 155H 处理器\n*仅限 Windows 版本产品搭载。\n英特尔® 酷睿™ Ultra 5 125H 处理器\n\n",
           "source_id": "official-9490c788e039db3e",
           "qualifiers": [
-            "仅限 Windows 版本产品搭载。",
-            "仅"
+            "仅限 Windows 版本产品搭载。"
           ],
           "system": "",
           "source_url": "https://consumer.huawei.com/cn/laptops/matebook-14-2024/specs/"
@@ -2468,8 +2477,7 @@
           "quote": "## 键盘和触控板\n\n全尺寸背光键盘\n*快捷键功能仅限 Windows 版本产品支持。\n大尺寸触控板，支持多点触控\n\n",
           "source_id": "official-9490c788e039db3e",
           "qualifiers": [
-            "快捷键功能仅限 Windows 版本产品支持。",
-            "仅"
+            "快捷键功能仅限 Windows 版本产品支持。"
           ],
           "system": "",
           "source_url": "https://consumer.huawei.com/cn/laptops/matebook-14-2024/specs/"
@@ -2828,7 +2836,15 @@
         "仅部分电脑管家 14.0.3.200\n及以上版本的华为笔记本支持此功能，此功能默认关闭，需在控制中心中打开功能。实际使用中可能因使用习惯、环境因素等不同，效果略有差异，请以实际体验为准。如在选购或使用时对功能体验、使用限制、支持机型等有疑问，请咨询华为客服（⁠9⁠5⁠0⁠8⁠0⁠0⁠）⁠。",
         "仅电脑管家 13.0.3.390 及以上版本的部分华为笔记本、HarmonyOS 3.0.0.160 及以上版本的部分华为手机与 HarmonyOS 3.1.0.122\n及以上版本的部分华为平板支持该功能。使用该功能时，手机、平板、PC 需登录同一华为账号，并打开蓝牙和 Wi-Fi\n开关。仅部分应用和文件支持该功能。如在选购或使用时对功能体验、使用限制、支持机型等有疑问，请咨询华为客服（⁠9⁠5⁠0⁠8⁠0⁠0⁠）⁠。"
       ],
-      "marketing_conditions_source_url": "https://consumer.huawei.com/cn/laptops/matebook-14-2024/"
+      "marketing_conditions_source_url": "https://consumer.huawei.com/cn/laptops/matebook-14-2024/",
+      "fact_extraction": {
+        "version": "2026-10-23.source-fields-v2",
+        "reextracted_at": "2026-10-22T18:19:09.172524+00:00",
+        "source_sha256": "142fb4df127357049f7d8f4c22d4e7656157478f3145a9308ef67e33d6f6e201",
+        "source_text_sha256": "6a4d71edeccfee02199459881f8645a35608aa6a1310fc84f46daf656d89e556",
+        "previous_facts_sha256": "e67d84734d6422f493fadac75f0993d4cfb1d1405017e1621d1d889b934e5ae5",
+        "capture_time_unchanged": true
+      }
     },
     {
       "name": "HUAWEI MateBook D 14 2024",
@@ -2898,8 +2914,7 @@
           "quote": "## 电池\n\n材料\n锂聚合物\n容量\n56 Wh（额定容量）\n*电池使用时间依使用情况和设置的不同可能有所差异。\n\n",
           "source_id": "official-d959403fa3c40f9d",
           "qualifiers": [
-            "电池使用时间依使用情况和设置的不同可能有所差异。",
-            "额定容量"
+            "电池使用时间依使用情况和设置的不同可能有所差异。"
           ],
           "system": "",
           "source_url": "https://consumer.huawei.com/cn/laptops/matebook-d-14-2024-13th-gen-core/specs/"
@@ -2912,8 +2927,7 @@
           "quote": "## 尺寸与重量\n\n长度\n15.9 mm\n宽度\n314.5 mm\n厚度\n227.79 mm\n重量\n约 1.39 kg\n*实际重量依配置、制造工艺、测量方法的不同可能有所差异。\n\n",
           "source_id": "official-d959403fa3c40f9d",
           "qualifiers": [
-            "实际重量依配置、制造工艺、测量方法的不同可能有所差异。",
-            "约"
+            "实际重量依配置、制造工艺、测量方法的不同可能有所差异。"
           ],
           "system": "",
           "source_url": "https://consumer.huawei.com/cn/laptops/matebook-d-14-2024-13th-gen-core/specs/"
@@ -3009,8 +3023,7 @@
           "quote": "## 键盘和触控板\n\nHUAWEI MateBook D 14 2024 13 代酷睿版\n全尺寸背光键盘，1.5 mm 键程\n触控板支持 5 点触控（Windows 11 当前仅支持四点手势识别）\nHUAWEI MateBook D 14 2024 SE 版 13 代酷睿版\n全尺寸键盘，1.5 mm 键程\n触控板支持 5 点触控（Windows 11 当前仅支持四点手势识别）\n*快捷键功能仅限 Windows 版本产品支持。\n\n",
           "source_id": "official-d959403fa3c40f9d",
           "qualifiers": [
-            "快捷键功能仅限 Windows 版本产品支持。",
-            "仅"
+            "快捷键功能仅限 Windows 版本产品支持。"
           ],
           "system": "",
           "source_url": "https://consumer.huawei.com/cn/laptops/matebook-d-14-2024-13th-gen-core/specs/"
@@ -3448,7 +3461,15 @@
         "仅部分电脑管家 11.1.6 及以上版本的华为笔记本支持 AI 字幕功能，该功能需电脑保持联网状态，AI 字幕音源支持媒体音和麦克风输入。",
         "*以上部分功能仅在特定系统版本、特定机型上适配支持，如在选购或使用时对功能体验、使用限制、支持机型等有疑问，请咨询华为客服（950800）。"
       ],
-      "marketing_conditions_source_url": "https://consumer.huawei.com/cn/laptops/matebook-d-14-2024-13th-gen-core/"
+      "marketing_conditions_source_url": "https://consumer.huawei.com/cn/laptops/matebook-d-14-2024-13th-gen-core/",
+      "fact_extraction": {
+        "version": "2026-10-23.source-fields-v2",
+        "reextracted_at": "2026-10-22T18:19:09.180138+00:00",
+        "source_sha256": "22b9c2f37b519a1fd9eabe9c19238057ac92fb0a05ca4532a541c358fb314e3f",
+        "source_text_sha256": "2e7b1351eae78f8134fe8fe890916b86de17e229bcc1c068106957031a958f94",
+        "previous_facts_sha256": "ab23ba00ce7be7942ea8f69f5417f4b3e521c2b5302f175c1745205793ce1c8d",
+        "capture_time_unchanged": true
+      }
     },
     {
       "name": "HUAWEI MateBook D 16 2024",
@@ -3517,9 +3538,7 @@
           "value": "56 Wh / 70 Wh（额定容量）",
           "quote": "## 电池\n\n材料\n锂聚合物\n容量\n56 Wh / 70 Wh（额定容量）\n\n",
           "source_id": "official-fa5c460d6a33aab6",
-          "qualifiers": [
-            "额定容量"
-          ],
+          "qualifiers": [],
           "system": "",
           "source_url": "https://consumer.huawei.com/cn/laptops/matebook-d-16-2024/specs/"
         },
@@ -3531,8 +3550,7 @@
           "quote": "## 尺寸与重量\n\n长度\n18 mm\n宽度\n356.7 mm\n厚度\n248.7 mm\n重量\n约 1.68 kg（56 Wh 电池版本）\n约 1.72 kg（70 Wh 电池版本）\n*实际尺寸和重量依配置、制造工艺、测量方法的不同可能有所差异。\n\n",
           "source_id": "official-fa5c460d6a33aab6",
           "qualifiers": [
-            "实际尺寸和重量依配置、制造工艺、测量方法的不同可能有所差异。",
-            "约"
+            "实际尺寸和重量依配置、制造工艺、测量方法的不同可能有所差异。"
           ],
           "system": "",
           "source_url": "https://consumer.huawei.com/cn/laptops/matebook-d-16-2024/specs/"
@@ -3559,8 +3577,7 @@
           "quote": "## 处理器\n\n第 13 代英特尔®酷睿™ i9-13900H 标压处理器\n*仅限 Windows 版本产品搭载。\n第 13 代英特尔®酷睿™ i5-13420H 标压处理器\n\n",
           "source_id": "official-fa5c460d6a33aab6",
           "qualifiers": [
-            "仅限 Windows 版本产品搭载。",
-            "仅"
+            "仅限 Windows 版本产品搭载。"
           ],
           "system": "",
           "source_url": "https://consumer.huawei.com/cn/laptops/matebook-d-16-2024/specs/"
@@ -3630,8 +3647,7 @@
           "quote": "## 键盘和触控板\n\n全尺寸键盘，1.5 mm 键程\n支持独立数字键盘\n*快捷键功能仅限 Windows 版本产品支持。\n支持 5 点触控（Windows 11 当前仅支持四点手势识别）\n\n",
           "source_id": "official-fa5c460d6a33aab6",
           "qualifiers": [
-            "快捷键功能仅限 Windows 版本产品支持。",
-            "仅"
+            "快捷键功能仅限 Windows 版本产品支持。"
           ],
           "system": "",
           "source_url": "https://consumer.huawei.com/cn/laptops/matebook-d-16-2024/specs/"
@@ -3945,7 +3961,15 @@
         "仅部分 HarmonyOS 2 及以上版本的华为智慧屏，与部分电脑管家 13.0.2.300\n及以上版本的华为笔记本支持该功能。如在选购或使用时对功能体验、使用限制、支持机型等有疑问，请咨询华为客服⁠（950800）。",
         "仅电脑管家 13.0.3.320 及以上版本的部分华为 PC、HarmonyOS 3.0.0.160\n及以上版本的部分华为手机与部分华为平板支持该功能。具体支持设备及支持计划请以官方信息为准。使用该功能时，手机、平板、PC 需登录同一华为账号，并打开蓝牙和 Wi-Fi\n开关。如在选购或使用时对功能体验、使用限制、支持机型等有疑问，请咨询华为客服⁠（950800）。"
       ],
-      "marketing_conditions_source_url": "https://consumer.huawei.com/cn/laptops/matebook-d-16-2024/"
+      "marketing_conditions_source_url": "https://consumer.huawei.com/cn/laptops/matebook-d-16-2024/",
+      "fact_extraction": {
+        "version": "2026-10-23.source-fields-v2",
+        "reextracted_at": "2026-10-22T18:19:09.188653+00:00",
+        "source_sha256": "4cf791ca0baa7c180a4ead368cf6d1f6bf741640e6ba2e58cfd30223ba95bd79",
+        "source_text_sha256": "c06f2a84c65b956e8439bfa6ec41a0020870d06cdf6bde82f2ab2f77782edd68",
+        "previous_facts_sha256": "7442227e40892a7c314fd73ced0431b5a3ed42115bd8d8cebb836b666a514dbe",
+        "capture_time_unchanged": true
+      }
     },
     {
       "name": "HUAWEI MateBook D 16 SE 版 2024",
@@ -4014,9 +4038,7 @@
           "value": "56 Wh（额定容量）",
           "quote": "## 电池\n\n材料\n锂聚合物\n容量\n56 Wh（额定容量）\n\n",
           "source_id": "official-f63a328c8fdd3a8c",
-          "qualifiers": [
-            "额定容量"
-          ],
+          "qualifiers": [],
           "system": "",
           "source_url": "https://consumer.huawei.com/cn/laptops/matebook-d-16-se-2024/specs/"
         },
@@ -4028,8 +4050,7 @@
           "quote": "## 尺寸与重量\n\n长度\n18 mm\n宽度\n356.7 mm\n厚度\n248.7 mm\n重量\n约 1.70 kg\n*实际尺寸和重量依配置、制造工艺、测量方法的不同可能有所差异。\n\n",
           "source_id": "official-f63a328c8fdd3a8c",
           "qualifiers": [
-            "实际尺寸和重量依配置、制造工艺、测量方法的不同可能有所差异。",
-            "约"
+            "实际尺寸和重量依配置、制造工艺、测量方法的不同可能有所差异。"
           ],
           "system": "",
           "source_url": "https://consumer.huawei.com/cn/laptops/matebook-d-16-se-2024/specs/"
@@ -4124,8 +4145,7 @@
           "quote": "## 键盘和触控板\n\n全尺寸键盘，1.5 mm 键程\n支持独立数字键盘\n*快捷键功能仅限 Windows 版本产品支持。\n触控板支持多点触控\n\n",
           "source_id": "official-f63a328c8fdd3a8c",
           "qualifiers": [
-            "快捷键功能仅限 Windows 版本产品支持。",
-            "仅"
+            "快捷键功能仅限 Windows 版本产品支持。"
           ],
           "system": "",
           "source_url": "https://consumer.huawei.com/cn/laptops/matebook-d-16-se-2024/specs/"
@@ -4325,9 +4345,7 @@
           "value": "功能仅 Windows 版本支持",
           "quote": "## 无线连接\n\nWLAN\nIEEE 802.11a/b/g/n/ac/ax\n2.4 GHz 和 5 GHz 双频\n2 × 2 MIMO\n支持 WPA/WPA2/WPA3\n蓝牙\nWindows 版：蓝牙 5.1\nLinux V20 版：蓝牙 4.2\nNFC\nWindows 版：支持\nLinux V20 版：功能仅 Windows 版本支持\n\n",
           "source_id": "official-f63a328c8fdd3a8c",
-          "qualifiers": [
-            "仅"
-          ],
+          "qualifiers": [],
           "system": "",
           "source_url": "https://consumer.huawei.com/cn/laptops/matebook-d-16-se-2024/specs/"
         },
@@ -4468,7 +4486,15 @@
         "仅部分华为智慧屏，与部分电脑管家 12.0.1 及以上版本的华为笔记本支持该功能。如在选购或使用时对功能体验、使用限制、支持机型等有疑问，请咨询华为客服（950800）。",
         "电脑和耳机、音箱、鼠标、键盘、打印机等设备的靠近发现条件、功能体验、使用限制、支持机型等问题，请在华为官网的对应产品中了解更多内容或咨询华为客服（950800）。"
       ],
-      "marketing_conditions_source_url": "https://consumer.huawei.com/cn/laptops/matebook-d-16-se-2024/"
+      "marketing_conditions_source_url": "https://consumer.huawei.com/cn/laptops/matebook-d-16-se-2024/",
+      "fact_extraction": {
+        "version": "2026-10-23.source-fields-v2",
+        "reextracted_at": "2026-10-22T18:19:09.198164+00:00",
+        "source_sha256": "cae04d66f7179382278245f0b2291b506b8960f13727b42eef9e3de6ab8c993f",
+        "source_text_sha256": "462ead6828aa4b167af5f10711b46c0d86a9846f9f669f01a946b72abbcee81b",
+        "previous_facts_sha256": "f08e085e1c479608253f73ebccfdaf71d4ea634ec7a0cb980440401ab03f5cad",
+        "capture_time_unchanged": true
+      }
     },
     {
       "name": "HUAWEI MateBook GT 14",
@@ -4542,9 +4568,7 @@
           "value": "70 Wh（额定容量）",
           "quote": "## 电池\n\n材料\n锂聚合物\n容量\n70 Wh（额定容量）\n\n",
           "source_id": "official-9dda01594744d1da",
-          "qualifiers": [
-            "额定容量"
-          ],
+          "qualifiers": [],
           "system": "",
           "source_url": "https://consumer.huawei.com/cn/laptops/matebook-gt-14/specs/"
         },
@@ -4557,8 +4581,7 @@
           "source_id": "official-9dda01594744d1da",
           "qualifiers": [
             "数据来源于华为实验室，测量标准为机身靠近抠手位侧脚垫中心处的整机厚度，产品最大厚度为 18.4 mm，实际厚度或有差异，请以实际产品为准。",
-            "实际尺寸和重量依配置、制造工艺、测量方法的不同可能有所差异。",
-            "约"
+            "实际尺寸和重量依配置、制造工艺、测量方法的不同可能有所差异。"
           ],
           "system": "",
           "source_url": "https://consumer.huawei.com/cn/laptops/matebook-gt-14/specs/"
@@ -4591,8 +4614,7 @@
           "quote": "## 处理器\n\n第 1 代英特尔®酷睿™ Ultra 9 185H 处理器\n*仅限 Windows 版本产品搭载。\n第 1 代英特尔®酷睿™ Ultra 5 125H 处理器\n\n",
           "source_id": "official-9dda01594744d1da",
           "qualifiers": [
-            "仅限 Windows 版本产品搭载。",
-            "仅"
+            "仅限 Windows 版本产品搭载。"
           ],
           "system": "",
           "source_url": "https://consumer.huawei.com/cn/laptops/matebook-gt-14/specs/"
@@ -4665,8 +4687,7 @@
           "source_id": "official-9dda01594744d1da",
           "qualifiers": [
             "功能仅限 Windows 版本产品支持。",
-            "快捷键功能仅限 Windows 版本产品支持。",
-            "仅"
+            "快捷键功能仅限 Windows 版本产品支持。"
           ],
           "system": "",
           "source_url": "https://consumer.huawei.com/cn/laptops/matebook-gt-14/specs/"
@@ -5194,7 +5215,15 @@
         "电池容量为额定⁠值。",
         "数据来源于华为实验室，420 米为空旷环境中路由器和笔记本间无遮挡，连接 5 GHz 频段 Wi-Fi，测试 1080P\n视频在线流畅播放的最远距离。实际使用根据环境、设备等因素的不同而有所不同，请以实际体验为⁠准。"
       ],
-      "marketing_conditions_source_url": "https://consumer.huawei.com/cn/laptops/matebook-gt-14/"
+      "marketing_conditions_source_url": "https://consumer.huawei.com/cn/laptops/matebook-gt-14/",
+      "fact_extraction": {
+        "version": "2026-10-23.source-fields-v2",
+        "reextracted_at": "2026-10-22T18:19:09.208168+00:00",
+        "source_sha256": "cb723c8a0bfb3bb6bb4f761c6ea5b70b3642f0c19ca912c0bfe3c38d7a0c3736",
+        "source_text_sha256": "8535f8e08cd5fb41582b62530faf45daf9de575cfede15001468bc8b31ea2c22",
+        "previous_facts_sha256": "beef4631a2428bd4466c6a4da1ef56f3141b4e13b67d2eac8cbbef6d354d85e5",
+        "capture_time_unchanged": true
+      }
     },
     {
       "name": "HUAWEI MateBook X Pro 酷睿 Ultra 微绒典藏版",
@@ -5240,8 +5269,7 @@
           "quote": "## 特色应用\n\nAI 概要\n仅部分电脑管家 14.0.3.200 及以上版本的华为笔记本支持该功能，为限时尝鲜功能。使用该功能需电脑保持联网状态，实际效果受内容、网络环境等因素影响或有差异，后期可能涉及付费使用，请以实际体验为准。如在选购或使用时对功能体验、使用限制、支持机型等有疑问，请咨询华为客服（950800）。\nAI 慧眼\n仅部分电脑管家 14.0.3.200 及以上版本的华为笔记本支持此功能。此功能默认关闭，需在控制中心中打开功能。\n超级终端\n仅部分华为手机、平板、显示器、智慧屏、耳机等终端设备，与部分电脑管家 13.0.2.300及以上版本的华为笔记本互联支持该功能。如在选购或使用时对功能体验、使用限制、支持机型等有疑问，请咨询华为客服（950800）。\n超级中转站\n仅电脑管家 13.0.3.390 及以上版本的部分华为笔记本、HarmonyOS 3.0.0.160 及以上版本的部分华为手机与 HarmonyOS 3.1.0.122 及以上版本的部分华为平板支持该功能。使用该功能时，手机、平板、PC 需登录同一华为账号，并打开蓝牙和 Wi-Fi 开关。仅部分应用和文件支持该功能。如在选购或使用时对功能体验、使用限制、支持机型等有疑问，请咨询华为客服（950800）。\n*以上功能仅限 Windows 版本产品支持。\n\n",
           "source_id": "official-052814216435cf56",
           "qualifiers": [
-            "以上功能仅限 Windows 版本产品支持。",
-            "仅"
+            "以上功能仅限 Windows 版本产品支持。"
           ],
           "system": "",
           "source_url": "https://consumer.huawei.com/cn/laptops/matebook-x-pro-ultra-premium-edition/specs/"
@@ -5266,9 +5294,7 @@
           "value": "70 Wh（额定容量）",
           "quote": "## 电池\n\n材料\n锂聚合物\n容量\n70 Wh（额定容量）\n\n",
           "source_id": "official-052814216435cf56",
-          "qualifiers": [
-            "额定容量"
-          ],
+          "qualifiers": [],
           "system": "",
           "source_url": "https://consumer.huawei.com/cn/laptops/matebook-x-pro-ultra-premium-edition/specs/"
         },
@@ -5280,8 +5306,7 @@
           "quote": "## 尺寸与重量\n\n长度\n13.5 mm\n宽度\n310 mm\n厚度\n222 mm\n重量\n约 980 g\n*实际尺寸和重量依配置、制造工艺、测量方法的不同可能有所差异。\n\n",
           "source_id": "official-052814216435cf56",
           "qualifiers": [
-            "实际尺寸和重量依配置、制造工艺、测量方法的不同可能有所差异。",
-            "约"
+            "实际尺寸和重量依配置、制造工艺、测量方法的不同可能有所差异。"
           ],
           "system": "",
           "source_url": "https://consumer.huawei.com/cn/laptops/matebook-x-pro-ultra-premium-edition/specs/"
@@ -5315,8 +5340,7 @@
           "quote": "## 处理器\n\n第 1 代英特尔®酷睿™ Ultra 9 185H 处理器\n*仅限 Windows 版本产品搭载。\n第 1 代英特尔®酷睿™ Ultra 7 155H 处理器\n\n",
           "source_id": "official-052814216435cf56",
           "qualifiers": [
-            "仅限 Windows 版本产品搭载。",
-            "仅"
+            "仅限 Windows 版本产品搭载。"
           ],
           "system": "",
           "source_url": "https://consumer.huawei.com/cn/laptops/matebook-x-pro-ultra-premium-edition/specs/"
@@ -5389,8 +5413,7 @@
           "source_id": "official-052814216435cf56",
           "qualifiers": [
             "华为分享功能仅限 Windows 版本产品支持。",
-            "快捷键功能仅限 Windows 版本产品支持。",
-            "仅"
+            "快捷键功能仅限 Windows 版本产品支持。"
           ],
           "system": "",
           "source_url": "https://consumer.huawei.com/cn/laptops/matebook-x-pro-ultra-premium-edition/specs/"
@@ -5922,7 +5945,15 @@
         "仅部分华为手机、平板，与部分电脑管家 13.0.2.300\n及以上版本的华为笔记本支持该功能。如在选购或使用时对功能体验、使用限制、支持机型等有疑问，请咨询华为客服（950800）⁠⁠。",
         "需登录同一华为账号，移动端书签可同步到电⁠⁠脑。"
       ],
-      "marketing_conditions_source_url": "https://consumer.huawei.com/cn/laptops/matebook-x-pro-ultra-premium-edition/"
+      "marketing_conditions_source_url": "https://consumer.huawei.com/cn/laptops/matebook-x-pro-ultra-premium-edition/",
+      "fact_extraction": {
+        "version": "2026-10-23.source-fields-v2",
+        "reextracted_at": "2026-10-22T18:19:09.217165+00:00",
+        "source_sha256": "9dbf090ae14d396e616c9a2b7477cf6567363575c60f989a125f780aff34efe8",
+        "source_text_sha256": "da67217c2e185181baecee6e49863c915d9cffd05e7a63f4a59ce1a17d50f366",
+        "previous_facts_sha256": "e81627ca04c8b06f2b73f92ed439de371f51f20a388312ceb6dcf53ec41fcbf4",
+        "capture_time_unchanged": true
+      }
     }
   ],
   "policy": "Public Huawei consumer product pages only. No live sell price claims. Variant conditions and original source snapshots retained."

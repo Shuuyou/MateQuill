@@ -30,6 +30,17 @@ def test_editorial_spine_is_short_section_title_instead_of_raw_prompt():
     assert task.scene not in doc.model_dump_json()
 
 
+def test_internal_purpose_is_not_customer_copy_and_reviewed_source_has_no_draft_notice():
+    task, result = sample()
+    result.status = 'ready'
+    result.intro = ''
+    doc = compose_vector_poster(task, result, PosterBrief(purpose='门店引流'))
+    public_text = '\n'.join(layer.text for layer in doc.layers)
+    assert '门店引流' not in public_text
+    assert '设计草稿' not in public_text
+    assert next(layer for layer in doc.layers if layer.role == 'watermark').locked
+
+
 @pytest.mark.parametrize('preset', ['portrait','square','story','landscape','a4'])
 @pytest.mark.parametrize('direction', ['minimal','editorial','bold'])
 def test_vector_artboards_preserve_complete_content_and_provenance(preset, direction):

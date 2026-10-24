@@ -1,0 +1,179 @@
+/* Shared product rhythm. Layout states stay in components; no content is hidden
+   to simulate success or erase actionable errors. */
+:root {
+  --canvas: #f8f8f5;
+  --paper: #fff;
+  --ink: #242923;
+  --secondary: #697065;
+  --line: #e2e5dc;
+  --accent: #365945;
+  --selected: #eaf0e6;
+  --ease-product: cubic-bezier(.22,.75,.25,1);
+}
+body { font-size: 16px; }
+button, a { transition: color 160ms, background-color 160ms, border-color 160ms, box-shadow 160ms; }
+button:active:not(:disabled) { translate: 0 1px; }
+button:focus-visible, a:focus-visible { outline-offset: 3px; }
+.mq-sidebar { background: #f0f2eb; border-color: #e5e8de; padding: 26px 14px; }
+.mq-brand img { width: 36px; height: 36px; }
+.mq-brand > span { font-size: 19px; letter-spacing: -.04em; }
+.mq-brand small { display: none; }
+.mq-sidebar nav { gap: 7px; }
+.mq-sidebar nav button { border-radius: 10px; height: 46px; color: #6a7166; }
+.mq-sidebar nav button span { font-size: 15px; }
+.mq-sidebar nav button.is-selected { background: #e0e7d9; color: #263d2d; }
+.mq-sidebar nav button:hover:not(:disabled) { background: #e7ebe1; }
+.mq-topline { height: 76px; padding: 0 40px; }
+.mq-topline > span:first-child { font-size: 15px; font-weight: 450; color: var(--secondary); }
+.mq-workspace-toggle { gap: 10px; }
+.mq-workspace-toggle strong { font-size: 14px; font-weight: 500; }
+.mq-workspace-toggle > span:nth-child(2) > span { display: none; }
+.mq-workspace-avatar { width: 30px; height: 30px; font-size: 15px; }
+.mq-main { padding: 26px 40px 64px; }
+.mq-conversation { max-width: 820px; padding: 0 0 30px; }
+.mq-conversation.is-new { padding-top: clamp(12px, 4vh, 48px); }
+.mq-conversation-welcome { margin-bottom: 30px; }
+.mq-conversation-welcome .youju-character { width: 72px; height: 72px; margin: 0 0 18px -5px; }
+.mq-conversation-welcome h1 { font-size: clamp(30px, 3.2vw, 42px); line-height: 1.4; letter-spacing: .01em; margin-bottom: 13px; }
+.mq-conversation-welcome p { font-size: 16px; line-height: 1.7; }
+.mq-conversation-navigation:empty { display: none; }
+.mq-conversation-navigation { font-size: 14px; margin: 0 0 20px; gap: 24px; }
+.mq-conversation-header > h1 { font-size: 30px; line-height: 1.5; margin: 0 0 18px; }
+.mq-conversation-composer {
+  border: 1px solid #dce1d5; border-radius: 20px;
+  padding: 22px 22px 14px; background: var(--paper);
+  box-shadow: 0 4px 22px #293d2610;
+  transition: border-color 180ms, box-shadow 180ms;
+}
+.mq-conversation-composer:focus-within { border-color: #99ad8c; box-shadow: 0 0 0 3px #48643b08, 0 6px 24px #293d2610; }
+.mq-conversation-composer > textarea { display: block; min-height: 76px; max-height: 220px; resize: none; font: 400 17px/1.75 var(--font-ui); }
+.mq-composer-toolbar { display: flex; align-items: flex-end; gap: 12px; margin-top: 12px; }
+.mq-composer-toolbar > .mq-media-capture { flex: 1; min-width: 0; }
+.mq-composer-toolbar > div:first-child { flex: 1; min-width: 0; }
+.mq-composer-toolbar footer { display: flex; align-items: center; gap: 8px; flex-shrink: 0; margin-left: auto; }
+.mq-composer-toolbar .mq-capture-actions { margin: 0; gap: 2px; }
+.mq-composer-toolbar .mq-capture-actions button { padding: 9px 10px; min-height: 42px; border-radius: 9px; font-size: 14px; color: var(--secondary); }
+.mq-composer-toolbar .mq-capture-actions button:hover { background: #f2f4ef; color: var(--ink); }
+.mq-composer-toolbar .mq-capture-actions svg { width: 18px; height: 18px; }
+.mq-composer-toolbar footer > .mq-text-button { width: 36px; height: 42px; font-size: 24px; padding: 0; text-decoration: none; }
+.mq-composer-toolbar .mq-primary { width: 42px; height: 42px; min-height: 42px; padding: 0; display: grid; place-items: center; border-radius: 13px; background: #304c39; color: white; font-size: 24px; }
+.mq-composer-toolbar .mq-primary:disabled { background: #eef0eb; color: #a5ada0; opacity: 1; }
+.mq-composer-toolbar .mq-primary:hover:not(:disabled) { background: #213e2c; }
+.mq-conversation .mq-store-suggestion { width: 100%; margin: 28px 0 0; padding: 20px 0 0; border-top: 1px solid var(--line); }
+.mq-store-suggestion p { font-size: 14px; color: var(--secondary); }
+.mq-store-suggestion-open { padding: 4px 0; gap: 20px; }
+.mq-store-suggestion-open strong { font-size: 17px; font-weight: 500; }
+.mq-store-suggestion-open span { font-size: 14px; }
+.mq-conversation-messages { gap: 30px; margin-bottom: 30px; }
+.mq-conversation-message.is-user { max-width: 86%; padding: 14px 20px; background: #ecefe7; border-radius: 17px 17px 4px 17px; }
+.mq-conversation-message.is-assistant { padding: 0; border: 0; }
+.mq-conversation-text { font-size: 17px; line-height: 1.85; }
+.mq-conversation-message { animation: mq-content-arrive 260ms var(--ease-product) both; }
+.mq-conversation-artifact { border-radius: 15px; grid-template-columns: 156px minmax(0, 1fr); box-shadow: 0 3px 16px #20302004; }
+.mq-conversation-artifact > img { width: 156px; max-height: 220px; }
+.mq-conversation-artifact > span { padding: 22px 24px; gap: 10px; }
+.mq-conversation-artifact strong { font: 500 22px/1.5 var(--font-ui); }
+.mq-conversation-artifact span span { font-size: 15px; line-height: 1.75; -webkit-line-clamp: 2; }
+.mq-conversation-artifact em { font-size: 14px; }
+.mq-conversation-artifact:hover { transform: translateY(-1px); box-shadow: 0 8px 24px #2030200b; }
+.mq-conversation-plan { margin: 18px 0 28px; border-top: 1px solid var(--line); }
+.mq-conversation-plan > summary { cursor: pointer; color: var(--secondary); padding: 16px 0; font-size: 15px; }
+.mq-conversation-plan .mq-opportunity { margin: 0 0 20px; }
+.mq-opportunity { border-radius: 0; padding: 24px 0; background: transparent; }
+.mq-opportunity h2 { font-size: 28px; line-height: 1.5; }
+.mq-opportunity header > p { font-size: 14px; margin-bottom: 8px; }
+.mq-opportunity-rationale, .mq-opportunity-angle, .mq-opportunity-preparation p,
+.mq-opportunity li { font-size: 16px; line-height: 1.85; }
+.mq-opportunity summary { font-size: 15px; padding: 15px 0; }
+.mq-opportunity footer { gap: 20px; }
+.mq-conversation-retry { margin: 12px 0 24px; display: flex; gap: 20px; }
+.mq-conversation-questions { margin: 24px 0; font-size: 17px; }
+.mq-conversation-choice { font-size: 16px; border-radius: 12px; min-height: 46px; transition: background 160ms, border-color 160ms; }
+.mq-conversation-choice:hover { border-color: #90a783; background: #f0f4eb; }
+.mq-conversation-working { font-size: 15px; gap: 12px; min-height: 66px; }
+.mq-conversation-working .youju-character { width: 46px; height: 46px; }
+.mq-conversation-editor > .mq-return-conversation:has(+ .mq-workbench),
+.mq-conversation-editor > .mq-return-conversation:has(+ div) { margin-bottom: 18px; }
+.mq-workbench-heading { gap: 24px; margin-bottom: 28px; }
+.mq-workbench-heading > div:first-child { min-width: 0; flex: 1; }
+.mq-workbench-actions { display: flex; align-items: center; justify-content: flex-end; gap: 22px; flex-wrap: wrap; }
+.mq-workbench-actions > button { margin: 0; }
+.mq-editor-note { position: sticky; top: 24px; }
+.mq-editor-note .youju-character { width: 48px; height: 48px; margin-bottom: 14px; }
+.mq-editor-note h2 { font-size: 25px; margin: 0 0 20px; }
+.mq-editor-note form { border-radius: 15px; box-shadow: none; background: white; }
+.mq-editor-note textarea { min-height: 100px; font-size: 16px; }
+.mq-creation-submission { border-radius: 0; border: 0; border-top: 1px solid var(--line); background: transparent; padding: 28px 0; }
+.mq-creation-submission h2 { font-size: 20px; margin-bottom: 14px; }
+.mq-workbench-heading h1 { font-size: clamp(27px, 3vw, 38px); line-height: 1.5; }
+.mq-section-label { font-size: 14px; color: var(--secondary); }
+.mq-document { border-color: var(--line); border-radius: 16px; background: white; }
+.mq-document-tabs { gap: 22px; padding: 0 28px; }
+.mq-document-tabs button { padding: 18px 0; font-size: 15px; }
+.mq-article { padding: 30px 36px; font-size: 18px; line-height: 1.95; }
+.mq-article figure { margin: 24px 0; }
+.mq-document-footer { padding: 18px 28px; gap: 24px; }
+.mq-document-footer a { font-size: 14px; }
+.mq-library-controls, .mq-campaign-heading { margin-bottom: 30px; }
+.mq-library-grid { gap: 20px; }
+.mq-library-mode { display: flex; align-items: center; justify-content: space-between; margin: 12px 0; color: var(--secondary); font-size: 14px; }
+.mq-products { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 0 32px; }
+.mq-products > article { display: flex; flex-direction: column; align-items: flex-start; min-height: 0; border: 0; border-top: 1px solid var(--line); border-radius: 0; padding: 22px 0; background: transparent; gap: 8px; }
+.mq-products .mq-product-mark { font: 400 13px/1.6 var(--font-ui); color: var(--secondary); margin: 0; }
+.mq-products h2 { font: 500 18px/1.5 var(--font-ui); margin: 0; }
+.mq-products article > p { font-size: 14px; line-height: 1.7; margin: 0; }
+.mq-products article > div:last-child { margin-top: auto; padding-top: 8px; gap: 12px; }
+.mq-products article > div:last-child button { font-size: 14px; }
+.mq-products article > div:last-child label { font-size: 14px; }
+.catalog-card, .mq-library-card { border-radius: 14px; box-shadow: none; }
+.mq-workspace-popover, .mq-conversation-navigation details > div { box-shadow: 0 12px 48px #26302414; animation: mq-content-arrive 150ms var(--ease-product) both; }
+.mq-primary { box-shadow: none; }
+.mq-mobile-team { display: none; }
+@keyframes mq-content-arrive { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+@media (min-width: 781px) {
+  .mq-conversation.has-messages .mq-conversation-composer { position: sticky; bottom: 18px; z-index: 8; box-shadow: 0 8px 36px #20302015; }
+}
+@media (max-width: 1100px) and (min-width: 781px) {
+  .mq-nav-expanded { padding-left: 220px; }
+  .mq-nav-expanded .mq-sidebar { box-shadow: none; }
+  .mq-main, .mq-topline { padding-inline: 30px; }
+}
+@media (max-width: 780px) {
+  .mq-app, .mq-nav-expanded { padding-left: 0; padding-bottom: 74px; }
+  .mq-sidebar { padding: 7px 10px; height: 68px; background: #f4f5f0f5; }
+  .mq-nav-expanded .mq-sidebar nav button { width: auto; min-width: 58px; height: 54px; }
+  .mq-sidebar nav button.is-selected { background: transparent; color: #264732; }
+  .mq-main { padding: 20px 22px 36px; }
+  .mq-products { grid-template-columns: 1fr; }
+  .mq-topline { height: 64px; padding: 0 22px; gap: 18px; }
+  .mq-topline > span:first-child { white-space: nowrap; flex-shrink: 0; }
+  .mq-workspace-menu { min-width: 0; }
+  .mq-workspace-toggle { max-width: 100%; padding-inline: 0; gap: 8px; }
+  .mq-workspace-toggle > span:nth-child(2) { min-width: 0; }
+  .mq-workspace-toggle strong { max-width: 210px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mq-mobile-team { display: inline-flex; }
+  .mq-conversation.is-new { padding-top: 18px; }
+  .mq-conversation-welcome { margin-bottom: 24px; }
+  .mq-conversation-welcome .youju-character { width: 62px; height: 62px; margin-bottom: 15px; }
+  .mq-conversation-welcome h1 { font-size: 29px; }
+  .mq-conversation-welcome p { font-size: 15px; }
+  .mq-conversation-composer { padding: 18px 16px 12px; border-radius: 17px; }
+  .mq-conversation-composer > textarea { font-size: 16px; min-height: 88px; }
+  .mq-composer-toolbar { gap: 4px; }
+  .mq-composer-toolbar .mq-capture-actions button { padding-inline: 7px; font-size: 13px; }
+  .mq-composer-toolbar footer { gap: 4px; }
+  .mq-conversation-artifact { grid-template-columns: 100px minmax(0,1fr); }
+  .mq-conversation-artifact > img { width: 100px; }
+  .mq-conversation-artifact > span { padding: 16px; }
+  .mq-conversation-artifact strong { font-size: 18px; }
+  .mq-store-suggestion-open { align-items: flex-start; }
+  .mq-store-suggestion-open span { white-space: nowrap; }
+  .mq-article { padding: 24px; font-size: 17px; }
+  .mq-document-tabs { padding-inline: 20px; gap: 18px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; }
+  .mq-app, .mq-sidebar, .mq-conversation-message, .mq-conversation-artifact,
+  .mq-workspace-popover, .mq-conversation-navigation details > div { animation: none; transition: none; }
+  button:active:not(:disabled) { translate: none; }
+}

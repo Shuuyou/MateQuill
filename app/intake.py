@@ -78,6 +78,11 @@ async def resolve_intake(query: str, catalog: list[dict], llm=None, answers: dic
             candidates = _candidates(product_answer, rows)
     audience = str(answers.get('audience') or '').strip()[:200] or _audience(query)
     scene = str(answers.get('scene') or '').strip()[:1200] or query
+    platform = str(answers.get('platform') or '')
+    if platform not in ('xiaohongshu', 'wechat', 'moments', 'poster'):
+        platform = next((code for word, code in (('朋友圈', 'moments'), ('公众号', 'wechat'), ('海报', 'poster'), ('小红书', 'xiaohongshu')) if word in query), 'xiaohongshu')
+    if not audience and platform == 'moments':
+        audience = '关注本店的朋友'
     if not audience and query and llm is not None and getattr(llm, 'enabled', False):
         try:
             extracted = await llm._json(
@@ -93,9 +98,6 @@ async def resolve_intake(query: str, catalog: list[dict], llm=None, answers: dic
         except Exception:
             # Intake remains usable when the optional model is unavailable.
             pass
-    platform = str(answers.get('platform') or '')
-    if platform not in ('xiaohongshu', 'wechat', 'moments', 'poster'):
-        platform = next((code for word, code in (('朋友圈', 'moments'), ('公众号', 'wechat'), ('海报', 'poster'), ('小红书', 'xiaohongshu')) if word in query), 'xiaohongshu')
     questions = []
     if len(candidates) != 1:
         options = candidates if candidates else rows
@@ -104,7 +106,7 @@ async def resolve_intake(query: str, catalog: list[dict], llm=None, answers: dic
     if not audience:
         questions.append({'field': 'audience', 'label': '这篇内容主要写给谁看？', 'options': []})
     task = {'product': candidates[0]['name'] if len(candidates) == 1 else '', 'audience': audience,
-            'scene': scene, 'platform': platform, 'stage': str(answers.get('stage') or 'consideration'),
+            'scene': scene, 'platform': platform, 'stage': str(answers.get('stage') or ('unknown' if platform == 'moments' else 'consideration')),
             'goal': str(answers.get('goal') or ''), 'requirements': str(answers.get('requirements') or query)}
     return {'status': 'clarify' if questions else 'ready', 'task': task, 'questions': questions,
             'summary': '，'.join(part for part in (task['product'], audience) if part)}

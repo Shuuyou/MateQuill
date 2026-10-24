@@ -1,4 +1,22 @@
 import type { RunResult, RunTask } from "./types";
+import type { MarketingOpportunity } from "./agent";
+export interface StoreOpportunity {
+  assignment_id: string;
+  store_id?: string;
+  store_name?: string;
+  status: string;
+  available?: boolean;
+  opportunity: MarketingOpportunity | null;
+  prepared_at?: number | null;
+  adopted_at?: number | null;
+  diversity?: { selection_reason?: string; method?: string; embedding_state?: string } | null;
+  alternatives?: (MarketingOpportunity & { candidate_id: string; selected: boolean })[];
+}
+export interface CampaignOpportunities {
+  campaign_id: string;
+  campaign_version: number;
+  stores: StoreOpportunity[];
+}
 export interface ChannelCampaign {
   id: string;
   title: string;
@@ -29,7 +47,34 @@ export interface StoreAssignment {
   updated_at: string;
   available?: boolean;
   unavailable_reason?: string;
+  publisher_label?: string;
+  publisher_kind?: "brand" | "regional";
+  is_simulation?: boolean;
+  source_refs?: {
+    title: string;
+    url: string;
+    published_at?: string | null;
+    excerpt?: string;
+    claims?: (string | Record<string, unknown>)[];
+  }[];
 }
+export interface PreparedAssignment {
+  status: "ready";
+  task: RunTask;
+  opportunity: {
+    title: string;
+    reason?: string;
+    summary?: string;
+    reasons?: string[];
+    [key: string]: unknown;
+  };
+  sources?: { title: string; url?: string }[];
+}
+export type PrepareAssignmentResponse = PreparedAssignment | {
+  status: "unavailable";
+  reasons?: string[];
+  message?: string;
+};
 export interface ContentSubmission {
   id: string;
   assignment_id: string;

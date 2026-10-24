@@ -45,6 +45,12 @@ _active_claim = ContextVar('matequill_active_claim', default=None)
 _active_reservation = ContextVar('matequill_active_reservation', default=None)
 
 
+def _budget_scope(context):
+    from .tenancy.auth import guest_state
+    guest = not context.is_legacy and guest_state(context.user_id, context.tenant_id)['is_guest']
+    return guest, int(os.getenv('MATEQUILL_TRIAL_CREATIONS' if guest else 'MATEQUILL_DAILY_CREATIONS', '3' if guest else '100'))
+
+
 def _day():
     return datetime.now(ZoneInfo(os.getenv('MATEQUILL_BUSINESS_TIMEZONE', 'Asia/Shanghai'))).date().isoformat()
 
@@ -56,7 +62,7 @@ def generation_budget():
         yield
         return
     identifier = ((_active_job.get() + ':') if _active_job.get() else '') + uuid4().hex[:24]
-    limit = int(os.getenv('MATEQUILL_DAILY_CREATIONS', '100'))
+    guest, limit = _budget_scope(context)
     with db_connection() as connection:
         if connection.dialect.name == 'postgresql':
             from sqlalchemy import text
@@ -67,11 +73,12 @@ def generation_budget():
             connection.execute(update(usage).where(usage.c.id == '__budget_lock__').values(status='reserved'))
         connection.execute(update(usage).where(usage.c.tenant_id == context.tenant_id,
             usage.c.status == 'reserved', usage.c.created_at < time.time() - 600).values(status='failed', finished_at=time.time()))
-        count = connection.execute(select(func.count()).select_from(usage).where(
-            usage.c.tenant_id == context.tenant_id, usage.c.day == _day(),
-            usage.c.status.in_(['reserved', 'completed']))).scalar_one()
+        conditions = [usage.c.tenant_id == context.tenant_id, usage.c.status.in_(['reserved', 'completed'])]
+        if not guest:
+            conditions.append(usage.c.day == _day())
+        count = connection.execute(select(func.count()).select_from(usage).where(*conditions)).scalar_one()
         if count >= limit:
-            raise HTTPException(429, '今日创作额度已用完，请联系企业管理员')
+            raise HTTPException(429, '保存到你的门店后，可以继续创作' if guest else '今日创作额度已用完，请联系企业管理员')
         connection.execute(usage.insert().values(id=identifier, tenant_id=context.tenant_id,
             user_id=context.user_id, store_id=context.store_id, day=_day(), status='reserved', created_at=time.time()))
     status = 'failed'
@@ -105,6 +112,8 @@ def persist_generation_result(identifier, record):
             if not current or current['claim_token'] != claim[1] or current['lease_until'] <= time.time() or current['status'] != 'running':
                 raise HTTPException(409, '任务正在由新的工作进程接续')
         save_run(identifier, record)
+        from .gtm_agent.effects import checkpoint_generated_artifact
+        checkpoint_generated_artifact('run', identifier, record)
         if claim:
             job = load_body('generation_job', claim[0], action='write')
             job['committed_result'] = record
@@ -113,7 +122,8 @@ def persist_generation_result(identifier, record):
         if reserved:
             connection.execute(update(usage).where(usage.c.id == reserved,
                 usage.c.tenant_id == context.tenant_id, usage.c.status == 'reserved')
-                .values(status='completed', finished_at=time.time()))
+                .values(status='failed' if record.get('status') in {'blocked', 'error', 'needs_input'} else 'completed',
+                        finished_at=time.time()))
 
 
 class JobInput(BaseModel):
@@ -123,6 +133,13 @@ class JobInput(BaseModel):
 
 @router.post('/jobs', status_code=202)
 def enqueue(payload: JobInput):
+    return enqueue_operation(payload)
+
+
+def enqueue_operation(payload: JobInput, *, operation='content', parameters=None):
+    """Share the existing fenced queue with registered creation operations."""
+    if operation not in {'content', 'design'}:
+        raise ValueError('Unknown generation operation')
     from .resource_access import validate_task_resources
     context = require_context()
     validate_task_resources(payload.task)
@@ -133,6 +150,8 @@ def enqueue(payload: JobInput):
     key = context.tenant_id + ':' + context.user_id + ':' + payload.idempotency_key
     body = {'id': identifier, 'status': 'queued', 'task': payload.task.model_dump(mode='json'),
             'created_at': time.time()}
+    if operation != 'content':
+        body.update(operation=operation, parameters=parameters or {})
     from .tenancy.database import transaction_context
     try:
         with transaction_context() as connection:
@@ -144,7 +163,9 @@ def enqueue(payload: JobInput):
             previous = connection.execute(select(dispatch).where(dispatch.c.idempotency_key == key)).mappings().first()
             if previous:
                 prior_body = load_body('generation_job', previous['id'])
-                if prior_body.get('task') != payload.task.model_dump(mode='json'):
+                if (prior_body.get('task') != payload.task.model_dump(mode='json')
+                        or prior_body.get('operation', 'content') != operation
+                        or prior_body.get('parameters', {}) != (parameters or {})):
                     raise HTTPException(409, '这次请求的需求已变化，请重新开始创作')
                 return {'id': previous['id'], 'status': previous['status']}
             count = connection.execute(select(func.count()).select_from(dispatch).where(
@@ -177,17 +198,128 @@ def job_result(identifier: str):
     if state in {'cancelled', 'failed'} and not body.get('error'):
         body['error'] = {'message': '任务权限已更新，请重新开始创作' if state == 'cancelled' else '这次创作未完成，请重试'}
     # Never return the source prompt/task through the polling contract.
-    return {key: value for key, value in body.items() if key not in {'task', 'committed_result'}}
+    return {key: value for key, value in body.items() if key not in {'task', 'committed_result', 'parameters'}}
+
+
+@router.post('/jobs/{identifier}/retry', status_code=202)
+def retry_design_job(identifier: str):
+    """Resume a saved design through the same fenced queue, never repurchase an unknown request."""
+    from .tenancy import authorize_resource
+    from .tenancy.database import transaction_context
+    from .resource_access import ensure_live_context, validate_task_resources
+    from .design_service import source_record
+    import base64
+    import hashlib
+    context = ensure_live_context() or require_context()
+    if context.is_legacy or not context.store_id:
+        raise HTTPException(403, '登录原门店后继续这次设计')
+    try:
+        resource = authorize_resource('generation_job', identifier, 'edit')
+    except HTTPException as exc:
+        if exc.status_code == 404:
+            raise HTTPException(403, '无法继续这次设计') from None
+        raise
+    if resource['owner_id'] != context.user_id or resource['store_id'] != context.store_id:
+        raise HTTPException(403, '回到创建这次设计的账号和门店后继续')
+    with transaction_context() as connection:
+        # Serialize with claimers and concurrent retries before reading checkpoints.
+        connection.execute(update(dispatch).where(dispatch.c.id == '__retry_lock__').values(status='queued'))
+        row = connection.execute(select(dispatch).where(dispatch.c.id == identifier,
+            dispatch.c.tenant_id == context.tenant_id).with_for_update()).mappings().first()
+        if not row or row['user_id'] != context.user_id or row['store_id'] != context.store_id:
+            raise HTTPException(403, '无法继续这次设计')
+        body = load_body('generation_job', identifier, action='write')
+        if row['status'] != 'failed' or body.get('operation') != 'design' or body.get('committed_result'):
+            raise HTTPException(409, '这次任务无需恢复，请查看当前结果')
+        parameters = body.get('parameters') or {}
+        design_id, source_id = parameters.get('design_id'), parameters.get('source_run_id')
+        if not design_id or not source_id:
+            raise HTTPException(409, '这次设计没有可接续的原图')
+        validate_task_resources(TaskInput.model_validate(body['task']))
+        source_record(source_id)  # Revalidate current source permission and live task grants.
+        work = load_body('design_work', design_id, action='write')
+        if work.get('source_run_id') != source_id:
+            raise HTTPException(409, '设计来源已变化，请重新开始')
+        stages = list((work.get('commercial_visuals') or {}).values())
+        if not stages or any(stage.get('status') in {'started', 'unavailable'} for stage in stages):
+            raise HTTPException(409, '原图请求结果尚未确认，请先核对已有请求')
+        saved = False
+        for stage in stages:
+            asset = stage.get('asset') or {}
+            if stage.get('status') != 'completed':
+                continue
+            try:
+                header, encoded = str(asset.get('data_url') or '').split(',', 1)
+                raw = base64.b64decode(encoded, validate=True)
+                valid = header == 'data:image/png;base64' and raw.startswith(b'\x89PNG\r\n\x1a\n')
+                if asset.get('sha256'):
+                    valid = valid and hashlib.sha256(raw).hexdigest() == asset['sha256']
+                saved = saved or valid
+            except (ValueError, TypeError):
+                continue
+        if not saved:
+            raise HTTPException(409, '这次设计没有可接续的原图')
+        changed = connection.execute(update(dispatch).where(dispatch.c.id == identifier,
+            dispatch.c.tenant_id == context.tenant_id, dispatch.c.user_id == context.user_id,
+            dispatch.c.store_id == context.store_id, dispatch.c.status == 'failed').values(
+                status='queued', claim_token=None, lease_until=0, session_hash=context.session_hash))
+        if changed.rowcount != 1:
+            raise HTTPException(409, '任务状态刚刚更新，请刷新查看')
+        if body.get('error'):
+            body['error_history'] = [*(body.get('error_history') or []),
+                {'error': body['error'], 'finished_at': body.get('finished_at'), 'retried_at': time.time()}][-10:]
+        body.update(status='queued', retry_count=int(body.get('retry_count') or 0) + 1, retried_at=time.time())
+        for key in ('error', 'result', 'finished_at'):
+            body.pop(key, None)
+        save_body('generation_job', identifier, body)
+        audit('job.retry', 'generation_job', identifier)
+    return {'id': identifier, 'status': 'queued'}
+
+
+def commit_artifact_result(kind, identifier, artifact, projected_result):
+    """Fence and checkpoint a non-copy artifact with its usage reservation."""
+    from .tenancy.database import transaction_context
+    context = require_context()
+    if kind != 'design':
+        raise ValueError('Unsupported artifact')
+    with transaction_context() as connection:
+        claim = _active_claim.get()
+        if claim:
+            current = connection.execute(select(dispatch).where(dispatch.c.id == claim[0],
+                dispatch.c.tenant_id == context.tenant_id).with_for_update()).mappings().first()
+            if not current or current['claim_token'] != claim[1] or current['lease_until'] <= time.time() or current['status'] != 'running':
+                raise HTTPException(409, '任务正在由新的工作进程接续')
+        save_body(kind, identifier, artifact)
+        plan = artifact.get('plan') or {}
+        selected = next((item for item in plan.get('concepts', []) if item.get('id') == plan.get('selected_concept_id')), None)
+        if selected:
+            save_body('design_style', identifier, {'id': identifier, 'source_run_id': artifact['source_run_id'],
+                'platform': artifact['platform'], 'status': artifact['status'], 'concept': selected})
+        from .gtm_agent.effects import checkpoint_generated_artifact
+        checkpoint_generated_artifact(kind, identifier, artifact)
+        if claim:
+            job = load_body('generation_job', claim[0], action='write')
+            job['committed_result'] = projected_result
+            save_body('generation_job', claim[0], job)
+        reserved = _active_reservation.get()
+        if reserved:
+            connection.execute(update(usage).where(usage.c.id == reserved,
+                usage.c.tenant_id == context.tenant_id, usage.c.status == 'reserved')
+                .values(status='completed', finished_at=time.time()))
 
 
 @router.get('/usage')
 def usage_summary():
     context = require_context()
+    guest, limit = _budget_scope(context)
+    conditions = [usage.c.tenant_id == context.tenant_id]
+    if not guest:
+        conditions.append(usage.c.day == _day())
     with db_connection() as connection:
         rows = connection.execute(select(usage.c.status, func.count().label('count')).where(
-            usage.c.tenant_id == context.tenant_id, usage.c.day == _day()).group_by(usage.c.status)).mappings().all()
+            *conditions).group_by(usage.c.status)).mappings().all()
     counts = {row['status']: row['count'] for row in rows}
-    return {'day': _day(), 'unit': 'creation', 'limit': int(os.getenv('MATEQUILL_DAILY_CREATIONS', '100')),
+    return {'day': _day(), 'unit': 'creation', 'limit': limit,
             'completed': counts.get('completed', 0), 'reserved': counts.get('reserved', 0),
             'failed': counts.get('failed', 0)}
 
@@ -314,7 +446,11 @@ async def execute_claimed(row):
         from .api import run_task
         request = Request({'type': 'http', 'method': 'POST', 'path': '/api/run',
             'headers': [], 'client': ('127.0.0.1', 0), 'server': ('127.0.0.1', 8000), 'scheme': 'http'})
-        operation = asyncio.create_task(run_task(TaskInput.model_validate(body['task']), request))
+        if body.get('operation') == 'design':
+            from .design_service import execute_design
+            operation = asyncio.create_task(execute_design(body.get('parameters') or {}))
+        else:
+            operation = asyncio.create_task(run_task(TaskInput.model_validate(body['task']), request))
         async def keep_alive():
             while not operation.done():
                 await asyncio.sleep(20)

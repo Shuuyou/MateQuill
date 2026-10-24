@@ -1904,6 +1904,114 @@
       "height": 960,
       "visual_review_status": "unreviewed",
       "scope_note": "关联精确产品页；配置与功能仍须核对对应销售版本，不证明所有 SKU 均支持。"
+    },
+    {
+      "product": "HUAWEI Mate 90",
+      "path": "runtime/official-assets/mate90/f8c8dffed0c10783.png",
+      "source_url": "https://consumer.huawei.com/cn/phones/mate90/",
+      "image_url": "https://consumer.huawei.com/content/dam/huawei-cbg-site/cn/mkt/pdp/phones/mate90/images/design/green-1.png",
+      "title": "HUAWEI Mate 90 晶格绿手机背面图，展示手机的颜色",
+      "alt": "HUAWEI Mate 90 晶格绿手机背面图，展示手机的颜色",
+      "context": "对应产品官网HTML已确认图地址；像素审阅独立绑定SHA256。",
+      "sha256": "f8c8dffed0c1078337881d8a2ef8c43409a593a8ad7c75f098c3998b960eb30f",
+      "captured_at": "2026-10-22",
+      "mime": "image/png",
+      "width": 292,
+      "height": 620,
+      "visual_review_status": "reviewed",
+      "scope_note": "仅对应标准款外观；素材本身不证明功能、参数或本店库存。"
+    },
+    {
+      "product": "HUAWEI Mate 90",
+      "path": "runtime/official-assets/mate90/c599ea881242a51c.png",
+      "source_url": "https://consumer.huawei.com/cn/phones/mate90/",
+      "image_url": "https://consumer.huawei.com/content/dam/huawei-cbg-site/cn/mkt/pdp/phones/mate90/images/design/green-2.png",
+      "title": "HUAWEI Mate 90 晶格绿手机侧视图，展示手机的颜色",
+      "alt": "HUAWEI Mate 90 晶格绿手机侧视图，展示手机的颜色",
+      "context": "对应产品官网HTML已确认图地址；像素审阅独立绑定SHA256。",
+      "sha256": "c599ea881242a51c29a128cd37e2742eff2ed3bb66c399fc780d40a9e751be31",
+      "captured_at": "2026-10-22",
+      "mime": "image/png",
+      "width": 362,
+      "height": 540,
+      "visual_review_status": "reviewed",
+      "scope_note": "仅对应标准款外观；素材本身不证明功能、参数或本店库存。"
+    },
+    {
+      "product": "HUAWEI FreeBuds Neo",
+      "path": "runtime/official-assets/freebuds-neo/a4416ec271da4812.png",
+      "source_url": "https://consumer.huawei.com/cn/headphones/freebuds-neo/",
+      "image_url": "https://consumer.huawei.com/content/dam/huawei-cbg-site/cn/mkt/pdp/headphones/freebuds-neo/images/section22/huawei-freebuds-neo-stellar-silver.png",
+      "title": "HUAWEI FreeBuds Neo 星河银",
+      "alt": "HUAWEI FreeBuds Neo 星河银",
+      "context": "对应产品官网HTML已确认图地址；像素审阅独立绑定SHA256。",
+      "sha256": "a4416ec271da4812b94d5314b44c701d05df85993ab167f8674ff8342a3f8e5b",
+      "captured_at": "2026-10-22",
+      "mime": "image/png",
+      "width": 573,
+      "height": 346,
+      "visual_review_status": "reviewed",
+      "scope_note": "仅对应标准款外观；素材本身不证明功能、参数或本店库存。"
+    },
+    {
+      "product": "HUAWEI FreeBuds Neo",
+      "path": "runtime/official-assets/freebuds-neo/30630aaefe0f7cdf.png",
+      "source_url": "https://consumer.huawei.com/cn/headphones/freebuds-neo/",
+      "image_url": "https://consumer.huawei.com/content/dam/huawei-cbg-site/cn/mkt/pdp/headphones/freebuds-neo/images/section22/huawei-freebuds-neo-nebula-pink.png",
+      "title": "HUAWEI FreeBuds Neo 星云粉",
+      "alt": "HUAWEI FreeBuds Neo 星云粉",
+      "context": "对应产品官网HTML已确认图地址；像素审阅独立绑定SHA256。",
+      "sha256": "30630aaefe0f7cdff711ecdf7c7b4873b4ad1189918b41da4bff29ed7856f0a6",
+      "captured_at": "2026-10-22",
+      "mime": "image/png",
+      "width": 573,
+      "height": 346,
+      "visual_review_status": "reviewed",
+      "scope_note": "仅对应标准款外观；素材本身不证明功能、参数或本店库存。"
+    },
+    {
+      "product": "HUAWEI Mate 90",
+      "path": "runtime/official-assets/mate90/44cebbc9b5ca0451.jpg",
+      "source_url": "https://consumer.huawei.com/cn/phones/mate90/",
+      "image_url": "https://consumer.huawei.com/content/dam/huawei-cbg-site/cn/mkt/pdp/phones/mate90/images/hero/kv.jpg",
+      "title": "HUAWEI Mate 90 官方产品页主视觉",
+      "alt": "HUAWEI Mate 90",
+      "context": "精确产品官网首屏主视觉；产品发布设计参考，不代表特定促销活动。",
+      "sha256": "44cebbc9b5ca04515eae767b8f9fc0ab122882abfededb1714d4ecaf7d471b8f",
+      "captured_at": "2026-10-22T16:21:38.765801+00:00",
+      "mime": "image/jpeg",
+      "width": 1920,
+      "height": 960,
+      "visual_review_status": "pixel_review_sha256",
+      "visual_role": "campaign_key_visual"
+    },
+    {
+      "product": "HUAWEI Mate 80",
+      "path": "runtime/official-assets/mate80/d72d86c3eee60d01.png",
+      "source_url": "https://consumer.huawei.com/cn/phones/mate80/",
+      "image_url": "https://consumer.huawei.com/content/dam/huawei-cbg-site/cn/mkt/pdp/phones/mate80/img/accessory/accessory-compare-product-1-1-2x.png",
+      "title": "HUAWEI Mate 80 official transparent front/rear product views",
+      "alt": "",
+      "context": "Exact first product in official comparison row; original transparent product pixels for commercial composition.",
+      "sha256": "d72d86c3eee60d0134e22dd061032e5658e421c1a742925417b7da4964cd8ae4",
+      "captured_at": "2026-10-22T19:27:51.103748+00:00",
+      "mime": "image/png",
+      "width": 976,
+      "height": 976,
+      "visual_review_status": "pixel_review_sha256",
+      "visual_role": "product_packshot",
+      "asset_kind": "packshot",
+      "source_binding": {
+        "page_sha256": "33375313a88cc9ebfc1ba0447682525981c5e185179df3fe9a4a761510326d2a",
+        "switch_item_index": 0,
+        "same_row_first_product_name": "HUAWEI Mate 80",
+        "header_names": [
+          "HUAWEI Mate 80",
+          "HUAWEI Mate 80 Pro Max 风驰版",
+          "HUAWEI Mate 80 Pro Max",
+          "HUAWEI Mate 80 Pro"
+        ]
+      }
     }
   ],
   "errors": [],
@@ -1967,6 +2075,18 @@
       "source_url": "https://consumer.huawei.com/cn/laptops/matebook-x-pro-ultra-premium-edition/",
       "asset_count": 10,
       "note": "Exact official page source; SKU feature/compatibility claims require separate evidence."
+    },
+    {
+      "product": "HUAWEI Mate 90",
+      "source_url": "https://consumer.huawei.com/cn/phones/mate90/",
+      "asset_count": 2,
+      "note": "精确官方产品页与产品DAM目录；逐张像素审阅已绑定SHA256。"
+    },
+    {
+      "product": "HUAWEI FreeBuds Neo",
+      "source_url": "https://consumer.huawei.com/cn/headphones/freebuds-neo/",
+      "asset_count": 2,
+      "note": "精确官方产品页与产品DAM目录；逐张像素审阅已绑定SHA256。"
     }
   ]
 }

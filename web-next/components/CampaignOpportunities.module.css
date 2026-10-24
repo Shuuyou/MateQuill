@@ -1,0 +1,6 @@
+.selection { color: var(--secondary); line-height: 1.7; }
+.alternatives > div { display: grid; gap: 20px; padding: 12px 0 6px; }
+.alternatives section { border-top: 1px solid var(--line); padding-top: 16px; }
+.alternatives h4 { margin: 0 0 8px; font-size: 17px; font-weight: 500; }
+.alternatives p { margin: 0 0 10px; line-height: 1.8; }
+.alternatives button { padding: 8px 0; min-height: 40px; }

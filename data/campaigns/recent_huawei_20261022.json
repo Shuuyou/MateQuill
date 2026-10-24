@@ -1,0 +1,418 @@
+{
+  "schema_version": "1.0",
+  "verified_at": "2026-10-22",
+  "timezone": "Asia/Shanghai",
+  "evidence_window": {
+    "from": "2026-09-22",
+    "through": "2026-10-22"
+  },
+  "provenance": {
+    "mode": "real_public_facts_simulated_campaign_dispatch",
+    "publisher_label": "演示任务",
+    "description": "产品与发布事件依据公开真实来源；总部、省代身份、任务安排、截止时间和分发范围由 MateQuill 模拟，不代表华为或代理商实际下发。"
+  },
+  "sources": [
+    {
+      "id": "huawei-events-20261001",
+      "title": "华为发布会：HUAWEI Mate90 系列及全场景新品发布会",
+      "publisher": "华为终端官网",
+      "url": "https://consumer.huawei.com/cn/press/events/",
+      "published_on": "2026-10-01",
+      "date_basis": "官网发布会索引标示的事件日期；非索引页面创建时间",
+      "verification_method": "web_search_index",
+      "verified_at": "2026-10-22"
+    },
+    {
+      "id": "huawei-mate90-buying-guide",
+      "title": "HUAWEI Mate 90系列购买指引",
+      "publisher": "华为终端官网",
+      "url": "https://consumer.huawei.com/cn/support/content/zh-cn16119533/",
+      "published_on": null,
+      "event_on": "2026-10-01",
+      "date_basis": "正文正式开售时间；页面未提供可确认的发布日期",
+      "verification_method": "web_search_index_and_page_open",
+      "verified_at": "2026-10-22",
+      "excerpt": "HUAWEI Mate 90 全网通版 12GB+256GB 晶格绿、晶格粉、零度白、曜石黑 2026年10月1日12：08",
+      "claims": [
+        {
+          "label": "开售时间",
+          "value": "2026年10月1日12：08",
+          "quote": "2026年10月1日12：08",
+          "qualifiers": []
+        }
+      ]
+    },
+    {
+      "id": "huawei-xmage-20261001",
+      "title": "XMAGE 升级为「华为睿影 XMAGE」，开启移动影像新十年",
+      "publisher": "华为终端官网",
+      "url": "https://consumer.huawei.com/cn/press/news/2026/all-new-xmage/",
+      "published_on": "2026-10-01",
+      "verification_method": "web_search_index",
+      "verified_at": "2026-10-22",
+      "excerpt": "XMAGE 升级为「华为睿影 XMAGE」，开启移动影像新十年",
+      "claims": [
+        {
+          "label": "品牌升级",
+          "value": "XMAGE 升级为「华为睿影 XMAGE」",
+          "quote": "XMAGE 升级为「华为睿影 XMAGE」",
+          "qualifiers": []
+        }
+      ]
+    },
+    {
+      "id": "c114-freebuds-neo-20261001",
+      "title": "华为全新音频系列HUAWEI FreeBuds Neo发布：先锋美学，一眼见新，售价699元",
+      "publisher": "C114通信网",
+      "url": "https://www.c114.com.cn/news/126/a1318745.html",
+      "published_on": "2026-10-01",
+      "published_at": "2026-10-01T14:32:00+08:00",
+      "verification_method": "web_search_index",
+      "verified_at": "2026-10-22",
+      "excerpt": "2026年10月14日10:08正式开售",
+      "claims": [
+        {
+          "label": "限定款礼盒开售",
+          "value": "2026年10月14日10:08正式开售",
+          "quote": "2026年10月14日10:08正式开售",
+          "qualifiers": [
+            "限定款礼盒开售时间，不等同于普通款首销。"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sina-launch-20261001",
+      "title": "华为Mate 90系列及全场景新品发布会举行，多款重磅新品亮相",
+      "publisher": "新浪科技",
+      "url": "https://finance.sina.com.cn/tech/mobile/n/n/2026-10-01/doc-initsyam6779713.shtml",
+      "published_on": "2026-10-01",
+      "verification_method": "web_search_index",
+      "verified_at": "2026-10-22"
+    }
+  ],
+  "campaigns": [
+    {
+      "id": "demo-hq-mate90-october-2026",
+      "title": "Mate 90 新品体验：讲清一个值得上手的细节",
+      "publisher": {
+        "role": "brand_hq",
+        "name": "华为终端总部（演示）",
+        "simulated": true
+      },
+      "status": "ready",
+      "dispatch_at": "2026-10-22T09:00:00+08:00",
+      "due_at": "2026-10-23T15:00:00+08:00",
+      "schedule_is_simulated": true,
+      "event": {
+        "name": "HUAWEI Mate90 系列及全场景新品发布会",
+        "occurred_on": "2026-10-01",
+        "kind": "product_launch",
+        "promotion_start": null,
+        "promotion_end": null
+      },
+      "products": [
+        "HUAWEI Mate 90",
+        "HUAWEI Mate 90 Pro",
+        "HUAWEI Mate 90 Pro Max"
+      ],
+      "platforms": [
+        "xiaohongshu",
+        "moments"
+      ],
+      "objective": "用本店真实实机素材解释一个购买前值得体验的问题，承接产品咨询。",
+      "brief": "选取实际可体验的对应机型，围绕外观、握持或经核实的具体操作组织图文。门店确认样机与服务后，一键生成本店版本。",
+      "verified_facts": [
+        {
+          "text": "Mate 90 系列于 2026 年 10 月 1 日发布。",
+          "source_ids": [
+            "huawei-events-20261001"
+          ]
+        },
+        {
+          "text": "官方购买指引列示该系列正式开售时间为 2026 年 10 月 1 日 12:08。",
+          "source_ids": [
+            "huawei-mate90-buying-guide"
+          ]
+        },
+        {
+          "text": "购买指引列有华为授权体验店、华为智能生活馆等线下渠道。",
+          "source_ids": [
+            "huawei-mate90-buying-guide"
+          ]
+        }
+      ],
+      "store_inputs": [
+        "对应机型实机照片",
+        "本店可体验机型"
+      ],
+      "content_constraints": [
+        "机型、版本与图片一致",
+        "本店库存和样机情况由门店资料决定",
+        "未核实的数值参数不进入成品"
+      ],
+      "price_policy": "不注入当前成交价；官网首发价不等于本店当前优惠。",
+      "source_ids": [
+        "huawei-events-20261001",
+        "huawei-mate90-buying-guide"
+      ],
+      "source_refs": [
+        {
+          "title": "HUAWEI Mate 90系列购买指引",
+          "url": "https://consumer.huawei.com/cn/support/content/zh-cn16119533/",
+          "published_at": null,
+          "product": "HUAWEI Mate 90",
+          "excerpt": "产品传播名 | 产品对外名称 | 颜色 | 正式开售时间 | 首发价格（元）\nHUAWEI Mate 90 | HUAWEI Mate 90 全网通版 12GB+256GB | 晶格绿、晶格粉、零度白、曜石黑 | 2026年10月1日12：08 | 5999元",
+          "claims": [
+            {
+              "label": "开售时间",
+              "value": "2026年10月1日12：08",
+              "quote": "产品传播名 | 产品对外名称 | 颜色 | 正式开售时间 | 首发价格（元）\nHUAWEI Mate 90 | HUAWEI Mate 90 全网通版 12GB+256GB | 晶格绿、晶格粉、零度白、曜石黑 | 2026年10月1日12：08 | 5999元",
+              "qualifiers": [
+                "该行对应 HUAWEI Mate 90 全网通版 12GB+256GB；首发信息不代表本店当前价格、库存或优惠。"
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "demo-province-xmage-october-2026",
+      "title": "把秋天拍进生活：本店影像体验选题",
+      "publisher": {
+        "role": "regional_distributor",
+        "name": "浙江省代运营中心（演示）",
+        "simulated": true
+      },
+      "status": "ready",
+      "dispatch_at": "2026-10-22T09:10:00+08:00",
+      "due_at": "2026-10-23T15:00:00+08:00",
+      "schedule_is_simulated": true,
+      "event": {
+        "name": "华为睿影 XMAGE 品牌升级",
+        "occurred_on": "2026-10-01",
+        "kind": "brand_announcement",
+        "promotion_start": null,
+        "promotion_end": null
+      },
+      "products": [
+        "HUAWEI Mate 90 系列"
+      ],
+      "platforms": [
+        "xiaohongshu",
+        "moments",
+        "wechat"
+      ],
+      "objective": "把影像发布信息转化为本店周边生活场景和实际拍摄过程。",
+      "brief": "系统根据门店位置建议一个适合拍摄的生活主题，店员提供实际拍摄素材，生成拍摄过程、画面观察与产品体验的图文。秋日选题为本演示策划，不是华为官方摄影征集活动。",
+      "verified_facts": [
+        {
+          "text": "华为于 2026 年 10 月 1 日宣布 XMAGE 升级为华为睿影 XMAGE。",
+          "source_ids": [
+            "huawei-xmage-20261001"
+          ]
+        },
+        {
+          "text": "该公告介绍了 Mate 90 系列睿影红枫人像及人像原片、柔光人像、绚丽烟花、星芒效果。",
+          "source_ids": [
+            "huawei-xmage-20261001"
+          ]
+        }
+      ],
+      "store_inputs": [
+        "带机型记录的实际拍摄照片",
+        "拍摄场景或店员一句观察"
+      ],
+      "content_constraints": [
+        "每项功能只应用于资料支持的机型及版本",
+        "不把生成图片当实拍样张",
+        "不虚构官方比赛、奖品或本地活动"
+      ],
+      "price_policy": "本任务不含价格与优惠。",
+      "source_ids": [
+        "huawei-xmage-20261001",
+        "huawei-events-20261001"
+      ],
+      "source_refs": [
+        {
+          "title": "XMAGE 升级为「华为睿影 XMAGE」，开启移动影像新十年",
+          "url": "https://consumer.huawei.com/cn/press/news/2026/all-new-xmage/",
+          "published_at": "2026-10-01",
+          "product": "HUAWEI Mate 90 系列",
+          "excerpt": "XMAGE 升级为「华为睿影 XMAGE」，开启移动影像新十年",
+          "claims": [
+            {
+              "label": "品牌升级",
+              "value": "XMAGE 升级为「华为睿影 XMAGE」",
+              "quote": "XMAGE 升级为「华为睿影 XMAGE」",
+              "qualifiers": []
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "demo-province-freebuds-neo-october-2026",
+      "title": "FreeBuds Neo 新品：从外观细节到日常聆听",
+      "publisher": {
+        "role": "regional_distributor",
+        "name": "浙江省代运营中心（演示）",
+        "simulated": true
+      },
+      "status": "ready",
+      "dispatch_at": "2026-10-22T09:20:00+08:00",
+      "due_at": "2026-10-23T15:00:00+08:00",
+      "schedule_is_simulated": true,
+      "event": {
+        "name": "HUAWEI FreeBuds Neo 发布及限定礼盒开售",
+        "occurred_on": "2026-10-01",
+        "sale_event_on": "2026-10-14",
+        "kind": "product_launch_and_sale",
+        "promotion_start": null,
+        "promotion_end": null
+      },
+      "products": [
+        "HUAWEI FreeBuds Neo",
+        "HUAWEI FreeBuds Neo × 王者荣耀朵莉亚限定款礼盒"
+      ],
+      "platforms": [
+        "xiaohongshu",
+        "moments"
+      ],
+      "objective": "用实际产品外观、随身场景和经核实体验引出新品兴趣。",
+      "brief": "普通款与限定礼盒分别匹配真实素材，按门店客群组织通勤、校园或游戏休闲选题。没有礼盒素材时直接使用普通款。",
+      "verified_facts": [
+        {
+          "text": "HUAWEI FreeBuds Neo 于 2026 年 10 月 1 日发布。",
+          "source_ids": [
+            "c114-freebuds-neo-20261001"
+          ]
+        },
+        {
+          "text": "中国大陆发布报道列出星河银、星云粉、零度白及星空黑四款配色。",
+          "source_ids": [
+            "c114-freebuds-neo-20261001"
+          ]
+        },
+        {
+          "text": "报道列示王者荣耀朵莉亚限定款礼盒于 2026 年 10 月 14 日 10:08 开售。",
+          "source_ids": [
+            "c114-freebuds-neo-20261001",
+            "sina-launch-20261001"
+          ]
+        }
+      ],
+      "store_inputs": [
+        "本店对应款式的实拍素材",
+        "本店是否提供体验"
+      ],
+      "content_constraints": [
+        "普通款与限定礼盒素材不混用",
+        "不混用日本或香港地区价格和配色",
+        "性能与兼容性数值需要完整条件支持"
+      ],
+      "price_policy": "首发报道价格不自动转为门店当前价；内容默认不写促销金额。",
+      "expired_benefits": [
+        {
+          "name": "10 月 7 日前购买耳机免费领取丢失无忧服务",
+          "ended_on": "2026-10-07",
+          "eligible_for_current_copy": false,
+          "source_ids": [
+            "c114-freebuds-neo-20261001"
+          ]
+        }
+      ],
+      "source_ids": [
+        "c114-freebuds-neo-20261001",
+        "sina-launch-20261001",
+        "huawei-events-20261001"
+      ],
+      "source_refs": [
+        {
+          "title": "华为全新音频系列HUAWEI FreeBuds Neo发布：先锋美学，一眼见新，售价699元",
+          "url": "https://www.c114.com.cn/news/126/a1318745.html",
+          "published_at": "2026-10-01",
+          "product": "HUAWEI FreeBuds Neo",
+          "excerpt": "2026年10月14日10:08正式开售",
+          "claims": [
+            {
+              "label": "限定款礼盒开售",
+              "value": "2026年10月14日10:08正式开售",
+              "quote": "2026年10月14日10:08正式开售",
+              "qualifiers": [
+                "限定款礼盒开售时间，不等同于普通款首销。"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "product_sources": [
+    {
+      "product": "HUAWEI Mate 90",
+      "title": "HUAWEI Mate 90 规格参数",
+      "url": "https://consumer.huawei.com/cn/phones/mate90/specs/",
+      "published_at": null,
+      "verified_at": "2026-10-22",
+      "excerpt": "尺寸 6.75 英寸。操作系统 HarmonyOS 7.0。电池 6600 mAh（典型值）。",
+      "claims": [
+        {
+          "label": "屏幕",
+          "value": "6.75 英寸",
+          "quote": "6.75 英寸",
+          "qualifiers": [
+            "圆角屏按标准矩形测量；实际可视区域略小"
+          ]
+        },
+        {
+          "label": "操作系统",
+          "value": "HarmonyOS 7.0",
+          "quote": "HarmonyOS 7.0",
+          "qualifiers": []
+        },
+        {
+          "label": "电池",
+          "value": "6600 mAh（典型值）",
+          "quote": "6600 mAh（典型值）",
+          "qualifiers": [
+            "额定容量为6415mAh",
+            "电池内置不可拆卸"
+          ]
+        }
+      ]
+    },
+    {
+      "product": "HUAWEI FreeBuds Neo",
+      "title": "HUAWEI FreeBuds Neo 规格参数",
+      "url": "https://consumer.huawei.com/cn/headphones/freebuds-neo/specs/",
+      "published_at": null,
+      "verified_at": "2026-10-22",
+      "excerpt": "耳机 约 4.8 g。充电盒有线充电：USB Type-C。双设备连接 支持。",
+      "claims": [
+        {
+          "label": "单只耳机重量",
+          "value": "约 4.8 g",
+          "quote": "约 4.8 g",
+          "qualifiers": [
+            "受产品配置和制造工艺影响，实际重量以实物为准"
+          ]
+        },
+        {
+          "label": "充电接口",
+          "value": "USB Type-C",
+          "quote": "USB Type-C",
+          "qualifiers": [
+            "指充电盒有线充电"
+          ]
+        },
+        {
+          "label": "双设备连接",
+          "value": "双设备连接 支持",
+          "quote": "双设备连接 支持",
+          "qualifiers": []
+        }
+      ]
+    }
+  ]
+}

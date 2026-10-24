@@ -18,6 +18,7 @@ class Settings:
     image_api_key: str = field(default_factory=lambda: os.getenv('IMAGE_API_KEY', ''))
     image_model: str = field(default_factory=lambda: os.getenv('IMAGE_MODEL', 'gpt-image-2.5'))
     image_review_model: str = field(default_factory=lambda: os.getenv('IMAGE_REVIEW_MODEL', ''))
+    design_text_model: str = field(default_factory=lambda: os.getenv('DESIGN_TEXT_MODEL', ''))
     asr_base_url: str = field(default_factory=lambda: os.getenv('ASR_BASE_URL', ''))
     asr_api_key: str = field(default_factory=lambda: os.getenv('ASR_API_KEY', ''))
     asr_model: str = field(default_factory=lambda: os.getenv('ASR_MODEL', ''))

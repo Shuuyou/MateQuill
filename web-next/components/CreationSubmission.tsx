@@ -65,7 +65,7 @@ export default function CreationSubmission({
       ) : (
         <form onSubmit={(event) => void submit(event)}>
           <div>
-            <h2>把这篇好内容，交给团队看看。</h2>
+            <h2>交给团队审核</h2>
             <label>
               想和店长说什么
               <input

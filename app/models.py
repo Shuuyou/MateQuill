@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from typing import Literal
 from uuid import uuid4
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 
 
 class TaskInput(BaseModel):
@@ -21,6 +21,15 @@ class TaskInput(BaseModel):
     media_ids: list[str] = Field(default_factory=list, max_length=12)
     store_id: str = Field(default='', max_length=100)
     assignment_id: str = Field(default='', max_length=160)
+
+    @model_validator(mode='before')
+    @classmethod
+    def platform_stage_default(cls, value):
+        # A Moments follower/contact is not necessarily considering a purchase.
+        # Preserve explicit stages and the other platforms' existing default.
+        if isinstance(value, dict) and value.get('platform') == 'moments' and not value.get('stage'):
+            return {**value, 'stage': 'unknown'}
+        return value
 
 
 class Fact(BaseModel):

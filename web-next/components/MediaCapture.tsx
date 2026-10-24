@@ -38,11 +38,9 @@ export default function MediaCapture({
     file: File;
     kind: "photo" | "audio";
   } | null>(null);
-  const [transcript, setTranscript] = useState("");
-  const [confirming, setConfirming] = useState(false);
   useEffect(() => {
-    onBusy(uploading || recording || confirming);
-  }, [uploading, recording, confirming, onBusy]);
+    onBusy(uploading || recording);
+  }, [uploading, recording, onBusy]);
 
   const stopTracks = () => {
     stream.current?.getTracks().forEach((track) => track.stop());
@@ -88,8 +86,9 @@ export default function MediaCapture({
         );
       setRetry(null);
       if (response.transcript) {
-        setTranscript(response.transcript);
-        setConfirming(true);
+        // The composer is already editable: do not add a mandatory confirmation
+        // step between a spoken request and sending it.
+        onTranscript(response.transcript);
       }
     } catch (reason) {
       setError(
@@ -276,31 +275,6 @@ export default function MediaCapture({
             )}
             <button type="button" onClick={() => audioInput.current?.click()}>
               选择录音文件
-            </button>
-          </div>
-        </div>
-      )}
-      {confirming && (
-        <div className="mq-transcript">
-          <label htmlFor="voice-transcript">刚才这段话，听对了吗？</label>
-          <textarea
-            id="voice-transcript"
-            value={transcript}
-            onChange={(event) => setTranscript(event.target.value)}
-          />
-          <div>
-            <button
-              type="button"
-              onClick={() => {
-                onTranscript(transcript.trim());
-                setConfirming(false);
-              }}
-              disabled={!transcript.trim()}
-            >
-              加入这次需求
-            </button>
-            <button type="button" onClick={() => setConfirming(false)}>
-              暂不使用
             </button>
           </div>
         </div>

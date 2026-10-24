@@ -1,0 +1,45 @@
+.workspace { max-width: 1120px; margin-inline: auto; }
+.workspace .heading { margin: 0 0 24px; }
+.workspace .heading h1 { margin: 0; font: 400 clamp(29px, 3vw, 36px)/1.5 var(--font-display); }
+.workspace .tabs { gap: 28px; margin-bottom: 8px; }
+.workspace .tabs > button { font-size: 16px; padding: 14px 0 16px; }
+.workspace .assignments { gap: 0; }
+.workspace .assignments > article {
+  display: block; padding: 28px 0; border: 0; border-bottom: 1px solid var(--line);
+  border-radius: 0; background: transparent;
+}
+.workspace .assignments > article > div { min-width: 0; }
+.workspace .assignments h2 {
+  max-width: 36em; margin: 10px 0; font: 400 clamp(23px, 2.2vw, 28px)/1.55 var(--font-display);
+  text-wrap: pretty; overflow-wrap: anywhere;
+}
+.workspace .metadata { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 18px; font-size: 15px; line-height: 1.7; color: var(--secondary); }
+.workspace .status { margin-left: auto; }
+.workspace .assignments :global(.mq-assignment-product) { font-size: 16px; margin: 0 0 12px; font-weight: 450; }
+.workspace .assignments :global(.mq-card-actions) {
+  flex-direction: row; align-items: center; gap: 10px 24px; padding-top: 0; margin-top: 18px;
+}
+.workspace .assignments :global(.mq-primary) { min-height: 44px; border-radius: 11px; padding: 11px 18px; background: #304c39; color: white; font-size: 15px; }
+.workspace .assignments :global(.mq-primary):disabled { background: #e7ebe3; color: #747c6e; }
+.workspace .assignments :global(.mq-text-button) { font-size: 15px; }
+.workspace .assignments :global(.mq-preparation-thinking),
+.workspace .assignments :global(.mq-preparation-reason) { font-size: 16px; line-height: 1.8; margin: 10px 0; }
+.workspace .assignments :global(.mq-preparation-error) { margin: 14px 0; font-size: 16px; line-height: 1.8; }
+.workspace .assignments :global(.mq-preparation-explanation),
+.workspace .assignments :global(.mq-assignment-sources) { margin: 10px 0; font-size: 16px; }
+.workspace .assignments summary { font-size: 15px; line-height: 1.75; cursor: pointer; }
+.workspace .assignments :global(.mq-assignment-sources) ul { padding-left: 22px; }
+.workspace .assignments :global(.mq-assignment-sources) li { margin: 10px 0; overflow-wrap: anywhere; }
+.workspace .assignments :global(.mq-opportunity) { margin-top: 18px; padding: 18px 0 0; border-top: 1px solid var(--line); }
+.workspace .assignments :global(.mq-assignment-history-toggle) { align-self: flex-start; margin-top: 24px; }
+.workspace :global(.mq-channel-empty) { padding: 40px 16px; }
+.workspace :global(.mq-channel-empty) :global(.youju-character) { width: 64px; height: 64px; margin-bottom: 18px; }
+.workspace :global(.mq-channel-empty) h2 { font-size: 24px; }
+@media (max-width: 780px) {
+  .workspace .heading { margin-bottom: 18px; }
+  .workspace .tabs { gap: 24px; }
+  .workspace .assignments > article { padding: 24px 0; }
+  .workspace .metadata { gap: 6px 14px; }
+  .workspace .status { margin-left: 0; }
+  .workspace .assignments :global(.mq-card-actions) { gap: 10px 18px; }
+}

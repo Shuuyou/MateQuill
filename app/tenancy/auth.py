@@ -10,12 +10,12 @@ from uuid import uuid4
 from argon2 import PasswordHasher
 from argon2.exceptions import VerificationError, InvalidHashError
 from fastapi import HTTPException
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, select, update, or_
 from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.responses import JSONResponse
 
 from .context import TenantContext, _context
-from .database import db_connection, memberships, sessions, tenants, users
+from .database import db_connection, memberships, sessions, tenants, users, trials
 
 COOKIE_NAME = 'matequill_session'
 SESSION_SECONDS = 7 * 24 * 60 * 60
@@ -68,6 +68,12 @@ def membership_rows(user_id, tenant_id=None):
 
 
 def context_from_session(row):
+    with db_connection() as connection:
+        expired_trial = connection.execute(select(trials.c.user_id).where(
+            trials.c.user_id == row['user_id'], trials.c.tenant_id == row['tenant_id'],
+            trials.c.claimed_at.is_(None), trials.c.expires_at <= time.time())).first()
+    if expired_trial:
+        return None
     rows = membership_rows(row['user_id'], row['tenant_id'])
     if not rows:
         return None
@@ -87,8 +93,11 @@ def session_row(token_or_hash, *, hashed=False):
         return None
     digest = token_or_hash if hashed else token_hash(token_or_hash)
     with db_connection() as connection:
-        row = connection.execute(select(sessions).join(users, users.c.id == sessions.c.user_id).where(
-            sessions.c.token_hash == digest, sessions.c.expires_at > time.time(), users.c.active.is_(True))).mappings().first()
+        row = connection.execute(select(sessions).join(users, users.c.id == sessions.c.user_id)
+            .outerjoin(trials, trials.c.user_id == sessions.c.user_id).where(
+            sessions.c.token_hash == digest, sessions.c.expires_at > time.time(), users.c.active.is_(True),
+            or_(trials.c.user_id.is_(None), trials.c.tenant_id != sessions.c.tenant_id,
+                trials.c.claimed_at.is_not(None), trials.c.expires_at > time.time()))).mappings().first()
     return dict(row) if row else None
 
 
@@ -116,20 +125,33 @@ def refresh_context(context):
                    roles=tuple(sorted({role for role, scope in refreshed.grants if scope is None or scope == context.store_id})))
 
 
-def new_session(user_id, tenant_id, store_id=None):
+def new_session(user_id, tenant_id, store_id=None, *, seconds=SESSION_SECONDS):
     token = secrets.token_urlsafe(48)
     now = time.time()
     with db_connection() as connection:
         connection.execute(delete(sessions).where(sessions.c.expires_at < now))
         connection.execute(sessions.insert().values(token_hash=token_hash(token), user_id=user_id,
-            tenant_id=tenant_id, store_id=store_id, expires_at=now + SESSION_SECONDS, created_at=now))
+            tenant_id=tenant_id, store_id=store_id, expires_at=now + seconds, created_at=now))
     return token
 
 
-def set_session_cookie(response, token, request):
+def set_session_cookie(response, token, request, *, seconds=SESSION_SECONDS):
     secure = os.getenv('MATEQUILL_COOKIE_SECURE', '0') == '1' or request.url.scheme == 'https'
+    same_site = os.getenv('MATEQUILL_COOKIE_SAMESITE', 'lax').lower()
+    if same_site not in {'lax', 'strict', 'none'}:
+        same_site = 'lax'
+    if same_site == 'none':
+        secure = True
     response.set_cookie(COOKIE_NAME, token, httponly=True, secure=secure,
-                        samesite='lax', max_age=SESSION_SECONDS, path='/')
+                        samesite=same_site, max_age=seconds, path='/')
+
+
+def guest_state(user_id, tenant_id):
+    with db_connection() as connection:
+        row = connection.execute(select(trials.c.expires_at).where(trials.c.user_id == user_id,
+            trials.c.tenant_id == tenant_id, trials.c.claimed_at.is_(None),
+            trials.c.expires_at > time.time())).first()
+    return {'is_guest': row is not None, 'trial_expires_at': row.expires_at if row else None}
 
 
 def me_payload(request):
@@ -145,6 +167,7 @@ def me_payload(request):
         tenant_name=selected['tenant_name'], store_id=context.store_id, roles=list(context.roles),
         store_ids=list(context.store_ids), all_stores=context.all_stores)
     return {'authenticated': True, 'user': dict(user), 'workspace': workspace,
+            **guest_state(row['user_id'], row['tenant_id']),
             'memberships': [{key: item[key] for key in ('id', 'tenant_id', 'tenant_name', 'store_id', 'role')} for item in rows]}
 
 
@@ -157,6 +180,10 @@ def validate_origin(request):
         raise HTTPException(403, '请求来源无效')
     configured = os.getenv('MATEQUILL_ALLOWED_ORIGINS', 'http://127.0.0.1:3003,http://localhost:3003,http://127.0.0.1:3001,http://localhost:3001')
     allowed = {value.strip().rstrip('/') for value in configured.split(',') if value.strip()}
+    for name in ('MATEQUILL_PUBLIC_URL', 'MATEQUILL_STUDIO_PUBLIC_ORIGIN'):
+        public = urlparse(os.getenv(name, ''))
+        if public.scheme in {'http', 'https'} and public.netloc and not public.username and not public.password:
+            allowed.add(public.scheme + '://' + public.netloc)
     allowed.add(str(request.base_url).rstrip('/'))
     if origin.rstrip('/') not in allowed:
         raise HTTPException(403, '请求来源无效')
@@ -164,7 +191,7 @@ def validate_origin(request):
 
 class TenantContextMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request, call_next):
-        public = request.url.path in {'/health', '/api/auth/login', '/api/auth/me', '/api/auth/accept-invitation'}
+        public = request.url.path in {'/health', '/api/auth/login', '/api/auth/me', '/api/auth/guest', '/api/auth/demo', '/api/auth/accept-invitation', '/api/messaging/handoff/exchange'}
         is_api = request.url.path.startswith('/api/')
         context = None
         try:

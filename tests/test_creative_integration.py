@@ -69,8 +69,39 @@ class CaptureModel(OpenAICompatibleLLM):
 
     async def _json(self, system, payload, temperature=0.2):
         self.payloads.append(payload)
+        if payload.get('schema', {}).get('title') == 'MarketingReview':
+            from app.marketing_review import DIMENSIONS
+            value = {
+                'schema_version': '1', 'phase': payload['phase'], 'decision': 'accept',
+                'dimensions': {key: {'status': 'pass', 'rationale': '合成夹具验证数据流', 'findings': []}
+                               for key in DIMENSIONS},
+                'creative_effectiveness': {'status': 'pass', 'hook': '合成夹具的具体任务',
+                    'local_value': '夹具保留原有场景', 'brand_connection': '引用给定产品',
+                    'natural_action': '保留原有行动建议', 'distinctiveness': '保留卡片结构',
+                    'preserve': ['测试中的完整卡片'], 'improvements': []},
+                'revision_brief': '',
+            }
+            if payload.get('reader_value_contract'):
+                from test_reader_value import judgement
+                value['reader_value'] = judgement(payload['reader_value_contract'])
+            return value
         if 'draft' in payload:
-            return {'audit': [{'severity':'info','category':'semantic','message':'所有产品主张均被引用直接支持'}]}
+            result = {'audit': [{'severity':'info','category':'semantic','message':'所有产品主张均被引用直接支持'}]}
+            if 'product_claim_schema' in payload:
+                # This synthetic draft makes the same supported RAM claim in
+                # its body and card; all other surfaces contain editorial copy.
+                surfaces = payload['product_claim_surfaces']
+                claims = [{'surface': key, 'quote': text,
+                    'proposition': '内存为16GB', 'claim_type': 'spec',
+                    'evidence_ids': ['f1'],
+                    'evidence_quotes': [{'evidence_id': 'f1', 'quote': '内存16GB。需兼容设备。'}],
+                    'support_level': 'exact_spec', 'verdict': 'supported',
+                    'reason': '合成规格原文直接支持，并保留兼容条件'}
+                    for key, text in surfaces.items() if '16GB' in text]
+                result['product_claim_review'] = {'claims': claims,
+                    'coverage': {key: 'claims_listed' if '16GB' in text else 'no_product_claim'
+                                 for key, text in surfaces.items()}}
+            return result
         return draft()
 
 
@@ -83,8 +114,12 @@ def test_writer_uses_connector_and_verifier_receives_entire_card_plan():
     assert payload['platform_playbook']==payload['creative_brief']['playbook']
     result=RunResult.model_validate({**draft(), 'creative_plan': {'cards':[card()]}})
     asyncio.run(model.verify(result,evidence()))
-    assert model.payloads[-1]['draft']['creative_plan']['cards'][0]['body']==card()['body']
-    assert 'f1' in [x['id'] for x in model.payloads[-1]['evidence']['facts']]
+    semantic_payload = next(payload for payload in reversed(model.payloads) if 'assessment_scope' in payload)
+    assert semantic_payload['draft']['creative_plan']['cards'][0]['body']==card()['body']
+    assert 'f1' in [x['id'] for x in semantic_payload['evidence']['facts']]
+    marketing_payload = next(payload for payload in reversed(model.payloads)
+                             if payload.get('schema', {}).get('title') == 'MarketingReview')
+    assert marketing_payload['draft']['creative_plan']['cards'][0]['body']==card()['body']
 
 
 def test_creative_card_repair_stays_one_cycle():

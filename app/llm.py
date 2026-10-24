@@ -1,10 +1,14 @@
 """Small OpenAI-compatible JSON client; no secrets are logged or persisted."""
 from __future__ import annotations
 import json
+from copy import deepcopy
 import re
 import time
+from datetime import datetime
+from zoneinfo import ZoneInfo
 from pathlib import Path
 import httpx
+from urllib.parse import urlsplit
 from .models import AuditItem
 
 
@@ -20,8 +24,25 @@ class ModelCallError(RuntimeError):
         super().__init__(self.safe_message)
 
 
+def official_source_record(source):
+    """Keep the captured official page identifiable without sharing signed URLs."""
+    row = source.model_dump(exclude={'excerpt', 'url'})
+    try:
+        parsed = urlsplit(source.url or '')
+        host = (parsed.hostname or '').lower()
+        if (parsed.scheme == 'https' and (host == 'huawei.com' or host.endswith('.huawei.com'))
+                and not parsed.username and not parsed.password and not parsed.query
+                and parsed.port in (None, 443)):
+            row['official_url'] = parsed._replace(fragment='').geturl()
+    except ValueError:
+        pass
+    return row
+
+
 class OpenAICompatibleLLM:
     supports_creative_plan = True
+    supports_marketing_review = True
+    supports_reader_value_contract = True
 
     def __init__(self, base_url='https://api.deepseek.com', api_key='', model='deepseek-flash', timeout=60,
                  max_tokens=5000, max_calls=4):
@@ -31,9 +52,10 @@ class OpenAICompatibleLLM:
         self.timeout = timeout
         self.enabled = bool(api_key and model and base_url)
         self.max_tokens = min(max(256,int(max_tokens)),6000)
-        self.max_calls = min(max(1,int(max_calls)),4)
+        self.max_calls = min(max(1,int(max_calls)),12)
         self.metrics = []
         self._calls = 0
+        self.creative_execution = None
 
     def _context(self,bundle,priority_ids=None,limit=10):
         """A bounded, diverse fact set with deduplicated verbatim evidence spans."""
@@ -64,7 +86,7 @@ class OpenAICompatibleLLM:
             facts.append({**f.model_dump(exclude={'quote'}),'evidence_span_id':span_keys[key]})
         source_ids={f.source_id for f in selected}
         return {'product':bundle.product,'system':bundle.system,'facts':facts,'evidence_spans':spans,
-            'sources':[s.model_dump(exclude={'excerpt','url'}) for s in bundle.sources if s.id in source_ids],
+            'sources':[official_source_record(s) for s in bundle.sources if s.id in source_ids],
             'conflicts':bundle.conflicts}
 
     def _draft(self,result):
@@ -103,6 +125,12 @@ class OpenAICompatibleLLM:
                 if attempt or exc.code not in {'invalid_model_json', 'empty_model_content'} or self._calls >= self.max_calls:
                     raise
 
+    def _chat_body(self, system, serialized, temperature):
+        return {'model': self.model, 'messages': [{'role': 'system', 'content': system},
+            {'role': 'user', 'content': serialized}],
+            'response_format': {'type': 'json_object'}, 'temperature': temperature,
+            'max_tokens': self.max_tokens}
+
     async def _json_once(self, system, payload, temperature=0.2):
         if not self.enabled:
             raise ModelCallError('model_not_configured')
@@ -113,10 +141,7 @@ class OpenAICompatibleLLM:
             raise ModelCallError('input_budget_exceeded')
         self._calls += 1
         started=time.monotonic()
-        body = {'model': self.model, 'messages': [{'role':'system','content':system},
-                {'role':'user','content':serialized}],
-                'response_format':{'type':'json_object'}, 'temperature':temperature,
-                'max_tokens':self.max_tokens}
+        body = self._chat_body(system, serialized, temperature)
         if 'deepseek.com' in self.base_url:
             body['thinking'] = {'type':'disabled'}
         usage={}
@@ -170,18 +195,39 @@ class OpenAICompatibleLLM:
 
     async def generate(self, task, bundle, strategy):
         prompt = (Path(__file__).resolve().parent.parent / 'prompts/system.txt').read_text(encoding='utf-8')
+        from .marketing_review import review_context_instruction
+        prompt += '\n' + review_context_instruction()
         connector=get_connector(task.platform,task.creative_connector)
         brief=connector.build_brief(task,bundle,strategy)
+        self.local_editorial_context = brief.get('local_editorial_context')
+        self.marketing_task = task
+        if not getattr(self, 'marketing_context', None):
+            from .marketing_context import prepare_marketing_context
+            self.marketing_context = await prepare_marketing_context(task, self.local_editorial_context)
+        self.marketing_context['publisher']['kind'] = brief.get('account_voice', {}).get('publisher_identity', 'store')
         playbook=brief.get('playbook',{})
         budget=min(10,max(1,int(brief.get('fact_budget',3))))
         priorities=strategy.get('priority_fact_ids',[])
         # Supply only the publishable fact budget, rather than tempting the writer
         # with a complete specification table. Explicit technical requests retain
         # their requested facts; otherwise prefer concise, usable capabilities.
-        task_text=' '.join((task.audience,task.scene,task.requirements,task.goal))
+        # Historical examples are tone context, never this task's fact focus.
+        current_requirements = task.requirements.split('\n本店与本人的工作记忆', 1)[0]
+        task_text=' '.join((task.audience,task.scene,current_requirements,task.goal))
+        focus_ids = []
+        match = re.search(r'本次选定事实ID：([^\n]+)', current_requirements)
+        if match:
+            try:
+                raw_ids = json.loads(match.group(1))
+                if isinstance(raw_ids, list):
+                    focus_ids = [identifier for identifier in raw_ids if isinstance(identifier, str)]
+            except ValueError:
+                pass
         def editorial_score(fact):
             label=fact.label
             score=max(0,20-priorities.index(fact.id)) if fact.id in priorities else 0
+            if fact.id in focus_ids:
+                score += 1000 - focus_ids.index(fact.id)
             if any(key in task_text and key in label for key in ('屏幕','重量','电池','内存','接口','协同','触控','手写','软件')):
                 score+=30
             if re.search('功能|特色|协同|触控|手写|重量|屏幕',label):
@@ -194,16 +240,99 @@ class OpenAICompatibleLLM:
                 score+=100
             if re.search('电压|供电|时钟|频率|处理器|CPU|接口|操作系统',label,re.I) and not any(key in task_text for key in ('接口','供电','CPU','处理器','系统')):
                 score-=25
+            # A launch date is background, not a mandatory retail talking point.
+            # Campaign source metadata alone must not turn every draft into a
+            # release-time explanation. Explicit event briefs keep these facts.
+            if re.search('开售|首销|发布时间|上市日期', label) and not re.search(
+                    '开售|首销|发布|上市|礼盒|活动时间', task.scene+' '+task.goal):
+                score-=80
             score-=min(15,sum(len(q) for q in fact.qualifiers)//30)
             return score
         selected=sorted(bundle.facts,key=editorial_score,reverse=True)[:budget]
+        evidence = self._writer_context(bundle,selected,budget)
+        previous = strategy.get('creative_execution')
+        if strategy.get('repair') and isinstance(previous, dict):
+            execution = deepcopy(previous)
+            brief['account_voice'] = deepcopy(execution['account_voice'])
+            brief['cultural_context'] = deepcopy(execution['cultural_context'])
+        else:
+            from .creative_exploration import explore_creative_directions
+            exploration = await explore_creative_directions(self, task, bundle, strategy, brief, evidence=evidence)
+            selected_concept = exploration.get('selected_concept')
+            if selected_concept and not strategy.get('reselect') and self.max_calls - self._calls >= 8:
+                from .marketing_review import review_marketing
+                proposal = {'title': selected_concept['opening'],
+                    'blocks': [{'text': selected_concept['payoff']}],
+                    'creative_plan': {'cards': [{'headline': selected_concept['angle'], 'body': selected_concept['payoff']}]}}
+                try:
+                    preflight = await review_marketing(self, task=task, draft=proposal,
+                        evidence=evidence, context={**self.marketing_context,
+                            'review_scope': '尚未发生的选题提案；不认证实际图片，先检查说话身份、读者关系与创意回报。'}, phase='draft')
+                except Exception as exc:
+                    self.marketing_review_failure = {'code': getattr(exc, 'code', 'invalid_marketing_preflight'),
+                        'stage': 'preflight', 'schema_errors': getattr(self, 'marketing_review_schema_errors', [])}
+                    # An optional concept review is not final delivery review.
+                    # Retain failure diagnostics and continue to the real draft;
+                    # final semantic + marketing checks remain mandatory.
+                    preflight = {'status': 'unavailable', 'failure': deepcopy(self.marketing_review_failure)}
+                exploration['preflight_review'] = preflight
+                if preflight.get('decision') in {'revise', 'reselect'} and self.max_calls - self._calls >= 5:
+                    from .marketing_context import replace_rejected_scene
+                    replace_rejected_scene(task, preflight)
+                    brief = connector.build_brief(task, bundle, strategy)
+                    self.local_editorial_context = brief.get('local_editorial_context')
+                    self.marketing_context['local_editorial_context'] = self.local_editorial_context
+                    replacement = await explore_creative_directions(self, task, bundle,
+                        {**strategy, 'reselection_feedback': preflight['revision_brief'],
+                         'rejected_concept': selected_concept}, brief, evidence=evidence)
+                    replacement['rejected_concept'] = selected_concept
+                    replacement['preflight_review'] = preflight
+                    replacement['automatic_reselection'] = True
+                    exploration = replacement
+            execution = {'schema_version': 1, 'platform': task.platform,
+                'account_voice': deepcopy(brief['account_voice']),
+                'cultural_context': deepcopy(brief['cultural_context']),
+                'exploration': exploration}
+        # This execution record is assembled by the service, not returned by the
+        # writer. The workflow persists it independently of model-supplied JSON.
+        self.creative_execution = deepcopy(execution)
+        if brief.get('local_editorial_context'):
+            self.creative_execution['local_editorial_context'] = deepcopy(brief['local_editorial_context'])
         return await self._json(prompt, {'task':task.model_dump(), 'strategy':strategy,
+            'local_editorial_context': brief.get('local_editorial_context'),
+            'marketing_context': self.marketing_context,
+            'speaker_origin_contract': {
+                'publisher_identity': '仅使用用户已明确提供的店员/门店身份',
+                'first_person_style': '可以表达建议、邀请、态度；不等于获得编写第一人称已发生经历的许可',
+                'source_of_experience': '只限本次user_materials中的用户明确提供记录；POI、编辑假设、策略案例与生成图片均不是已发生经历',
+                'unconfirmed_facilities': '一般到店咨询可正常邀请；不得从商圈位置推导本店窗景、楼层、体验台设备、库存或每天顾客活动',
+                'creative_alternative': '用具体可尝试的动作、平等的提问、观察方法与当地公共生活场景形成张力，不用假亲测制造可信度',
+            },
+            'reselection_priority': '若strategy.reselect或exploration记录被拒切角，废弃旧稿和旧处境前提，落实reselection_feedback的新命题，不复制旧稿再润色。',
+            'editorial_concept': execution['exploration'].get('selected_concept'),
+            'creative_direction_use': '围绕选定概念完成图文，不把候选混写成一篇；修订保留概念，只处理具体错误。账号偏好和案例仅用于表达，不提供产品事实。' + ('本轮local_editorial_context优先于旧概念中的冲突场景；正文和分镜兑现其中一个具体生活动作，只有店名落款不算，不能把场景缩成泛化出门与续航。' if brief.get('local_editorial_context') else ''),
+            'publication_context': {'current_date': datetime.now(ZoneInfo('Asia/Shanghai')).date().isoformat(),
+                'event_use': '按本次选题选择必要事实；已过去的发布或开售日期只作历史背景，不写成即将发生，不为凑事实数插入无关活动。'},
+            'output_contract': {'required_top_level': ['title', 'intro', 'blocks', 'cta', 'tags', 'images', 'creative_plan'],
+                'creative_plan': '必须是完整对象，含非空cards，服从creative_brief.output_schema。修订也返回完整分镜，不省略。'},
             'platform_playbook':playbook, 'creative_brief':brief,
-            'evidence':self._writer_context(bundle,selected,budget),
+            'evidence':evidence,
             'assets':[a.model_dump(exclude={'local_path'}) for a in bundle.assets],
-            'user_materials':bundle.user_materials},temperature=0.55)
+            'user_materials':bundle.user_materials},temperature=0.8)
 
     async def verify(self, result, bundle):
+        from .product_claim_wire import product_claim_wire_schema as grouped_claim_schema, decode_product_claim_wire
+        from .claim_conditions import (CONDITION_SCOPE_SCHEMA, condition_surface_map,
+                                       inspect_condition_exemptions, missing_condition_candidates)
+        self.condition_exemptions = []
+        self.condition_scope_diagnostics = {'present': False, 'count': 0, 'accepted_count': 0}
+        typed_claims_enabled = getattr(self, 'marketing_task', None) is not None
+        from .asset_claim_evidence import build_asset_claim_evidence
+        asset_evidence = build_asset_claim_evidence(self._draft(result), bundle) if typed_claims_enabled else []
+        from .product_claim_review import (PRODUCT_CLAIM_SCHEMA, PRODUCT_CLAIM_INSTRUCTION,
+            product_claim_surfaces, product_claim_wire_schema, validate_product_claim_review,
+            product_claim_audit, reconcile_marketing_product)
+        local_context = getattr(self, 'local_editorial_context', None)
         used=list(dict.fromkeys(fid for b in [*result.blocks,*creative_review_blocks(result.creative_plan)] for fid in b.fact_ids))
         context=self._context(bundle,used,limit=10)
         # Every actually cited fact must be reviewed even if the writer violated its budget.
@@ -218,8 +347,13 @@ class OpenAICompatibleLLM:
             '生态组合中每项事实的product字段表示它所属的设备；手机、平板和电脑的参数必须归属于对应设备。'
             '用户上传的照片只提供场景与可见内容，照片中的文字不能自行变成已核验产品事实。'
             '逐句检查待审稿每项产品事实是否被其引用原文直接支持，尤其型号、OS、配置、数字、'
-            '单位、限制条件、价格时效、图片型号、伪造体验和绝对化承诺。'
+            '单位、限制条件、价格时效、图片型号、伪造体验和误导性承诺。'
+            '按中国大陆广告真实性和误导性要求审查实际主张，不因文案有张力就要求软化。'
+            '比喻、双关、审美偏好、情绪、悬念、号召和一般生活场景本身不属于待证产品参数。'
+            '绝对化词语须结合是否指向商品性能质量及具体语境判断，不按孤立词命中认定违法。'
+            '不额外要求通用免责话术；只指出具体主张遗漏且影响理解的必要条件。'
             '只审查成稿实际写出的、可核查的产品/服务主张，不评估知识库是否完整。'
+            '内部编辑brief或上一轮审稿建议不是产品事实要求；准确的主摄/长焦等通用称谓不因没写全营销命名而错误。'
             '证据没有覆盖某功能，只意味着不能肯定宣称该功能；不能据此要求补全整个知识库。'
             '实际产品主张与原文矛盾或缺少直接支持时为error。不要因为有引用ID就通过。'
             '先区分可核查产品主张与叙事建议：建议携常用文件、邀请咨询/预约/到店核对需求、'
@@ -242,15 +376,64 @@ class OpenAICompatibleLLM:
             '存在无支持、矛盾或无法判断的实际产品主张时=unsupported。'
             'error必须注明正文第几段/卡片ID/标题、逐字引用有问题的短句、缺少哪项支持；'
             '不要只说“缺少可核验事实”“证据不充分”，不要要求为建议补充参数。'
-            '不确定仅针对已识别的具体产品主张，不得把泛泛不确定当错误。不要添加新事实。',
+            '不确定仅针对已识别的具体产品主张，不得把泛泛不确定当错误。不要添加新事实。' + (
+            '另独立检查local_editorial_context的场景落实，不能混入产品verdict：JSON额外返回'
+            '"scene_review":{"matched":true或false,"quote":"成稿逐字短句","reason":"具体理由"}。'
+            '检查正文intro/blocks.text或卡片body是否实际体现所选人群在具体场景的一次生活动作。'
+            '还须体现周边环境带来的具体人物活动；通用周末逛街/到店试机/旧机对比不能代替本地生活任务。'
+            '只有店名、地名落款或泛化出门/续航/手机卖点不算落实；无需堆学校名或写全所有场景。'
+            '正文若把未被local_editorial_context.evidence支持的门店窗景、楼层、入口或现场设施写成现存事实，也matched=false，reason指出原句并改成不虚构现场的表达；一般创意建议可明确写为建议。'
+            'quote必须逐字取自正文或卡片body；只写在后台策略、visual_intent或cta中的场景不算正文落实。'
+            'matched=false时reason说明应补什么生活动作，不要求增加产品主张或泛化免责。'
+            if local_context else '') +
+            '复合原文中的qualifier可能仅约束未在本段宣称的另一个功能。对这类明确不相关的条件，JSON额外返回condition_scope数组，'
+            'missing_condition_candidates是程序发现的未展示限定，必须逐项判断其是否约束当前整面实际主张。'
+            '对确实不相关的候选，在condition_scope逐项原样引用surface、fact_id、qualifier，claim_quote可设为空字符串由服务器精确绑定当前整面全文，applicable:false并给reason。'
+            '若写非空claim_quote则必须等于condition_surfaces该面完整text，不允许摘无关短句或改写。'
+            '只有已确定与整面实际主张均无关的条件才列出；涉及本段实际宣称的版本、模式、兼容或性能条件仍必须保留。'
+            '不能为让稿件通过而豁免相关条件，不能用硬件名称推断体验效果。没有这类条件返回空数组。'
+            'verdict仍只针对实际主张与其相关条件判断，不能因原文还有未宣称的功能要求把整个规格页塞进正文。' +
+            (PRODUCT_CLAIM_INSTRUCTION if typed_claims_enabled else ''),
             {'draft':self._draft(result), 'evidence':context,
+             'local_editorial_context': local_context,
+             'condition_scope_schema': CONDITION_SCOPE_SCHEMA, 'condition_surfaces': condition_surface_map(result),
+             'missing_condition_candidates': missing_condition_candidates(result, bundle),
+             **({'product_claim_schema': grouped_claim_schema(product_claim_surfaces(self._draft(result)), [f['id'] for f in context['facts']] + [a['id'] for a in asset_evidence]),
+                 'product_claim_surfaces': product_claim_surfaces(self._draft(result)),
+                 'product_evidence_id_policy': 'evidence_ids只能从schema枚举的事实或独立素材证据ID选择；E1/V1/Q1等evidence_span_id是原文片段定位符，不能作为事实ID返回。surfaces分组中的命题不返回surface/quote/coverage，evidence_quotes只返回evidence_id。由服务器回填真实原文，不要誊抄、概括或改写。不自动猜测或转换未知ID。',
+                 'outcome_evidence': [], 'actual_records': [], 'asset_evidence': asset_evidence} if typed_claims_enabled else {}),
              'assessment_scope':{'target':'claims_actually_made','knowledge_base_completeness':'out_of_scope',
                                  'advice_questions_and_creative_expression':'no_product_citation_required'},
              'assets':[a.model_dump(exclude={'local_path','url'}) for a in bundle.assets if a.id in ({i.asset_id for i in result.images}|{aid for card in result.creative_plan.get('cards',[]) for aid in card.get('asset_ids',[])})]})
         if not isinstance(data.get('audit'), list) or (not data['audit'] and data.get('verdict') not in ('supported','unsupported','no_product_claims')):
             raise ModelCallError('invalid_semantic_audit_schema')
         try:
-            items=[AuditItem.model_validate(x) for x in data['audit']]
+            typed_claim_review = None
+            if typed_claims_enabled:
+                try:
+                    raw_claim_review = data.get('product_claim_review')
+                    if isinstance(raw_claim_review, dict) and 'surfaces' in raw_claim_review:
+                        raw_claim_review = decode_product_claim_wire(raw_claim_review,
+                            product_claim_surfaces(self._draft(result)), [f['id'] for f in context['facts']] + [a['id'] for a in asset_evidence])
+                    typed_claim_review = validate_product_claim_review(raw_claim_review, self._draft(result), bundle,
+                        asset_evidence=asset_evidence)
+                except ValueError as exc:
+                    from pydantic import ValidationError
+                    safe = {'code': 'invalid_product_claim_review_schema', 'stage': 'semantic_claims',
+                        'schema_errors': [{'loc': list(x['loc']), 'type': x['type']} for x in exc.errors()][:30]
+                            if isinstance(exc, ValidationError) else [],
+                        'boundary_code': str(exc)[:120] if not isinstance(exc, ValidationError) else 'schema_validation'}
+                    if getattr(exc, 'diagnostics', None):
+                        safe['diagnostics'] = exc.diagnostics
+                    self.product_claim_review_failure = safe
+                    result.strategy['product_claim_review_failure'] = safe
+                    raise ModelCallError('invalid_product_claim_review_schema') from None
+                result.strategy['product_claim_review'] = deepcopy(typed_claim_review)
+                self.product_claim_review = typed_claim_review
+                items = product_claim_audit(typed_claim_review)
+                data = {**data, 'verdict': typed_claim_review['verdict'], 'audit': [x.model_dump() for x in items]}
+            else:
+                items=[AuditItem.model_validate(x) for x in data['audit']]
             verdict=data.get('verdict')
             if verdict in ('supported','no_product_claims') and not any(x.severity=='error' for x in items):
                 items.append(AuditItem(severity='info',category='semantic',message=(
@@ -260,14 +443,71 @@ class OpenAICompatibleLLM:
                 items.append(AuditItem(severity='error',category='semantic',message='审校标记存在不受支持的产品主张，但未给出具体位置与短句，本次审校未完成。'))
             elif verdict is not None and verdict not in ('supported','unsupported','no_product_claims'):
                 raise ModelCallError('invalid_semantic_audit_schema')
+            self.condition_exemptions, self.condition_scope_diagnostics = inspect_condition_exemptions(data, result, bundle)
+            result.strategy['condition_scope_diagnostics'] = self.condition_scope_diagnostics
+            if local_context:
+                review = data.get('scene_review')
+                public_body = '\n'.join([result.intro, *[b.text for b in result.blocks],
+                    *[str(card.get('body') or '') for card in result.creative_plan.get('cards', []) if isinstance(card, dict)]])
+                quote = review.get('quote') if isinstance(review, dict) else None
+                matched = (isinstance(review, dict) and review.get('matched') is True
+                    and isinstance(quote, str) and len(quote.strip()) >= 4 and quote in public_body)
+                if not matched:
+                    reason = str(review.get('reason') or '')[:500] if isinstance(review, dict) else ''
+                    items.append(AuditItem(severity='error', category='place_editorial',
+                        message='正文尚未落实本次门店场景。围绕所选人群的一次具体生活动作改写正文或卡片，保留已有事实与自然语气；店名落款不能代替场景。' + reason))
+                else:
+                    items.append(AuditItem(severity='info', category='place_editorial',
+                        message='正文已体现本次门店场景：' + quote[:300]))
+            if getattr(self, 'marketing_task', None) is not None:
+                from .marketing_review import review_marketing, review_audit_items
+                try:
+                    review = await review_marketing(self, task=self.marketing_task,
+                        draft=self._draft(result), evidence=context,
+                        context={**(getattr(self, 'marketing_context', None) or {}),
+                                 'validated_product_claim_review': typed_claim_review}, phase='draft')
+                    if typed_claim_review is not None:
+                        review = reconcile_marketing_product(review, typed_claim_review)
+                except ValueError as exc:
+                    self.marketing_review_failure = {'code': str(exc)[:180],
+                        'schema_errors': getattr(self, 'marketing_review_schema_errors', []),
+                        'dimension_shapes': getattr(self, 'marketing_review_schema_shape', {})}
+                    raise ModelCallError('invalid_marketing_review_schema') from None
+                self.marketing_review = review
+                history = getattr(self, 'marketing_review_history', [])
+                self.marketing_review_history = [*history, deepcopy(review)][-4:]
+                items.extend(review_audit_items(review))
             return items
         except ValueError:
             raise ModelCallError('invalid_semantic_audit_schema') from None
 
     async def repair(self, task, bundle, strategy, result):
-        return await self.generate(task,bundle,{**strategy,'repair':True,
+        if getattr(self, 'marketing_review', None):
+            from .marketing_context import enrich_review_evidence
+            self.marketing_context = await enrich_review_evidence(self.marketing_context, self.marketing_review)
+        repaired = await self.generate(task,bundle,{**strategy,'repair':True,
             'previous_draft':self._draft(result),
-            'repair_policy':'只修具体错误；不增加新卖点。海报最多3块，主副标题不进blocks，建议放cta；复杂接口细节可直接删除改用已支持简单卖点。',
+            'repair_policy':'只修具体错误，保留原稿的钩子、节奏、情绪与行动邀请，不把错误修订扩写成核对指南或免责声明；不增加新卖点。海报最多3块，主副标题不进blocks，建议放cta；复杂接口细节可直接删除改用已支持简单卖点。',
             'required_fixes':[x.message for x in result.audit if x.severity=='error']+
                 [x.message for x in result.editorial_review if x.severity=='warning'],
             'editorial_repair':'平台编辑问题也必须修：海报正文每块≤35字；朋友圈含标题与CTA总≤160字且intro为空；小红书只保留一个主CTA。限定条件留在公开disclosures，不增添新事实。'})
+        # This operation repairs prose and claims, not the chosen media. Keep
+        # existing source-bound images when a text repair omits the image list;
+        # the workflow still re-audits their IDs, relevance and captions.
+        if not repaired.get('images') and result.images:
+            repaired['images'] = [image.model_dump() for image in result.images]
+        return repaired
+
+    async def reselect(self, task, bundle, strategy, result):
+        """Replace a rejected premise; never polish the same harmful premise."""
+        review = getattr(self, 'marketing_review', {})
+        from .marketing_context import enrich_review_evidence, replace_rejected_scene
+        self.marketing_context = await enrich_review_evidence(getattr(self, 'marketing_context', {}), review)
+        replace_rejected_scene(task, review)
+        from .gtm_agent.place_context import local_editorial_context
+        self.marketing_context['local_editorial_context'] = local_editorial_context(task)
+        return await self.generate(task, bundle, {**strategy, 'repair': False, 'reselect': True,
+            'reselection_feedback': review.get('revision_brief', ''),
+            'rejected_concept': deepcopy((getattr(self, 'creative_execution', {}) or {}).get('exploration', {}).get('selected_concept')),
+            'previous_draft': self._draft(result),
+            'reselection_policy': '保持产品、平台、真实门店场景与已支持事实，换一个观察与叙事命题；不沿用被拒的读者处境、消费补偿或同义词改写。保留吸引力、具体阅读回报和店员身份，不能退化成核对指南或免责声明。'})

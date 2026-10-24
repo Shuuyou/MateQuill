@@ -1,0 +1,9 @@
+.publication { min-width: 0; }
+.actions { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.actions button { border: 1px solid var(--line, #e0e4d9); border-radius: 12px; padding: 11px 18px; color: inherit; background: var(--paper, #fffef9); font: inherit; cursor: pointer; transition: background .18s ease, transform .18s ease; }
+.actions button:hover:not(:disabled) { background: #edf2df; transform: translateY(-1px); }
+.actions button:focus-visible { outline: 2px solid #70824b; outline-offset: 3px; }
+.actions button:disabled { opacity: .5; cursor: default; }
+.notice { margin: 9px 0 0; line-height: 1.6; }
+.preview { display: block; width: 100%; height: min(74vh, 860px); border: 0; margin: 0 0 24px; background: #fff; }
+@media (prefers-reduced-motion: reduce) { .actions button { transition: none; } }

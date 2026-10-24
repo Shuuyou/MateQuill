@@ -50,19 +50,21 @@ class ImageService:
             raise ImageServiceError('尚未配置有效的图像服务凭证', reason='configuration')
         self.base_url, self._api_key, self.model = base_url.rstrip('/'), api_key, model
         self.timeout, self.max_image_bytes = timeout, max_image_bytes
+        self._verified_operations: set[str] = set()
 
     @property
     def _headers(self):
         return {'Authorization': f'Bearer {self._api_key}', 'Accept': 'application/json'}
 
-    async def _request(self, method: str, path: str, body=None):
+    async def _request(self, method: str, path: str, body=None, *, files=None, form=None):
         # Read bounded JSON: a malicious gateway cannot cause unbounded body retention.
-        limit = (self.max_image_bytes * 4 // 3 + 65536) if path == '/images/generations' else 2 * 1024 * 1024
+        limit = (self.max_image_bytes * 4 // 3 + 65536) if path in ('/images/generations', '/images/edits') else 2 * 1024 * 1024
         try:
             async with httpx.AsyncClient(timeout=self.timeout, follow_redirects=False,
                                          trust_env=False) as client:
+                request_args = {'files': files, 'data': form} if files else {'json': body}
                 async with client.stream(method, self.base_url + path, headers=self._headers,
-                                         json=body) as response:
+                                         **request_args) as response:
                     raw = bytearray()
                     async for part in response.aiter_bytes():
                         raw.extend(part)
@@ -134,6 +136,11 @@ class ImageService:
                     body.pop('response_format')
                     status, payload, headers = await self._request('POST', '/images/generations', body)
         self._check_status(status)
+        artifact = await self._artifact(payload, headers, width, height, 'ai_generated_background')
+        self._verified_operations.add('generate')
+        return artifact
+
+    async def _artifact(self, payload, headers, width, height, provenance):
         rows = payload.get('data') if isinstance(payload, dict) else None
         if not isinstance(rows, list) or not rows or not isinstance(rows[0], dict):
             raise ImageServiceError('该模型未返回 Images 图像结果；可能仅支持其它协议', reason='unsupported_response')
@@ -155,7 +162,66 @@ class ImageService:
         if not re.fullmatch(r'[A-Za-z0-9_.:-]{1,120}', request_id):
             request_id = ''
         return ImageArtifact(data, mime, self.model, request_id, actual_width, actual_height,
-                             width, height)
+                             width, height, provenance)
+
+    def capabilities(self) -> dict:
+        """Operations offered by this adapter; verification is scoped to actual calls."""
+        return {'model': self.model, 'operations': [
+            {'operation': name, 'endpoint': endpoint, 'verified': name in self._verified_operations}
+            for name, endpoint in (('generate', '/images/generations'), ('edit', '/images/edits'),
+                                   ('reference', '/images/edits'), ('mask', '/images/edits'))]}
+
+    async def generate(self, prompt: str, width: int, height: int) -> ImageArtifact:
+        self._validate_request(prompt, width, height)
+        body = {'model': self.model, 'prompt': prompt, 'size': f'{width}x{height}',
+                'n': 1, 'response_format': 'b64_json'}
+        status, payload, headers = await self._request('POST', '/images/generations', body)
+        self._check_status(status)
+        artifact = await self._artifact(payload, headers, width, height, 'ai_generated_concept')
+        self._verified_operations.add('generate')
+        return artifact
+
+    def _validate_request(self, prompt, width, height):
+        if (isinstance(width, bool) or isinstance(height, bool) or not isinstance(width, int)
+                or not isinstance(height, int) or not 32 <= width <= 8192
+                or not 32 <= height <= 8192 or width * height > 40_000_000):
+            raise ImageServiceError('图像请求尺寸无效', reason='dimensions')
+        if not self.model or not isinstance(prompt, str) or not prompt.strip() or len(prompt) > 16000:
+            raise ImageServiceError('请提供有效的图像模型与创作描述', reason='configuration')
+
+    async def edit(self, prompt: str, image_bytes: bytes, *, mask: bytes | None = None,
+                   reference_images: tuple[bytes, ...] = ()) -> ImageArtifact:
+        """OpenAI multipart edit. Transparent mask areas are editable, never auto-retried.
+
+        Reference images guide the model, but do not certify product preservation.
+        Callers can recompose protected pixels with design_image_tools.protect_regions.
+        """
+        mime, width, height = self._validate_image(image_bytes)
+        self._validate_request(prompt, width, height)
+        if len(reference_images) > 4:
+            raise ImageServiceError('单次最多使用四张参考图', reason='configuration')
+        files = [('image[]' if reference_images else 'image', ('source.png', image_bytes, mime))]
+        for index, reference in enumerate(reference_images):
+            ref_mime, _, _ = self._validate_image(reference)
+            files.append(('image[]', (f'reference-{index}.png', reference, ref_mime)))
+        if mask is not None:
+            mask_mime, mw, mh = self._validate_image(mask)
+            if mask_mime != 'image/png' or (mw, mh) != (width, height):
+                raise ImageServiceError('编辑遮罩须为与原图同尺寸的PNG', reason='dimensions')
+            with Image.open(io.BytesIO(mask)) as mask_image:
+                if mask_image.mode != 'RGBA':
+                    raise ImageServiceError('编辑遮罩须包含Alpha通道', reason='invalid_image')
+            files.append(('mask', ('mask.png', mask, mask_mime)))
+        status, payload, headers = await self._request('POST', '/images/edits', files=files,
+            form={'model': self.model, 'prompt': prompt, 'size': f'{width}x{height}', 'n': '1'})
+        self._check_status(status)
+        artifact = await self._artifact(payload, headers, width, height, 'ai_edited_candidate')
+        self._verified_operations.add('edit')
+        if mask is not None:
+            self._verified_operations.add('mask')
+        if reference_images:
+            self._verified_operations.add('reference')
+        return artifact
 
     @staticmethod
     def _safe_download_url(url):

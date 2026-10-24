@@ -11,7 +11,7 @@ router = APIRouter(prefix='/api/creations', tags=['creation-library'])
 @router.get('')
 def creations():
     items = []
-    for kind in ('run', 'poster'):
+    for kind in ('run', 'poster', 'design'):
         for row in list_resource_headers(kind):
             items.append({key: row.get(key) for key in (
                 'id', 'kind', 'created_at', 'store_id', 'owner_id', 'visibility', 'version')}
@@ -26,7 +26,7 @@ class SharingInput(BaseModel):
 
 @router.patch('/{kind}/{identifier}/sharing')
 def sharing(kind: str, identifier: str, payload: SharingInput):
-    if kind not in ('run', 'poster', 'media'):
+    if kind not in ('run', 'poster', 'design', 'media'):
         raise HTTPException(404, '没有找到这份内容')
     row = set_resource_visibility(kind, identifier, payload.visibility)
     audit('resource.shared', kind, identifier, {'visibility': payload.visibility})

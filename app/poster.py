@@ -66,14 +66,20 @@ class PosterLayer(BaseModel):
     width: float = Field(gt=0)
     height: float = Field(gt=0)
     z: int = 0
+    rotation: float = Field(default=0, ge=-180, le=180)
+    shadow_color: str = '#000000'
+    shadow_opacity: float = Field(default=0, ge=0, le=.6)
+    shadow_blur: float = Field(default=0, ge=0, le=80)
+    shadow_dx: float = Field(default=0, ge=-200, le=200)
+    shadow_dy: float = Field(default=0, ge=-200, le=200)
     locked: bool = False
     visible: bool = True
     text: str = Field(default='', max_length=12000)
-    font_size: float = Field(default=32, ge=8, le=300)
+    font_size: float = Field(default=32, ge=8, le=1600)
     font_weight: Literal[400, 500, 600, 700, 800] = 400
     color: str = '#172E27'
     align: Literal['left', 'center', 'right'] = 'left'
-    fill: str = '#FFFFFF'
+    fill: str = Field(default='#FFFFFF', pattern=r'^(?:#[0-9A-Fa-f]{6}|none)$')
     radius: float = Field(default=0, ge=0, le=400)
     opacity: float = Field(default=1, ge=0, le=1)
     geometry: Literal['rect','ellipse','line','path'] = 'rect'
@@ -92,8 +98,13 @@ class PosterLayer(BaseModel):
 
     @model_validator(mode='after')
     def validate_colors(self):
-        if not all(COLOR.fullmatch(c) for c in (self.color,self.fill,self.stroke,self.gradient_end)):
+        if not all(COLOR.fullmatch(c) for c in (self.color,self.stroke,self.gradient_end,self.shadow_color)):
             raise ValueError('图层颜色须使用六位 HEX 格式')
+        if self.fill == 'none':
+            if self.fill_style != 'solid':
+                raise ValueError('无填充图层不能同时使用渐变填充')
+        elif not COLOR.fullmatch(self.fill):
+            raise ValueError('图层填充须使用六位 HEX 或 none')
         if self.path_d and not re.fullmatch(r'[MmLlHhVvCcSsQqTtAaZz0-9.,+\-\s]+',self.path_d):
             raise ValueError('矢量路径只能包含绘图命令与坐标')
         return self
@@ -271,7 +282,7 @@ def build_poster(task, result, brief: PosterBrief | dict) -> PosterDocument:
     layer('text', '主标题', *text_box, text=brief.headline or result.get('title') or '找到适合你的工作方式',
           font_size=min(96, 76*scale), font_weight=800, color=foreground, role='headline')
     layer('text', '场景副标题', *subtitle_box,
-          text=brief.subtitle or result.get('intro') or brief.purpose,
+          text=brief.subtitle or result.get('intro') or '',
           font_size=max(16, 25*scale), color=foreground, role='subtitle')
     if chosen:
         layer('image', '真实产品图（锁定）', *product_box, asset_id=chosen['id'], role='product', locked=True,
@@ -297,7 +308,7 @@ def build_poster(task, result, brief: PosterBrief | dict) -> PosterDocument:
               text=footer, font_size=max(14, 17*scale), color=foreground, role='disclosure', locked=True,
               fact_ids=list(dict.fromkeys(f for b in result.get('blocks', []) for f in b.get('fact_ids', []))))
     layer('text', '草稿状态水印', m, h*.973, w-2*m, h*.023,
-          text='设计草稿 · 产品素材与文案需复核后发布', font_size=max(10, 14*scale),
+          text='' if result.get('status') == 'ready' else '设计草稿 · 产品素材与文案需复核后发布', font_size=max(10, 14*scale),
           color=foreground, align='right', role='watermark', locked=True)
     doc = PosterDocument(width=w, height=h, canvas=PosterCanvas(width=w, height=h, background=background),
                          brief=brief, layers=layers, assets=assets, source_run_id=result.get('run_id', ''))
@@ -377,7 +388,14 @@ def render_svg(document: PosterDocument | dict, asset_data: Mapping | Callable |
         if not layer.visible:
             continue
         x,y,w,h = layer.x,layer.y,layer.width,layer.height
-        svg.append(f'<g id="{_xml(layer.id)}"><title>{_xml(layer.name)}</title>')
+        effects = ''
+        if layer.rotation:
+            effects += f' transform="rotate({layer.rotation} {x+w/2} {y+h/2})"'
+        if layer.shadow_opacity:
+            shadow_id = f'shadow-{index}'
+            svg.append(f'<defs><filter id="{shadow_id}" x="-100%" y="-100%" width="300%" height="300%"><feDropShadow dx="{layer.shadow_dx}" dy="{layer.shadow_dy}" stdDeviation="{layer.shadow_blur}" flood-color="{layer.shadow_color}" flood-opacity="{layer.shadow_opacity}"/></filter></defs>')
+            effects += f' filter="url(#{shadow_id})"'
+        svg.append(f'<g id="{_xml(layer.id)}"{effects}><title>{_xml(layer.name)}</title>')
         if layer.type == 'shape':
             fill=layer.fill
             if layer.fill_style!='solid':

@@ -1,4 +1,11 @@
 /* The workspace uses the same paper, ink and display typography as creation. */
+.mq-trial-welcome { display: flex; flex-direction: column; align-items: flex-start; gap: 24px; }
+.mq-trial-welcome h2 { font: 400 clamp(28px, 3vw, 38px)/1.5 var(--font-display); margin: 0; }
+.mq-trial-welcome p { font-size: 18px; line-height: 1.8; color: var(--secondary); margin: 0; }
+.mq-trial-welcome .mq-primary { min-height: 54px; min-width: 230px; justify-content: space-between; }
+.mq-trial-dialog { border: 0; border-radius: 25px; padding: 0; max-width: min(560px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); color: var(--ink); background: var(--paper); }
+.mq-trial-dialog::backdrop { background: #242b2355; backdrop-filter: blur(6px); }
+.mq-trial-dialog .mq-auth-form { box-shadow: none; }
 .mq-auth-shell {
   min-height: 100dvh;
   padding: 40px clamp(24px, 6vw, 96px);
@@ -11,9 +18,25 @@
 }
 .mq-auth-shell > .youju-character {
   align-self: center;
+  width: 64px;
+  height: 64px;
+  flex: none;
 }
 .mq-auth-shell > p {
   text-align: center;
+}
+.mq-workspace-loading {
+  align-items: center;
+  gap: 18px;
+}
+.mq-workspace-loading > .youju-character {
+  width: 56px;
+  height: 56px;
+}
+.mq-workspace-loading > p {
+  margin: 0;
+  color: var(--secondary);
+  font-size: 16px;
 }
 .mq-auth-brand {
   display: flex;
@@ -233,6 +256,80 @@
 .mq-assignment-list h2 {
   font: 400 26px/1.5 var(--font-display);
   margin: 6px 0 12px;
+}
+.mq-assignment-list > .mq-assignment-featured {
+  position: relative;
+  padding: clamp(28px, 4vw, 48px);
+  background: linear-gradient(125deg, #f0f3e5, #fffdf7 72%);
+  border-color: #c7cfb4;
+  align-items: flex-start;
+}
+.mq-assignment-featured h2 {
+  max-width: 21em;
+  font-size: clamp(28px, 3vw, 38px);
+  line-height: 1.5;
+  margin: 16px 0;
+  text-wrap: balance;
+}
+.mq-assignment-featured .mq-card-actions {
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 18px;
+  padding-top: 44px;
+  flex-shrink: 0;
+}
+.mq-assignment-list .mq-assignment-publisher {
+  margin: 10px 0;
+  color: var(--ink);
+  font-size: 16px;
+}
+.mq-assignment-list .mq-assignment-product {
+  color: var(--ink);
+  font-weight: 500;
+}
+.mq-assignment-sources {
+  margin: 20px 0;
+  max-width: 46em;
+  font-size: 16px;
+  line-height: 1.75;
+}
+.mq-assignment-sources summary {
+  cursor: pointer;
+  color: var(--accent);
+  width: fit-content;
+}
+.mq-assignment-sources ul {
+  list-style: none;
+  padding: 12px 0 0;
+  margin: 0;
+}
+.mq-assignment-sources li + li { margin-top: 12px; }
+.mq-assignment-sources a { text-underline-offset: 4px; }
+.mq-assignment-sources time {
+  display: block;
+  color: var(--secondary);
+}
+.mq-preparation-thinking {
+  line-height: 1.9;
+  animation: mq-preparation-breathe 2.4s ease-in-out infinite;
+}
+.mq-preparation-reason { font-size: 18px; line-height: 1.9; }
+.mq-preparation-error { margin: 20px 0; }
+.mq-preparation-explanation { margin: 20px 0; }
+.mq-preparation-explanation summary { cursor: pointer; color: var(--accent); font-size: 18px; }
+.mq-preparation-explanation .mq-preparation-reason { margin-top: 16px; }
+@keyframes mq-preparation-breathe {
+  0%, 100% { opacity: 1; }
+  50% { opacity: .55; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .mq-preparation-thinking { animation: none; }
+}
+@media (max-width: 1000px) {
+  .mq-assignment-list > .mq-assignment-featured {
+    flex-direction: column;
+  }
+  .mq-assignment-featured .mq-card-actions { padding-top: 0; }
 }
 .mq-assignment-list p:not(.mq-section-label) {
   color: var(--secondary);
@@ -920,3 +1017,9 @@
     animation: none;
   }
 }
+.mq-demo-accounts { margin-top: 28px; padding-top: 22px; border-top: 1px solid var(--line); display: grid; gap: 7px; }
+.mq-demo-accounts h3 { font-size: 16px; font-weight: 500; margin: 0 0 8px; }
+.mq-demo-accounts button { border: 0; border-radius: 10px; background: transparent; color: var(--ink); display: flex; align-items: center; justify-content: space-between; text-align: left; padding: 10px 12px; }
+.mq-demo-accounts button:hover { background: #eaf0e6; }
+.mq-demo-accounts strong { display: block; font-size: 15px; font-weight: 500; }
+.mq-demo-accounts small { display: block; font-size: 13px; color: var(--secondary); margin-top: 3px; }

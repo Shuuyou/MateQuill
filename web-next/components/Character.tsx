@@ -20,6 +20,8 @@ export default function Character({
       className={`youju-character ${className}`}
       data-state={state}
       data-paused={paused}
+      width={64}
+      height={64}
       viewBox="0 0 144 144"
       aria-hidden="true"
     >

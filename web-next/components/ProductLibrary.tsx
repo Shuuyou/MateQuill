@@ -30,6 +30,7 @@ export default function ProductLibrary({
   const [category, setCategory] = useState("all");
   const [adding, setAdding] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
+  const [combining, setCombining] = useState(false);
   const [draft, setDraft] = useState<KnowledgeDraft | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -111,9 +112,8 @@ export default function ProductLibrary({
   return (
     <section className="mq-library mq-enter">
       <header className="mq-page-heading">
-        <p className="mq-section-label">从一台设备，到一起工作的华为生态</p>
         <div className="mq-section-heading">
-          <h1>好内容，从了解产品开始。</h1>
+          <h1>为哪款产品创作？</h1>
           {canEdit && (
             <button
               className="mq-text-button"
@@ -123,7 +123,6 @@ export default function ProductLibrary({
             </button>
           )}
         </div>
-        <p>选择产品开始创作，或组合设备，讲一个真实的跨设备任务。</p>
       </header>
       {adding && (
         <section className="mq-knowledge-editor">
@@ -226,6 +225,12 @@ export default function ProductLibrary({
           )}
         </div>
       </div>
+      <div className="mq-library-mode">
+        <span>{visible.length} 款产品</span>
+        <button className="mq-text-button" aria-pressed={combining} onClick={() => { setCombining(!combining); if (combining) setSelected([]); }}>
+          {combining ? "取消组合" : "组合设备创作"}
+        </button>
+      </div>
       <div className="mq-products">
         {visible.map((item) => (
           <article key={item.id}>
@@ -241,7 +246,7 @@ export default function ProductLibrary({
               >
                 为它写一篇 ↗
               </button>
-              <label>
+              {combining && <label>
                 <input
                   type="checkbox"
                   checked={selected.includes(item.name)}
@@ -254,7 +259,7 @@ export default function ProductLibrary({
                   }
                 />
                 加入生态组合
-              </label>
+              </label>}
             </div>
           </article>
         ))}

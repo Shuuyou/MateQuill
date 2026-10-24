@@ -14,6 +14,8 @@ export interface Membership {
 }
 export interface Session {
   authenticated: boolean;
+  is_guest?: boolean;
+  trial_expires_at?: number | null;
   user: { id: string; email: string; name: string } | null;
   workspace: {
     tenant_id: string;
@@ -86,11 +88,11 @@ export async function workspaceRequest<T>(
   if (!response.ok) {
     if (response.status === 401)
       window.dispatchEvent(new Event("matequill-session-expired"));
-    throw new Error(
+    throw Object.assign(new Error(
       typeof value.detail === "string"
         ? value.detail
         : "这次操作没有完成，请重试。",
-    );
+    ), { status: response.status });
   }
   return value as T;
 }

@@ -83,7 +83,7 @@ def compose_vector_poster(task, result, brief: PosterBrief | dict) -> PosterDocu
                        if word in headline and 2<=headline.index(word)<=len(headline)-2]
             split=min(positions,key=lambda pos:abs(pos-len(headline)/2)) if positions else len(headline)//2
         headline=headline[:split].rstrip('，。')+'\n'+headline[split:]
-    subtitle = brief.subtitle or source.get('intro') or brief.purpose
+    subtitle = brief.subtitle or source.get('intro') or ''
     brand = brief.brand_name or task_data.get('product', '')
     cta = brief.cta or source.get('cta') or '到店体验你的真实任务'
     blocks = source.get('blocks', [])[:3]
@@ -102,7 +102,7 @@ def compose_vector_poster(task, result, brief: PosterBrief | dict) -> PosterDocu
     # it is never replaced by decorative lorem ipsum or silently truncated.
     if direction == 'minimal':
         text('品牌标识', brand, (.065,.038,.69,.045), 23, weight=600, role='brand')
-        text('海报用途', brief.purpose, (.77,.041,.17,.03), 14,
+        text('场景栏目', section_title, (.77,.041,.17,.03), 14,
              color=muted, family='mono', align='right', role='design_annotation')
         rule('页眉细线', .065,.105,.87)
         if landscape:
@@ -167,7 +167,7 @@ def compose_vector_poster(task, result, brief: PosterBrief | dict) -> PosterDocu
     if conditions:
         text('事实限定与适用条件', conditions.text, (.065,.941,.87,.033), 16,
              color=muted, role='disclosure', locked=True, fact_ids=conditions.fact_ids)
-    text('草稿状态水印', '设计草稿 · 产品素材与文案需复核后发布',
+    text('草稿状态水印', '' if source.get('status') == 'ready' else '设计草稿 · 产品素材与文案需复核后发布',
          (.065,.979,.87,.018), 12, color=muted, role='watermark', locked=True, align='right')
     document = PosterDocument(width=w, height=h,
         canvas=PosterCanvas(width=w,height=h,background=bg), brief=brief,

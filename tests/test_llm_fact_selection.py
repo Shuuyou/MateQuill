@@ -6,6 +6,17 @@ from app.llm import OpenAICompatibleLLM
 from app.models import EvidenceBundle, Fact, Source, TaskInput
 
 
+def test_verifier_retains_official_page_identity_without_signed_or_private_urls():
+    from app.llm import official_source_record
+    page = 'https://consumer.huawei.com/cn/phones/mate80/specs/'
+    record = official_source_record(Source(id='official', title='官方规格', url=page))
+    assert record['official_url'] == page
+    for url in (page + '?token=private', 'https://private.example/internal',
+                'https://user:secret@consumer.huawei.com/specs', 'http://consumer.huawei.com/specs',
+                'https://consumer.huawei.com.evil.example/specs'):
+        assert 'official_url' not in official_source_record(Source(id='s', title='来源', url=url))
+
+
 def test_ecosystem_writer_prefers_scoped_capability_and_preserves_source_conditions(monkeypatch):
     app_conditions = ['以上应用以具体软件版本和实际支持情况为准。']
     collaboration_conditions = ['在手机/平板、电脑上，开启 WLAN、蓝牙，并登录同一华为账号。',
@@ -67,3 +78,23 @@ def test_application_fact_remains_available_with_its_exact_footnote(monkeypatch)
     assert fact['id'] == 'apps' and fact['qualifiers'] == [condition]
     assert any(span['kind'] == 'verbatim_condition' and span['text'] == condition
                for span in captured['evidence']['evidence_spans'])
+
+
+def test_launch_metadata_does_not_displace_a_relevant_value_but_explicit_event_can_use_it(monkeypatch):
+    bundle = EvidenceBundle(product='HUAWEI FreeBuds Neo', facts=[
+        Fact(id='date', product='HUAWEI FreeBuds Neo', label='限定款礼盒开售',
+             value='2026年10月14日开售', quote='2026年10月14日开售', source_id='s'),
+        Fact(id='benefit', product='HUAWEI FreeBuds Neo', label='聆听',
+             value='支持双设备连接', quote='支持双设备连接', source_id='s'),
+    ], sources=[Source(id='s', title='产品资料', excerpt='2026年10月14日开售。支持双设备连接。')])
+    for scene, expected in [('下班路上的随身聆听', 'benefit'), ('限定款礼盒开售时间', 'date')]:
+        model = OpenAICompatibleLLM(api_key='unit-test-placeholder')
+        captured = {}
+        async def capture(system, payload, temperature):
+            captured.update(payload)
+            return {'title': 'test'}
+        monkeypatch.setattr(model, '_json', capture)
+        task = TaskInput(product=bundle.product, platform='moments', audience='通勤人群', scene=scene)
+        asyncio.run(model.generate(task, bundle, {'priority_fact_ids': ['date']}))
+        assert [fact['id'] for fact in captured['evidence']['facts']] == [expected]
+    assert len(bundle.facts) == 2  # Selection never deletes the source record.

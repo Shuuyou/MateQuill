@@ -1,0 +1,203 @@
+{
+  "schema_version": 1,
+  "registry_version": "1.0.0",
+  "updated_at": "2026-10-22",
+  "scope": "curated_research_mechanisms",
+  "cases": [
+    {
+      "id": "joyoung.meme_as_object",
+      "title": "九阳豆浆把网络语言变成真实产品与包装",
+      "source_url": "https://m.adquan.com/info/detail-356838",
+      "source_name": "广告门 · BrandC",
+      "published_at": "2025-11-14",
+      "publisher_identity": "brand",
+      "platforms": [
+        "douyin",
+        "xiaohongshu",
+        "wechat",
+        "poster"
+      ],
+      "audience_tags": [
+        "年轻人",
+        "学生",
+        "圈层",
+        "幽默",
+        "抽象",
+        "玩梗"
+      ],
+      "mechanism": "把目标人群熟悉的网络符号转化为实际产品命名、包装与直播表演，让识别共同文化本身成为内容的阅读回报。",
+      "visual_action": "用真实商品和已有包装承接笑点，特写一个令人意外的细节，再展示人物与物件的互动。",
+      "participation": "给用户留下可以接话、改编或拍摄同款动作的结构，用户参与后形成自己的表达。",
+      "applicable_contexts": [
+        "新品",
+        "外观",
+        "包装",
+        "幽默",
+        "圈层"
+      ],
+      "transfer_method": "寻找本次产品已经存在的外观或动作与目标人群文化之间的连接；把这个连接做成画面和叙事，而非给所有产品套上同一个梗。",
+      "does_not_transfer": [
+        "该案例的猫咪形象、歌曲、包装和IP授权",
+        "原案例产品名称、台词和销售数字",
+        "把去年的梗宣称为当下热点"
+      ],
+      "record_kind": "research_case"
+    },
+    {
+      "id": "joyoung.playful_continuity",
+      "title": "九阳技能豆浆延续轻松玩乐的品牌表达",
+      "source_url": "https://www.foodaily.com/articles/41045",
+      "source_name": "Foodaily · 饮品营销",
+      "published_at": "2026-01-08",
+      "publisher_identity": "brand",
+      "platforms": [
+        "douyin",
+        "xiaohongshu",
+        "wechat"
+      ],
+      "audience_tags": [
+        "年轻人",
+        "幽默",
+        "抽象",
+        "玩梗",
+        "游戏"
+      ],
+      "mechanism": "以持续可识别的玩乐姿态连接不同新品，把新旧文化线索与人物短片、直播玩法共同组织成一段内容。",
+      "visual_action": "围绕一个真实产品设计可重复的动作节奏；短片、商品局部和人物反应使用同一视觉线索。",
+      "participation": "让互动规则简单到能当场参与，使用户有继续接梗或演出自己版本的空间。",
+      "applicable_contexts": [
+        "新品",
+        "直播",
+        "互动",
+        "游戏"
+      ],
+      "transfer_method": "保持本店自己的幽默尺度，但每次更换具体观察和动作；让一次有趣表达成长为账号辨识度。",
+      "does_not_transfer": [
+        "演员形象和合作关系",
+        "歌曲、短片、商品包装及其授权",
+        "原案例文案、产品配方和活动权益"
+      ],
+      "record_kind": "research_case"
+    },
+    {
+      "id": "duolingo.local_participation",
+      "title": "多邻国沪语课将地域语言与线下小店连接",
+      "source_url": "https://socialbeta.com/campaign/28757",
+      "source_name": "SocialBeta",
+      "published_at": "2026-10-16",
+      "publisher_identity": "brand",
+      "platforms": [
+        "xiaohongshu",
+        "douyin",
+        "wechat",
+        "moments",
+        "poster"
+      ],
+      "audience_tags": [
+        "本地",
+        "同城",
+        "上海",
+        "方言",
+        "年轻人",
+        "门店"
+      ],
+      "mechanism": "把地域语言、产品使用与真实城市空间连接，让当地人认得出的生活动作成为参与的理由。",
+      "visual_action": "选取已确认的门店环境、物件或城市动作组织画面；地域信息参与故事而非只堆在标题里。",
+      "participation": "设计一种与产品或门店能力相符、用户容易尝试的当地生活动作，给参与者留下可分享的成果。",
+      "applicable_contexts": [
+        "同城",
+        "本地",
+        "门店",
+        "体验",
+        "方言",
+        "城市"
+      ],
+      "transfer_method": "从本店已确认的位置和真实素材发现本地画面；用户的地理位置只支持选题假设，不能凭空推断客群或编造当地活动。",
+      "does_not_transfer": [
+        "沪语课程、合作门店、公交及美术馆活动",
+        "原案例福利、标识、IP和合作关系",
+        "把上海案例称作本店正在开展的活动"
+      ],
+      "record_kind": "research_case"
+    },
+    {
+      "id": "eleme.reverse_wish",
+      "title": "饿了么春节以反向祝愿表达生活共鸣",
+      "source_url": "https://socialbeta.com/t/109396",
+      "source_name": "SocialBeta",
+      "published_at": "2024-02-26",
+      "publisher_identity": "brand",
+      "platforms": [
+        "xiaohongshu",
+        "wechat",
+        "moments",
+        "poster"
+      ],
+      "audience_tags": [
+        "家庭",
+        "家人",
+        "春节",
+        "情绪",
+        "生活",
+        "职场"
+      ],
+      "mechanism": "从用户真正珍惜的生活状态出发，用与品牌通常销售立场相反的愿望制造反差，再用具体日常细节兑现共鸣。",
+      "visual_action": "一个清晰的大字立场配一个真实生活物件或动作，后续小细节提供自然转折，而不是堆砌产品参数。",
+      "participation": "让用户有分享自己生活细节的动机，交流建立在共同处境上，而不是固定的评论指令。",
+      "applicable_contexts": [
+        "节日",
+        "情绪",
+        "家人",
+        "下班",
+        "生活"
+      ],
+      "transfer_method": "先找到本次受众在乎的生活状态，再选择本店有资格表达的立场；允许自然克制地让产品退后半步。",
+      "does_not_transfer": [
+        "春节服务安排和活动承诺",
+        "原案例台词、品牌名称双关及素材",
+        "虚构顾客家庭经历或声称真实口碑"
+      ],
+      "record_kind": "research_case"
+    },
+    {
+      "id": "socialbeta.product_narrative",
+      "title": "栗栗橙与SocialBeta的产品叙事轴心方法",
+      "source_url": "https://api.socialbeta.com/article/110933",
+      "source_name": "栗栗橙 × SocialBeta",
+      "published_at": "2026-03-04",
+      "publisher_identity": "agency",
+      "platforms": [
+        "xiaohongshu",
+        "wechat",
+        "moments",
+        "poster",
+        "douyin"
+      ],
+      "audience_tags": [
+        "新品",
+        "设计",
+        "审美",
+        "生活方式",
+        "选购"
+      ],
+      "mechanism": "围绕产品与用户关系形成可持续的叙事轴心，让不同内容展开同一项有意义的价值，而非逐条复制已经流行的促销模板。",
+      "visual_action": "从产品真实细节选择一种稳定的视觉线索，每次用新的场景与动作展示它与生活的联系。",
+      "participation": "给读者一个值得继续讨论的观察角度，反馈用于更新下一次选题而非机械重复同一个话题。",
+      "applicable_contexts": [
+        "新品",
+        "产品",
+        "审美",
+        "生态",
+        "长期",
+        "设计"
+      ],
+      "transfer_method": "先选本次产品有依据的一个核心价值，再按本店发布身份与素材探索不同画面；长期保留声音，逐篇更换观察。",
+      "does_not_transfer": [
+        "研究报告中的品牌事实、销量和效果数字",
+        "其他品牌故事或用户经历",
+        "把行业方法论当作平台推荐算法保证"
+      ],
+      "record_kind": "research_case"
+    }
+  ]
+}

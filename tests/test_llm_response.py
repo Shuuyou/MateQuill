@@ -42,3 +42,12 @@ def test_invalid_envelope_is_distinct_from_content(monkeypatch):
  model=client(monkeypatch,[{'choices':[]}])
  with pytest.raises(ModelCallError,match='invalid_model_response'):asyncio.run(model._json('JSON',{}))
  assert len(model.metrics)==1
+
+
+def test_format_retry_preserves_budget_for_final_review(monkeypatch):
+ model=client(monkeypatch,['{"step":"write"}','{"step":"review"}','bad',
+                           '{"step":"repair"}','{"step":"final_review"}'],max_calls=6)
+ async def stages():
+  return [await model._json('JSON',{}) for _ in range(4)]
+ assert [value['step'] for value in asyncio.run(stages())]==['write','review','repair','final_review']
+ assert model._calls==5

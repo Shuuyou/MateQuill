@@ -1427,5 +1427,94 @@
     ],
     "usable": true,
     "reason": "2026-10-20直接目视本SHA256原图：可见两台浅粉色笔记本的外观与键盘；仅作官方产品外观封面，不证明兼容性、功能、体验或配置。"
+  },
+  "f8c8dffed0c1078337881d8a2ef8c43409a593a8ad7c75f098c3998b960eb30f": {
+    "observed_title": "绿色手机背面，圆形黑色镜头模组与竖向纹理机身",
+    "visual_role": "product_overview",
+    "semantic_tags": [
+      "appearance",
+      "rear_camera",
+      "green"
+    ],
+    "usable": true,
+    "visual_group": "new-product-20261022",
+    "reason": "已通过view_image逐张查看本SHA256图片；仅描述可见外观，不认证参数、功能或授权。"
+  },
+  "c599ea881242a51c29a128cd37e2742eff2ed3bb66c399fc780d40a9e751be31": {
+    "observed_title": "绿色手机侧面与凸起镜头模组，侧边可见按键",
+    "visual_role": "feature_detail",
+    "semantic_tags": [
+      "appearance",
+      "side_view",
+      "buttons"
+    ],
+    "usable": true,
+    "visual_group": "new-product-20261022",
+    "reason": "已通过view_image逐张查看本SHA256图片；仅描述可见外观，不认证参数、功能或授权。"
+  },
+  "a4416ec271da4812b94d5314b44c701d05df85993ab167f8674ff8342a3f8e5b": {
+    "observed_title": "银色椭圆耳机充电盒正面，盒盖闭合并带HUAWEI标志",
+    "visual_role": "product_overview",
+    "semantic_tags": [
+      "appearance",
+      "charging_case",
+      "silver"
+    ],
+    "usable": true,
+    "visual_group": "new-product-20261022",
+    "reason": "已通过view_image逐张查看本SHA256图片；仅描述可见外观，不认证参数、功能或授权。"
+  },
+  "30630aaefe0f7cdff711ecdf7c7b4873b4ad1189918b41da4bff29ed7856f0a6": {
+    "observed_title": "粉色椭圆耳机充电盒正面，盒盖闭合并带HUAWEI标志",
+    "visual_role": "product_overview",
+    "semantic_tags": [
+      "appearance",
+      "charging_case",
+      "pink"
+    ],
+    "usable": true,
+    "visual_group": "new-product-20261022",
+    "reason": "已通过view_image逐张查看本SHA256图片；仅描述可见外观，不认证参数、功能或授权。"
+  },
+  "b29b562c4ecacbb503e192ccf1d09a97b18f2fc9320f25cddad000b63ce098a3": {
+    "observed_title": "绿色手机背面斜放，圆形相机模组与HUAWEI字样，背景为Mate 80字样",
+    "semantic_tags": [
+      "手机",
+      "背面",
+      "相机模组",
+      "官方产品图",
+      "横版"
+    ],
+    "visual_role": "product_overview",
+    "usable": true,
+    "visual_group": "mate80-back-overview",
+    "reason": "目视检查本SHA256原图：展示手机背面与整体机身，不将画面当作拍照效果、续航或型号认证证据。",
+    "review_method": "visual_inspection",
+    "reviewed_at": "2026-10-22T15:20:24.902860+00:00"
+  },
+  "44cebbc9b5ca04515eae767b8f9fc0ab122882abfededb1714d4ecaf7d471b8f": {
+    "observed_title": "粉绿双机横置错位，黑色圆环相机与细密横纹，浅薄荷粉紫光带背景",
+    "visual_role": "campaign_key_visual",
+    "semantic_tags": [
+      "appearance",
+      "product_launch_visual",
+      "lattice_texture",
+      "pastel_light_bands"
+    ],
+    "usable": true,
+    "visual_group": "mate90-product-launch-hero",
+    "reason": "已实际查看官网首屏画面；观察绑定本SHA256，只用于构图、颜色与材质参考，不证明功能或促销活动。"
+  },
+  "d72d86c3eee60d0134e22dd061032e5658e421c1a742925417b7da4964cd8ae4": {
+    "observed_title": "浅绿色手机完整前后双视图叠放，背面圆形镜组与环形纹理，正面为深色环形屏幕图案",
+    "visual_role": "product_packshot",
+    "semantic_tags": [
+      "appearance",
+      "front",
+      "rear",
+      "packshot"
+    ],
+    "usable": true,
+    "reason": "已实际查看对应SHA原图与透明边缘检查图；仅观察当前产品图可见内容，不认证型号、性能或实拍结果。"
   }
 }

@@ -1,7 +1,10 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import "../public/legacy/motion.css";
 import "./product.css";
 import "./workspace.css";
+import "./conversation.css";
+import "./refinement.css";
 import WorkspaceProvider from "@/components/WorkspaceProvider";
 
 export const metadata: Metadata = {
@@ -18,7 +21,6 @@ export default function RootLayout({
     <html lang="zh-CN">
       <body>
         <link rel="stylesheet" href="/fonts/mingcha-ui.css" />
-        <link rel="stylesheet" href="/legacy/motion.css" />
         <WorkspaceProvider>{children}</WorkspaceProvider>
       </body>
     </html>

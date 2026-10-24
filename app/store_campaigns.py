@@ -22,7 +22,7 @@ from .models import TaskInput
 class StoreInput(BaseModel):
     model_config = ConfigDict(extra='forbid')
     name: str = Field(min_length=1, max_length=100)
-    audience: str = Field(min_length=1, max_length=300)
+    audience: str = Field(default='由 Agent 结合公开场景与使用反馈选择内容受众', min_length=1, max_length=300)
     core_tasks: list[str] = Field(default_factory=list, max_length=12)
     voice: str = Field(default='清楚、自然，像当面解释', max_length=200)
     location: str = Field(default='', max_length=200)

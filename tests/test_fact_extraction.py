@@ -33,7 +33,8 @@ USB-C接口
     collaboration = next(f for f in facts if "特色应用" in f.label)
     assert "需支持的设备，不保证所有软件兼容。" in collaboration.qualifiers
     battery = next(f for f in facts if "电池" in f.label)
-    assert "约" in battery.qualifiers
+    assert "约" in battery.value
+    assert "约" not in battery.qualifiers
     assert "典型值，实际使用情况可能不同。" in battery.qualifiers
 
 

@@ -55,6 +55,13 @@ login_attempts = Table('mq_login_attempts', metadata,
     Column('created_at', Float, nullable=False))
 Index('mq_login_window', login_attempts.c.identity_hash, login_attempts.c.created_at)
 
+# Authentication control-plane state; no customer content or caller-selected scope.
+trials = Table('mq_trials', metadata,
+    Column('user_id', String(64), ForeignKey('mq_users.id'), primary_key=True),
+    Column('tenant_id', String(64), ForeignKey('mq_tenants.id'), nullable=False, unique=True),
+    Column('store_id', String(120), nullable=False), Column('created_at', Float, nullable=False),
+    Column('expires_at', Float, nullable=False), Column('claimed_at', Float))
+
 
 def database_url():
     configured = os.environ.get('MATEQUILL_DATABASE_URL') or os.environ.get('TENANCY_DATABASE_URL')

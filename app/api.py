@@ -21,10 +21,15 @@ from .models import TaskInput
 @asynccontextmanager
 async def lifespan(application):
     from .generation_jobs import start_workers, stop_workers
+    from .gtm_agent.jobs import start_agent_workers, stop_agent_workers
     await start_workers()
+    await start_agent_workers()
     try:
         yield
     finally:
+        from .channel_routes import stop_draft_preparations
+        await stop_draft_preparations()
+        await stop_agent_workers()
         await stop_workers()
 
 
@@ -187,6 +192,13 @@ async def run_task(task: TaskInput, request: Request):
     from .generation_jobs import generation_budget
     validate_task_resources(task)
     with generation_budget():
+        from .store_task_research import prepare_store_task
+        try:
+            task = await prepare_store_task(task)
+        except TimeoutError:
+            raise HTTPException(504, '门店研究用时较长，可以重试这次创作') from None
+        except ValueError:
+            raise HTTPException(422, '门店研究尚未形成明确方向，请补充所在城市或街道后重试') from None
         return await _execute_run_task(task, request)
 
 
@@ -215,13 +227,16 @@ async def _execute_run_task(task: TaskInput, request: Request):
     if task.mode == 'local' and not settings.llm_api_key:
         raise HTTPException(400,'本地正式模式仅需配置模型服务，无需 ima 凭证')
     provider = get_demo() if task.mode == 'demo' else get_local() if task.mode == 'local' else ima
-    if task.ecosystem_products or task.media_ids:
+    if task.ecosystem_products or task.media_ids or task.assignment_id:
         from .task_context import TaskContextProvider
         provider = TaskContextProvider(provider, task)
-    llm = OpenAICompatibleLLM(settings.llm_base_url,settings.llm_api_key,settings.llm_model)
+    # Optional concept exploration uses at most two calls including its format
+    # retry, reserving four for writing, review, one repair and final review.
+    # All format retries share this same bounded budget.
+    llm = OpenAICompatibleLLM(settings.llm_base_url,settings.llm_api_key,settings.llm_model,max_calls=12)
     try:
         async with semaphore:
-            result = await asyncio.wait_for(AgentWorkflow(provider,llm).run(task),timeout=150)
+            result = await asyncio.wait_for(AgentWorkflow(provider,llm).run(task),timeout=300)
         validate_task_resources(task)
     except HTTPException:
         raise
@@ -240,7 +255,10 @@ async def _execute_run_task(task: TaskInput, request: Request):
     for source in record.get('sources',[]):
         # Sources use document titles + public hashes. Never return signed URLs.
         from .local_knowledge import official_url
-        if source.get('provider')!='huawei_official' or not official_url(source.get('url','')):
+        from .campaign_evidence import public_reference_url
+        public_source = (source.get('provider') == 'huawei_official' and official_url(source.get('url',''))) or (
+            source.get('provider') == 'campaign_reference' and public_reference_url(source.get('url','')))
+        if not public_source:
             source['url'] = ''
         quotes=[fact.get('quote','') for fact in record.get('facts',[])
                 if fact.get('source_id')==source.get('id') and fact.get('quote')]
@@ -249,7 +267,18 @@ async def _execute_run_task(task: TaskInput, request: Request):
     if run_id:
         runs[run_id] = record
         from .generation_jobs import persist_generation_result
-        persist_generation_result(run_id, record)
+        from .tenancy import get_context
+        from .tenancy.database import transaction_context
+        context = get_context()
+        snapshot = record.get('strategy', {}).get('strategy_snapshot')
+        with transaction_context():
+            persist_generation_result(run_id, record)
+            if snapshot and context and not context.is_legacy:
+                from .strategy_registry import freeze_strategy_snapshot
+                frozen = freeze_strategy_snapshot(snapshot, run_id=run_id,
+                    store_id=task.store_id or None, assignment_id=task.assignment_id)
+                record['strategy']['snapshot_id'] = frozen['id']
+                persist_generation_result(run_id, record)
         while len(runs)>100:
             runs.popitem(last=False)
     return JSONResponse(record)
@@ -364,6 +393,8 @@ async def export(run_id:str,format:str='md'):
     from .tenancy import get_context, audit
     if get_context() is not None:
         audit('creation.exported', 'run', run_id, {'format': format})
+        from .strategy_registry import record_workflow_event
+        record_workflow_event(run_id, 'exported')
     headers={'Content-Disposition':f'attachment; filename="zhijing-{run_id}.{format}"',
              'Cache-Control':'no-store'}
     record = run_view(record, run_id)
@@ -394,8 +425,12 @@ async def health():
 # Mount last: API routes must retain precedence.
 from .poster_routes import router as poster_router
 app.include_router(poster_router)
+from .design_routes import router as design_router
+app.include_router(design_router)
 from .creative_routes import router as creative_router
 app.include_router(creative_router)
+from .strategy_routes import router as strategy_router
+app.include_router(strategy_router)
 from .media_routes import router as media_router
 from .campaign_routes import router as campaign_router
 from .product_routes import router as product_router
@@ -409,8 +444,22 @@ from .tenancy import install_tenancy
 app.include_router(tenant_router)
 app.include_router(resource_router)
 app.include_router(channel_router)
+from .channel_opportunity_routes import router as channel_opportunity_router
+app.include_router(channel_opportunity_router)
+from .daily_store_routes import router as daily_store_router
+app.include_router(daily_store_router)
+from .publication_routes import router as publication_router
+app.include_router(publication_router)
+from .quotation_routes import router as quotation_router
+app.include_router(quotation_router)
 from .generation_jobs import router as jobs_router
 app.include_router(jobs_router)
+from .creative_agent_routes import router as creative_agent_router
+app.include_router(creative_agent_router)
+from .gtm_agent.routes import router as gtm_agent_router
+from .messaging.routes import router as messaging_router
+app.include_router(gtm_agent_router)
+app.include_router(messaging_router)
 install_tenancy(app)
 
 if (ROOT/'web').is_dir():

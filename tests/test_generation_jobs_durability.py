@@ -156,6 +156,49 @@ def test_concurrent_budget_reservations_cannot_exceed_tenant_limit(identities, m
         assert summary['completed'] == 1 and summary['reserved'] == 0
 
 
+@pytest.mark.parametrize('result_status', ['blocked', 'error', 'needs_input'])
+def test_nonready_persisted_result_releases_success_quota(identities, monkeypatch, result_status):
+    owner = identities[0]
+    monkeypatch.setenv('MATEQUILL_DAILY_CREATIONS', '1')
+    identifier = 'not-ready-' + uuid4().hex
+    with acting(owner):
+        with jobs.generation_budget():
+            assert jobs.usage_summary()['reserved'] == 1
+            jobs.persist_generation_result(identifier, {'run_id': identifier, 'status': result_status})
+        summary = jobs.usage_summary()
+        assert summary['completed'] == 0 and summary['reserved'] == 0 and summary['failed'] == 1
+        # Keep the unsuccessful result for recovery/explanation without charging
+        # a successful creation. The same one-unit allowance remains available.
+        assert load_body('run', identifier)['status'] == result_status
+        ready_id = 'next-ready-' + uuid4().hex
+        with jobs.generation_budget():
+            jobs.persist_generation_result(ready_id, {'run_id': ready_id, 'status': 'ready'})
+        assert jobs.usage_summary()['completed'] == 1
+        assert jobs.usage_summary()['failed'] == 1
+        with pytest.raises(HTTPException) as error:
+            with jobs.generation_budget():
+                pytest.fail('The one successful creation already consumed the allowance')
+        assert error.value.status_code == 429
+
+
+def test_ready_persisted_result_still_charges_exactly_one_success(identities, monkeypatch):
+    owner = identities[0]
+    monkeypatch.setenv('MATEQUILL_DAILY_CREATIONS', '1')
+    identifier = 'ready-' + uuid4().hex
+    with acting(owner):
+        with jobs.generation_budget():
+            jobs.persist_generation_result(identifier, {'run_id': identifier, 'status': 'ready'})
+            assert jobs.usage_summary()['completed'] == 1
+        # The budget context finalizer must neither charge twice nor release a
+        # successfully persisted run's reservation back to the pool.
+        summary = jobs.usage_summary()
+        assert summary['completed'] == 1 and summary['reserved'] == 0 and summary['failed'] == 0
+        with pytest.raises(HTTPException) as error:
+            with jobs.generation_budget():
+                pytest.fail('A saved ready result must consume the allowance')
+        assert error.value.status_code == 429
+
+
 def test_revoked_queued_membership_cancels_without_model_use(identities, monkeypatch):
     owner = identities[0]
     identifier = enqueue(owner)['id']

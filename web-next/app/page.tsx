@@ -1,33 +1,38 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useTransition } from "react";
+import dynamic from "next/dynamic";
 import IntakeComposer from "@/components/IntakeComposer";
 import Clarification from "@/components/Clarification";
-import ResultWorkbench from "@/components/ResultWorkbench";
-import PosterWorkbench from "@/components/PosterWorkbench";
-import StoreCampaign from "@/components/StoreCampaign";
-import ProductLibrary from "@/components/ProductLibrary";
+import { getDesign, type DesignBundle } from "@/lib/design";
 import Character from "@/components/Character";
 import { Icon } from "@/components/Icons";
 import { catalog } from "@/lib/api";
 import { useCreation } from "@/hooks/useCreation";
-import type { CatalogItem, RunTask, StoreProfile } from "@/lib/types";
+import type { CatalogItem, RunResult, RunTask, StoreProfile } from "@/lib/types";
 import type { StoreAssignment } from "@/lib/channel";
 import { workspaceRequest } from "@/lib/workspace";
 import { useWorkspace } from "@/components/WorkspaceProvider";
 import WorkspaceMenu from "@/components/WorkspaceMenu";
-import ChannelWorkspace from "@/components/ChannelWorkspace";
-import TeamWorkspace from "@/components/TeamWorkspace";
 import CreationSubmission from "@/components/CreationSubmission";
 import ChooseCreationStore from "@/components/ChooseCreationStore";
+import ConversationWorkspace from "@/components/ConversationWorkspace";
 
-type View = "create" | "history" | "campaign" | "catalog" | "planning" | "team";
+const ResultWorkbench = dynamic(() => import("@/components/ResultWorkbench"));
+const PosterWorkbench = dynamic(() => import("@/components/PosterWorkbench"));
+const DesignWorkspace = dynamic(() => import("@/components/DesignWorkspace"));
+const StoreCampaign = dynamic(() => import("@/components/StoreCampaign"));
+const ProductLibrary = dynamic(() => import("@/components/ProductLibrary"));
+const ChannelWorkspace = dynamic(() => import("@/components/ChannelWorkspace"));
+const TeamWorkspace = dynamic(() => import("@/components/TeamWorkspace"));
+
+type View = "agent" | "create" | "history" | "campaign" | "catalog" | "planning" | "team";
 const NAV: {
   view: View;
   icon: "write" | "history" | "store" | "book";
   label: string;
 }[] = [
-  { view: "create", icon: "write", label: "开始创作" },
+  { view: "agent", icon: "write", label: "开始创作" },
   { view: "campaign", icon: "store", label: "团队活动" },
   { view: "planning", icon: "write", label: "门店策划" },
   { view: "catalog", icon: "book", label: "产品与生态" },
@@ -35,27 +40,54 @@ const NAV: {
 ];
 
 export default function Page() {
-  const { session, scopeKey, switchWorkspace } = useWorkspace();
+  const { session, scopeKey, switchWorkspace, saveTrial } = useWorkspace();
   const creation = useCreation(scopeKey);
   const roles = session.workspace!.roles;
   const canManage = roles.some((role) =>
     ["admin", "operator", "regional_manager"].includes(role),
   );
   const canTeam = roles.some((role) => ["admin", "operator"].includes(role));
-  const [view, setView] = useState<View>(
-    canManage && !session.workspace!.store_id ? "campaign" : "create",
-  );
+  const [view, setView] = useState<View>("agent");
+  const [navigating, startNavigation] = useTransition();
+  useEffect(() => { window.scrollTo({ top: 0, behavior: "instant" }); }, [view]);
+  const [agentSeed, setAgentSeed] = useState<{ id: string; text: string } | null>(null);
   const [viewReady, setViewReady] = useState(false);
+  const [design, setDesign] = useState<DesignBundle | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    setDesign(null);
+    const identifier = sessionStorage.getItem(`matequill-open-design:${scopeKey}`);
+    const savedView = sessionStorage.getItem(`matequill-view-v3:${scopeKey}`);
+    if (identifier && savedView === "create") void getDesign(identifier).then((value) => {
+      if (!cancelled) { setDesign(value); setView("create"); }
+    }).catch(() => {
+      if (!cancelled) { sessionStorage.removeItem(`matequill-open-design:${scopeKey}`); setView("history"); }
+    });
+    return () => { cancelled = true; };
+  }, [scopeKey]);
+  useEffect(() => {
+    if (view !== "create" && design) {
+      setDesign(null);
+      sessionStorage.removeItem(`matequill-open-design:${scopeKey}`);
+    }
+  }, [view]);
+  function rememberDesign(value: DesignBundle | null) {
+    setDesign(value);
+    if (value) sessionStorage.setItem(`matequill-open-design:${scopeKey}`, value.id);
+    else sessionStorage.removeItem(`matequill-open-design:${scopeKey}`);
+  }
   const [items, setItems] = useState<CatalogItem[]>([]);
   const [catalogError, setCatalogError] = useState("");
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [product, setProduct] = useState("");
   const [pendingTask, setPendingTask] = useState<RunTask | null>(null);
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
   const [historyItems, setHistoryItems] = useState<
     { id: string; kind: string; title: string; created_at: string | number }[]
   >([]);
   const [historyError, setHistoryError] = useState("");
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [historyReload, setHistoryReload] = useState(0);
   const busy = creation.phase !== "idle";
   async function refreshCatalog() {
     setCatalogLoading(true);
@@ -77,11 +109,12 @@ export default function Page() {
     if (params.get("view") === "catalog") setView("catalog");
     try {
       const savedView = sessionStorage.getItem(
-        `matequill-view-v1:${scopeKey}`,
+        `matequill-view-v3:${scopeKey}`,
       ) as View | null;
       if (
         savedView &&
         [
+          "agent",
           "create",
           "history",
           "campaign",
@@ -91,6 +124,7 @@ export default function Page() {
         ].includes(savedView)
       )
         setView(savedView);
+      if (params.get("conversation")) setView("agent");
       const pending = sessionStorage.getItem(`matequill-pending:${scopeKey}`);
       if (pending) {
         const value = JSON.parse(pending) as {
@@ -98,8 +132,12 @@ export default function Page() {
           product?: string;
           assignmentId: string;
           generate?: boolean;
+          result?: RunResult;
         };
-        if (value.task && value.generate) void creation.direct(value.task);
+        if (value.task && value.result)
+          creation.openDraft(value.result, value.task, value.assignmentId);
+        else if (value.task && value.generate)
+          void creation.direct(value.task, value.assignmentId);
         else if (value.task)
           creation.startAssignment(value.task, value.assignmentId);
         setProduct(value.task?.product || value.product || "");
@@ -113,17 +151,23 @@ export default function Page() {
   }, []);
   useEffect(() => {
     if (viewReady)
-      sessionStorage.setItem(`matequill-view-v1:${scopeKey}`, view);
+      sessionStorage.setItem(`matequill-view-v3:${scopeKey}`, view);
   }, [view, viewReady, scopeKey]);
   useEffect(() => {
     if (view !== "history") return;
+    let active = true;
+    setHistoryLoading(true);
+    setHistoryError("");
     workspaceRequest<{ items: typeof historyItems }>("/api/creations")
       .then((value) => {
+        if (!active) return;
         setHistoryItems(value.items);
         setHistoryError("");
       })
-      .catch((reason: Error) => setHistoryError(reason.message));
-  }, [view]);
+      .catch((reason: Error) => { if (active) setHistoryError(reason.message); })
+      .finally(() => { if (active) setHistoryLoading(false); });
+    return () => { active = false; };
+  }, [view, scopeKey, historyReload]);
   useEffect(() => {
     const body = document.body;
     body.classList.add("mq-next");
@@ -186,9 +230,14 @@ export default function Page() {
       assignmentId: "",
     });
     creation.clearQuestions();
-    setView("create");
+    setAgentSeed({ id: crypto.randomUUID(), text: `帮我为${name}准备一篇适合我们店的内容。` });
+    setView("agent");
   }
-  async function startAssignment(task: RunTask, assignment: StoreAssignment) {
+  async function startAssignment(
+    task: RunTask,
+    assignment: StoreAssignment,
+    immediately = false,
+  ) {
     if (session.workspace!.store_id !== assignment.store_id) {
       const key = [
         session.user!.id,
@@ -197,7 +246,7 @@ export default function Page() {
       ].join(":");
       sessionStorage.setItem(
         `matequill-pending:${key}`,
-        JSON.stringify({ task, assignmentId: assignment.id }),
+        JSON.stringify({ task, assignmentId: assignment.id, generate: immediately }),
       );
       try {
         await switchWorkspace(
@@ -210,7 +259,21 @@ export default function Page() {
       }
       return;
     }
-    creation.startAssignment(task, assignment.id);
+    if (immediately) void creation.direct(task, assignment.id);
+    else creation.startAssignment(task, assignment.id);
+    setProduct(task.product);
+    setView("create");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+  async function openAssignmentDraft(result: RunResult, task: RunTask, assignment: StoreAssignment) {
+    if (session.workspace!.store_id !== assignment.store_id) {
+      const key = [session.user!.id, session.workspace!.tenant_id, assignment.store_id].join(":");
+      sessionStorage.setItem(`matequill-pending:${key}`, JSON.stringify({ task, result, assignmentId: assignment.id }));
+      try { await switchWorkspace(session.workspace!.tenant_id, assignment.store_id); }
+      catch (reason) { sessionStorage.removeItem(`matequill-pending:${key}`); throw reason; }
+      return;
+    }
+    creation.openDraft(result, task, assignment.id);
     setProduct(task.product);
     setView("create");
     window.scrollTo({ top: 0, behavior: "smooth" });
@@ -218,24 +281,38 @@ export default function Page() {
   return (
     <div className={`mq-app ${expanded ? "mq-nav-expanded" : ""}`}>
       <aside className="mq-sidebar" aria-label="工作空间导航">
-        <button
-          className="mq-brand"
-          aria-label={expanded ? "收起导航" : "展开导航"}
-          aria-expanded={expanded}
-          onClick={() => setExpanded((value) => !value)}
-        >
-          <img src="/youju.svg" alt="" />
-          <span>
-            MateQuill<small>场景有据</small>
-          </span>
-        </button>
-        <nav>
-          {NAV.filter((item) => item.view !== "planning" || canManage).map(
+        <div className="mq-sidebar-header">
+          <div className="mq-brand" aria-label="MateQuill">
+            <span className="mq-brand-symbol" aria-hidden="true">
+              <Character />
+            </span>
+            <span className="mq-brand-wordmark">
+              MateQuill<small>场景有据</small>
+            </span>
+          </div>
+          <button
+            type="button"
+            className="mq-sidebar-toggle"
+            aria-label={expanded ? "收起导航" : "展开导航"}
+            title={expanded ? "收起导航" : "展开导航"}
+            aria-expanded={expanded}
+            aria-controls="mq-primary-navigation"
+            onClick={() => setExpanded((value) => !value)}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <rect x="3" y="4" width="18" height="16" rx="3" />
+              <path d="M9 4v16" />
+              <path className="mq-sidebar-toggle-arrow" d="m13 9 3 3-3 3" />
+            </svg>
+          </button>
+        </div>
+        <nav id="mq-primary-navigation">
+          {NAV.filter((item) => (item.view !== "planning" || canManage) && (!session.is_guest || item.view !== "campaign")).map(
             (item) => (
               <button
                 key={item.view}
-                className={view === item.view ? "is-selected" : ""}
-                aria-current={view === item.view ? "page" : undefined}
+                className={view === item.view || (view === "create" && item.view === "agent") ? "is-selected" : ""}
+                aria-current={view === item.view || (view === "create" && item.view === "agent") ? "page" : undefined}
                 aria-label={item.label}
                 title={item.label}
                 disabled={busy}
@@ -244,7 +321,7 @@ export default function Page() {
                     creation.reset();
                     setProduct("");
                   }
-                  setView(item.view);
+                  startNavigation(() => setView(item.view));
                 }}
               >
                 <Icon name={item.icon} />
@@ -269,14 +346,17 @@ export default function Page() {
       </aside>
       <div className="mq-topline">
         <span>
-          MateQuill<span className="mq-topline-name">场景有据</span>
+          {view === "agent" ? "创作" : view === "create" ? "作品" : NAV.find((item) => item.view === view)?.label || "工作空间"}
         </span>
-        <WorkspaceMenu disabled={busy} />
+        <WorkspaceMenu disabled={busy} onTeam={canTeam ? () => startNavigation(() => setView("team")) : undefined} />
       </div>
       <main
-        className={`mq-main ${view === "create" && !creation.result && !creation.poster && !creation.questions.length ? "mq-main-intake" : ""}`}
+        aria-busy={navigating}
+        className={`mq-main ${view === "create" && !design && !creation.result && !creation.poster && !creation.questions.length ? "mq-main-intake" : ""}`}
       >
-        {view === "create" && (
+        {view === "agent" && <ConversationWorkspace seed={agentSeed} onSeedConsumed={() => setAgentSeed(null)} onOpenDraft={openAssignmentDraft} />}
+        {view === "create" && design && <DesignWorkspace initial={design} onChange={rememberDesign} onBack={() => { rememberDesign(null); setView("history"); }} />}
+        {view === "create" && !design && (
           <>
             {creation.assignmentId &&
               !busy &&
@@ -299,7 +379,7 @@ export default function Page() {
                 onSelect={chooseStore}
                 onManage={() => setView("planning")}
               />
-            ) : busy ? (
+            ) : busy && !creation.result && !creation.poster ? (
               <section
                 className="mq-generating"
                 role="status"
@@ -391,6 +471,7 @@ export default function Page() {
             {creation.error && (
               <div className="mq-error" role="alert">
                 <p>{creation.error}</p>
+                {session.is_guest && <button className="mq-primary" onClick={saveTrial}>保存到我的门店</button>}
                 <button
                   className="mq-text-button"
                   onClick={() => {
@@ -421,7 +502,7 @@ export default function Page() {
           </>
         )}
         {view === "campaign" && (
-          <ChannelWorkspace products={items} onStart={startAssignment} />
+          <ChannelWorkspace products={items} onStart={startAssignment} onOpenDraft={openAssignmentDraft} />
         )}
         {view === "planning" && canManage && (
           <StoreCampaign products={items} onGenerate={generate} />
@@ -454,20 +535,27 @@ export default function Page() {
         {view === "history" && (
           <section className="mq-history mq-enter">
             <header className="mq-page-heading">
-              <p className="mq-section-label">好内容，也值得再打开</p>
-              <h1>这次的创作记录。</h1>
+              <h1>创作记录</h1>
             </header>
-            {historyError && (
-              <p role="alert" className="mq-error">
-                {historyError}
-              </p>
+            {historyLoading && <p role="status">正在读取创作记录…</p>}
+            {!historyLoading && historyError && (
+              <div role="alert" className="mq-error">
+                <p>{historyError}</p>
+                <button className="mq-text-button" onClick={() => setHistoryReload((value) => value + 1)}>重新读取</button>
+              </div>
             )}
-            {historyItems.length ? (
+            {!historyLoading && !historyError && (historyItems.length ? (
               <ol>
                 {historyItems.map((item) => (
                   <li key={item.id}>
                     <button
-                      onClick={() => {
+                      onClick={async () => {
+                        if (item.kind === "design") {
+                          try { rememberDesign(await getDesign(item.id)); setView("create"); }
+                          catch (reason) { setHistoryError(reason instanceof Error ? reason.message : "这组图片暂时没有打开，请重试。"); }
+                          return;
+                        }
+                        setDesign(null);
                         void creation.reopen(
                           item.kind === "poster"
                             ? `poster:${item.id}`
@@ -506,12 +594,12 @@ export default function Page() {
                 <h2>第一篇好内容，就从今天开始。</h2>
                 <button
                   className="mq-primary"
-                  onClick={() => setView("create")}
+                  onClick={() => setView("agent")}
                 >
                   开始创作<span>↗</span>
                 </button>
               </div>
-            )}
+            ))}
           </section>
         )}
       </main>

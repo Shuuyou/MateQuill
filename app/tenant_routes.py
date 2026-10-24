@@ -47,12 +47,12 @@ class AcceptInput(StrictInput):
     password: str = Field(min_length=12, max_length=128)
 
 
-def _response_with_session(request, user_id, tenant_id, store_id=None):
+def _response_with_session(request, user_id, tenant_id, store_id=None, *, seconds=SESSION_SECONDS):
     old = request.cookies.get(COOKIE_NAME)
     if old:
         with db_connection() as connection:
             connection.execute(delete(sessions).where(sessions.c.token_hash == token_hash(old)))
-    token = new_session(user_id, tenant_id, store_id)
+    token = new_session(user_id, tenant_id, store_id, seconds=seconds)
     # Serialize from the newly created server session, without echoing its token.
     from .tenancy.auth import session_row
     row = session_row(token)
@@ -61,14 +61,60 @@ def _response_with_session(request, user_id, tenant_id, store_id=None):
     with db_connection() as connection:
         user = connection.execute(select(users.c.id, users.c.email, users.c.name).where(users.c.id == user_id)).mappings().one()
     chosen = next(item for item in rows if item['tenant_id'] == tenant_id)
-    result = {'authenticated': True, 'user': dict(user),
+    from .tenancy.auth import guest_state
+    result = {'authenticated': True, 'user': dict(user), **guest_state(user_id, tenant_id),
         'workspace': {'tenant_id': tenant_id, 'tenant_name': chosen['tenant_name'],
                       'store_id': context.store_id, 'roles': list(context.roles),
                       'store_ids': list(context.store_ids), 'all_stores': context.all_stores},
         'memberships': [{key: item[key] for key in ('id', 'tenant_id', 'tenant_name', 'store_id', 'role')} for item in rows]}
     response = JSONResponse(result)
-    set_session_cookie(response, token, request)
+    set_session_cookie(response, token, request, seconds=seconds)
     return response
+
+
+@router.post('/auth/guest')
+def start_guest(request: Request):
+    # Repeated clicks and reloads continue the current workspace without renewal.
+    if get_context():
+        return me_payload(request)
+    from .trial_onboarding import provision_trial, TRIAL_SECONDS
+    return _response_with_session(request, *provision_trial(), seconds=TRIAL_SECONDS)
+
+
+class DemoInput(StrictInput):
+    persona: str = Field(min_length=1, max_length=30)
+
+
+@router.get('/auth/demo')
+def demo_options():
+    from .demo_workspaces import choices
+    return {'accounts': choices()}
+
+
+@router.post('/auth/demo')
+def enter_demo(payload: DemoInput, request: Request):
+    from .demo_workspaces import demo_identity
+    return _response_with_session(request, *demo_identity(payload.persona))
+
+
+class ClaimTrialInput(StrictInput):
+    email: str = Field(min_length=3, max_length=254)
+    password: str = Field(min_length=12, max_length=128)
+    store_name: str = Field(min_length=1, max_length=100)
+
+
+@router.post('/auth/claim-trial')
+def save_trial(payload: ClaimTrialInput, request: Request):
+    from .trial_onboarding import claim_trial
+    context = require_context()
+    name = payload.store_name.strip()
+    if not name:
+        raise HTTPException(422, '给门店起个名字吧')
+    try:
+        claim_trial(context, normalize_email(payload.email), payload.password, name)
+    except IntegrityError:
+        raise HTTPException(409, '这个邮箱已有账号，请使用原账号登录') from None
+    return _response_with_session(request, context.user_id, context.tenant_id, context.store_id)
 
 
 @router.post('/auth/login')

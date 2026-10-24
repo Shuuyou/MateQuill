@@ -1,16 +1,24 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { stores } from "@/lib/api";
 import {
   CHANNEL_STATUS,
   type ChannelCampaign,
   type ContentSubmission,
   type StoreAssignment,
+  type PreparedAssignment,
+  type PrepareAssignmentResponse,
+  type StoreOpportunity,
 } from "@/lib/channel";
-import type { CatalogItem, RunTask, StoreProfile } from "@/lib/types";
+import type { CatalogItem, RunResult, RunTask, StoreProfile } from "@/lib/types";
 import { workspaceRequest } from "@/lib/workspace";
 import { useWorkspace } from "./WorkspaceProvider";
 import Character from "./Character";
+import OpportunityPlan from "./OpportunityPlan";
+import CampaignOpportunities from "./CampaignOpportunities";
+import styles from "./ChannelWorkspace.module.css";
+
+import { draftKey, getDraftState, prepareAssignmentDraft, subscribeDrafts } from "@/lib/assignmentDraft";
 
 const PATH = "/api/channel";
 interface PartnerGrant {
@@ -27,14 +35,26 @@ interface CampaignProgress {
   stores: number;
   counts: Record<string, number>;
 }
+function OpportunityNote({ opportunity }: { opportunity: PreparedAssignment["opportunity"] }) {
+  const text = opportunity.summary || opportunity.reason || opportunity.reasons?.join(" ") || "";
+  if (!text) return null;
+  return (
+    <details className="mq-preparation-explanation">
+      <summary>选题思路</summary>
+      <p className="mq-preparation-reason">{text}</p>
+    </details>
+  );
+}
 export default function ChannelWorkspace({
   products,
   onStart,
+  onOpenDraft,
 }: {
   products: CatalogItem[];
-  onStart: (task: RunTask, assignment: StoreAssignment) => void | Promise<void>;
+  onOpenDraft: (result: RunResult, task: RunTask, assignment: StoreAssignment) => void | Promise<void>;
+  onStart: (task: RunTask, assignment: StoreAssignment, immediately?: boolean) => void | Promise<void>;
 }) {
-  const { session } = useWorkspace();
+  const { session, scopeKey } = useWorkspace();
   const roles = session.workspace!.roles;
   const canManage = roles.some((role) =>
     ["admin", "operator", "regional_manager"].includes(role),
@@ -70,6 +90,83 @@ export default function ChannelWorkspace({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [showPast, setShowPast] = useState(false);
+  const [sharedOpportunities, setSharedOpportunities] = useState<Record<string, StoreOpportunity>>({});
+  const actionRunning = useRef(false);
+  const [, updateDrafts] = useState(0);
+  useEffect(() => subscribeDrafts(() => updateDrafts((value) => value + 1)), []);
+  function draft(assignment: StoreAssignment) { return getDraftState(draftKey(scopeKey, assignment)); }
+  function requestDraft(assignment: StoreAssignment, refresh = false, resume = false) {
+    return prepareAssignmentDraft(scopeKey, assignment, refresh, resume);
+  }
+  async function openOrPrepare(assignment: StoreAssignment) {
+    const state = draft(assignment);
+    if (state?.value?.status === "idle") {
+      await requestDraft(assignment, true);
+      return;
+    }
+    if (state?.value?.result) {
+      await onOpenDraft(state.value.result, state.value.task || assignment.task, assignment);
+      return;
+    }
+    await requestDraft(assignment, state?.value?.status === "failed" || state?.value?.status === "cancelled", !!state?.error && !["failed", "cancelled"].includes(state?.value?.status || ""));
+  }
+  const preparationRequests = useRef(new Map<string, Promise<PreparedAssignment>>());
+  const [preparations, setPreparations] = useState<Record<string, PreparedAssignment>>({});
+  const [preparing, setPreparing] = useState<Record<string, boolean>>({});
+  const [preparationErrors, setPreparationErrors] = useState<Record<string, string>>({});
+  function preparationKey(assignment: StoreAssignment) {
+    return `${scopeKey}:${assignment.id}:${assignment.campaign_version}`;
+  }
+  function prepare(assignment: StoreAssignment, refresh = false): Promise<PreparedAssignment> {
+    const key = preparationKey(assignment);
+    const existing = preparationRequests.current.get(key);
+    if (existing) return existing;
+    if (!refresh) {
+      if (preparations[key]) return Promise.resolve(preparations[key]);
+      try {
+        const saved = JSON.parse(sessionStorage.getItem(`matequill-prepared-v3:${key}`) || "null");
+        if (saved?.value?.status === "ready" && saved.value.task && saved.value.opportunity?.title &&
+          Date.now() - saved.at < 30 * 60 * 1000) {
+          setPreparations((previous) => ({ ...previous, [key]: saved.value }));
+          return Promise.resolve(saved.value);
+        }
+      } catch { /* A preparation can always be requested again. */ }
+    } else {
+      setPreparations((previous) => {
+        const next = { ...previous };
+        delete next[key];
+        return next;
+      });
+      try { sessionStorage.removeItem(`matequill-prepared-v3:${key}`); } catch { /* Memory state remains authoritative. */ }
+    }
+    setPreparing((previous) => ({ ...previous, [key]: true }));
+    setPreparationErrors((previous) => ({ ...previous, [key]: "" }));
+    const request = workspaceRequest<PrepareAssignmentResponse>(
+      `${PATH}/assignments/${assignment.id}/prepare`,
+      refresh ? { refresh: true, instruction: "请换一个不同的创作角度，保持同一门店和活动事实。" } : {},
+    ).then((value) => {
+      if (value.status !== "ready")
+        throw new Error(value.message || value.reasons?.join("；") || "这次选题还没有准备完成，请再试一次。");
+      if (!value.task || !value.opportunity?.title)
+        throw new Error("这次选题还没有准备完成，请再试一次。");
+      setPreparations((previous) => ({ ...previous, [key]: value }));
+      try {
+        sessionStorage.setItem(`matequill-prepared-v3:${key}`, JSON.stringify({ at: Date.now(), value }));
+      } catch { /* The current recommendation remains available in memory. */ }
+      return value;
+    }).catch((reason: unknown) => {
+      setPreparationErrors((previous) => ({
+        ...previous, [key]: reason instanceof Error ? reason.message : "选题暂时没有准备好，可以再试一次。",
+      }));
+      throw reason;
+    }).finally(() => {
+      preparationRequests.current.delete(key);
+      setPreparing((previous) => ({ ...previous, [key]: false }));
+    });
+    preparationRequests.current.set(key, request);
+    return request;
+  }
   async function load() {
     try {
       const [a, s, locations] = await Promise.all([
@@ -114,6 +211,8 @@ export default function ChannelWorkspace({
     operation: () => Promise<unknown>,
     success = "",
   ) {
+    if (actionRunning.current) return;
+    actionRunning.current = true;
     setBusy(key);
     setError("");
     setNotice("");
@@ -126,6 +225,7 @@ export default function ChannelWorkspace({
         reason instanceof Error ? reason.message : "操作未完成，请重试。",
       );
     } finally {
+      actionRunning.current = false;
       setBusy("");
     }
   }
@@ -160,38 +260,60 @@ export default function ChannelWorkspace({
       "活动草稿已保存，可以确认后下发门店。",
     );
   }
-  async function start(assignment: StoreAssignment) {
+  async function start(assignment: StoreAssignment, immediately = true) {
     await action(assignment.id, async () => {
+      const prepared = await prepare(assignment);
       if (["assigned", "pending"].includes(assignment.status))
         await workspaceRequest(
           `${PATH}/assignments/${assignment.id}/accept`,
           {},
         );
-      const value = await workspaceRequest<{ task: RunTask }>(
-        `${PATH}/assignments/${assignment.id}/task`,
-      );
-      await onStart(value.task, assignment);
+      await onStart(prepared.task, assignment, immediately);
     });
   }
   const waiting = submissions.filter(
     (item) => item.status === "submitted",
   ).length;
+  const recommended = assignments.find(
+    (item) => item.available !== false &&
+      ["assigned", "pending", "accepted", "changes_requested"].includes(item.status),
+  );
+  const orderedAssignments = recommended
+    ? [recommended, ...assignments.filter((item) => item.id !== recommended.id)]
+    : assignments;
+  const pastAssignmentCount = orderedAssignments.filter((item) => item.available === false || item.status === "published").length;
+  const visibleAssignments = orderedAssignments.filter((item) => showPast || (item.available !== false && item.status !== "published"));
+  const assignmentScope = assignments.map((item) => `${item.id}:${item.campaign_version}`).join("|");
+  useEffect(() => {
+    let live = true;
+    setSharedOpportunities({});
+    if (!session.workspace?.store_id) return;
+    const currentAssignments = assignments.filter((item) => item.store_id === session.workspace?.store_id && item.available !== false);
+    void Promise.all(currentAssignments.map(async (item) => {
+      try {
+        const shared = await workspaceRequest<StoreOpportunity>(`${PATH}/assignments/${item.id}/opportunity`);
+        if (live) setSharedOpportunities((previous) => ({ ...previous, [item.id]: shared }));
+        // A published regional proposal is adopted explicitly; it must not race
+        // an unrelated automatic draft when the store first opens this page.
+        if (live && item.id === recommended?.id && !shared.opportunity) void requestDraft(item);
+      } catch { /* Leave the existing explicit preparation action available. */ }
+    }));
+    return () => { live = false; };
+  }, [assignmentScope, scopeKey]);
+  async function adoptShared(assignment: StoreAssignment) {
+    await workspaceRequest(`${PATH}/assignments/${assignment.id}/opportunity/adopt`, {});
+    const shared = await workspaceRequest<StoreOpportunity>(`${PATH}/assignments/${assignment.id}/opportunity`);
+    setSharedOpportunities((previous) => ({ ...previous, [assignment.id]: shared }));
+    await requestDraft(assignment, false, true);
+    const result = draft(assignment)?.value?.result;
+    if (result) await onOpenDraft(result, draft(assignment)?.value?.task || assignment.task, assignment);
+  }
   return (
-    <section className="mq-channel mq-enter">
-      <header className="mq-page-heading">
-        <p className="mq-section-label">{session.workspace?.tenant_name}</p>
-        <h1>
-          {canManage
-            ? "一个好主题，让每家店讲出精彩。"
-            : "今天，讲好我们店的故事。"}
-        </h1>
-        <p>
-          {canManage
-            ? "组织活动、接住门店的创意，一起把内容用起来。"
-            : "选一个活动，添上本店的照片和真实见闻。"}
-        </p>
+    <section className={`mq-channel mq-enter ${styles.workspace}`}>
+      <header className={`mq-page-heading ${styles.heading}`}>
+        <h1>团队活动</h1>
       </header>
-      <nav className="mq-channel-tabs" aria-label="活动工作台">
+      <nav className={`mq-channel-tabs ${styles.tabs}`} aria-label="活动工作台">
         <button
           aria-current={tab === "assignments" ? "page" : undefined}
           onClick={() => setTab("assignments")}
@@ -244,62 +366,84 @@ export default function ChannelWorkspace({
       ) : (
         <>
           {tab === "assignments" && (
-            <div className="mq-assignment-list">
-              {assignments.length ? (
-                assignments.map((assignment) => (
-                  <article key={assignment.id}>
+            <div className={`mq-assignment-list ${styles.assignments}`}>
+              {visibleAssignments.length ? (
+                visibleAssignments.map((assignment) => (
+                  <article key={assignment.id} className={assignment.id === recommended?.id ? "mq-assignment-featured" : undefined}>
                     <div>
-                      <p className="mq-section-label">
-                        {assignment.store_name}
-                      </p>
-                      <h2>{assignment.title}</h2>
-                      <p>
-                        {[
-                          assignment.task?.audience,
-                          assignment.task?.scene || assignment.task?.goal,
-                        ]
-                          .filter(Boolean)
-                          .join(" · ")}
-                      </p>
-                      <span className="mq-content-status">
-                        {assignment.available === false
-                          ? assignment.unavailable_reason || "活动已结束"
-                          : CHANNEL_STATUS[assignment.status] ||
-                            assignment.status}
-                      </span>
+                      <div className={styles.metadata}>
+                        {(!session.workspace?.store_id || assignment.store_id !== session.workspace.store_id) && <span>{assignment.store_name}</span>}
+                        {assignment.publisher_label && <span>
+                          {assignment.publisher_label}
+                          {assignment.is_simulation && !assignment.publisher_label.includes("模拟") ? "（模拟）" : ""}
+                        </span>}
+                        <span className={styles.status}>
+                          {assignment.available === false
+                            ? assignment.unavailable_reason || "活动已结束"
+                            : CHANNEL_STATUS[assignment.status] || assignment.status}
+                        </span>
+                      </div>
+                      <h2>{draft(assignment)?.value?.result?.title || draft(assignment)?.value?.opportunity?.title || preparations[preparationKey(assignment)]?.opportunity.title || assignment.title}</h2>
+                      <p className="mq-assignment-product">{assignment.task?.product}</p>
+                      {draft(assignment)?.loading ? (
+                        <p className="mq-preparation-thinking" role="status" aria-live="polite">
+                          {["queued", "running"].includes(draft(assignment)?.value?.status || "")
+                            ? "正在写正文、安排配图…"
+                            : "正在为本店准备选题…"}
+                        </p>
+                      ) : draft(assignment)?.error ? (
+                        <div className="mq-preparation-error" role="alert"><p>{draft(assignment)?.error}</p></div>
+                      ) : null}
+                      {draft(assignment)?.value?.opportunity && <OpportunityNote opportunity={draft(assignment)!.value!.opportunity!} />}
+                      {sharedOpportunities[assignment.id]?.opportunity && <OpportunityPlan
+                        plan={sharedOpportunities[assignment.id].opportunity!}
+                        disabled={!!busy || !!draft(assignment)?.loading || assignment.available === false || assignment.status === "published"}
+                        primaryAction={{ label: draft(assignment)?.value?.result ? "打开本店图文" : draft(assignment)?.loading ? "正在制作本店图文…" : "采用这个机会，制作本店图文", run: () => void action(assignment.id, () => draft(assignment)?.value?.result ? openOrPrepare(assignment) : adoptShared(assignment)) }}
+                        onContinue={() => {}}
+                        onOpen={() => {}}
+                      />}
+                      {!!assignment.source_refs?.length && (
+                        <details className="mq-assignment-sources">
+                          <summary>活动资料 · {assignment.source_refs.length}</summary>
+                          <ul>{assignment.source_refs.map((source) => (
+                            <li key={source.url}>
+                              <a href={source.url} target="_blank" rel="noopener noreferrer">{source.title}<span aria-hidden="true"> ↗</span></a>
+                              {source.published_at && <time>{source.published_at.slice(0, 10)}</time>}
+                            </li>
+                          ))}</ul>
+                        </details>
+                      )}
                     </div>
                     <div className="mq-card-actions">
-                      <button
+                      {!sharedOpportunities[assignment.id]?.opportunity && <button
                         className="mq-primary"
-                        disabled={
-                          !!busy ||
-                          assignment.status === "published" ||
-                          assignment.available === false
-                        }
-                        onClick={() => void start(assignment)}
+                        disabled={!!busy || !!draft(assignment)?.loading || assignment.status === "published" || assignment.available === false}
+                        onClick={() => void action(assignment.id, () => openOrPrepare(assignment))}
                       >
-                        {busy === assignment.id
-                          ? "正在打开…"
-                          : assignment.available === false
-                            ? "查看最新活动"
-                            : assignment.status === "published"
-                              ? "已确认发布"
-                              : ["assigned", "pending"].includes(
-                                    assignment.status,
-                                  )
-                                ? "领取并创作"
-                                : assignment.status === "changes_requested"
-                                  ? "继续修改"
-                                  : "打开本店创作"}
+                        {draft(assignment)?.loading ? "正在为本店准备…" : busy === assignment.id
+                          ? "正在打开…" : assignment.available === false ? "活动已结束"
+                          : assignment.status === "published" ? "已确认发布"
+                          : draft(assignment)?.value?.result ? "打开这篇"
+                          : draft(assignment)?.error ? (["failed", "cancelled"].includes(draft(assignment)?.value?.status || "") ? "重新准备这篇" : "继续查看") : "准备本店图文"}
                         <span>↗</span>
-                      </button>
+                      </button>}
+                      {assignment.available !== false && !["published", "submitted", "approved"].includes(assignment.status) && (
+                        <button className="mq-text-button" disabled={!!busy || !!preparing[preparationKey(assignment)]} onClick={() => void start(assignment, false)}>
+                          {preparing[preparationKey(assignment)] ? "正在打开创作…" : "添张照片，或说一句"}
+                        </button>
+                      )}
+                      {draft(assignment)?.value?.result && assignment.available !== false && (
+                        <button className="mq-text-button" disabled={!!busy || !!draft(assignment)?.loading} onClick={() => void requestDraft(assignment, true)}>
+                          换个角度 ↻
+                        </button>
+                      )}
                     </div>
                   </article>
                 ))
               ) : (
                 <div className="mq-channel-empty">
                   <Character />
-                  <h2>好主题，正在酝酿。</h2>
+                  <h2>{pastAssignmentCount ? "当前没有待处理活动。" : "还没有团队活动。"}</h2>
                   <p>
                     {canCreate
                       ? "创建一次活动，把共同任务交给门店。"
@@ -317,6 +461,11 @@ export default function ChannelWorkspace({
                     </button>
                   )}
                 </div>
+              )}
+              {pastAssignmentCount > 0 && (
+                <button className="mq-text-button mq-assignment-history-toggle" onClick={() => setShowPast((value) => !value)} aria-expanded={showPast}>
+                  {showPast ? "收起过往活动" : `查看已结束与已发布的活动（${pastAssignmentCount}）`}
+                </button>
               )}
             </div>
           )}
@@ -512,6 +661,7 @@ export default function ChannelWorkspace({
                           .join(" · ")}
                       </p>
                     ) : null}
+                    {campaign.status === "active" && <CampaignOpportunities key={`${campaign.id}:${campaign.version}`} campaignId={campaign.id} />}
                     {canCreate && (
                       <div className="mq-card-actions">
                         {campaign.status === "draft" && (

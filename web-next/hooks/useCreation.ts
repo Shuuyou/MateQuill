@@ -8,6 +8,7 @@ import {
   intake,
   runTask,
   waitForRunJob,
+  reviseCreation,
 } from "@/lib/api";
 import type {
   MediaIntake,
@@ -239,6 +240,22 @@ export function useCreation(scopeKey: string) {
   }
   async function revise(instruction: string) {
     if (!data.task) return;
+    if (data.result?.status === "ready" && data.task.platform !== "poster") {
+      if (active.current) return;
+      active.current = true;
+      setError("");
+      setPhase("generating");
+      try {
+        const result = await reviseCreation(data.result.run_id, instruction);
+        remember(result, result._poster_task || data.task);
+      } catch (reason) {
+        setError(reason instanceof Error ? reason.message : "这次修改没有完成，原稿已保留。");
+      } finally {
+        active.current = false;
+        setPhase("idle");
+      }
+      return;
+    }
     await direct(
       {
         ...data.task,
@@ -303,6 +320,13 @@ export function useCreation(scopeKey: string) {
     reopen,
     reset,
     resume,
+    openDraft: (result: RunResult, task: RunTask, assignmentId: string) => {
+      setQuestions([]);
+      setError("");
+      setPhase("idle");
+      update({ assignmentId, query: task.scene || "", answers: {}, media: [], poster: null });
+      remember(result, task);
+    },
     startAssignment: (task: RunTask, assignmentId: string) => {
       setQuestions([]);
       setError("");

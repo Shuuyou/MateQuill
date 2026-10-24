@@ -1,5 +1,6 @@
 from __future__ import annotations
 import re
+from copy import deepcopy
 import time
 import hashlib
 import asyncio
@@ -22,6 +23,26 @@ PLATFORMS = {
 }
 
 
+def _persist_reader_value(result, llm):
+    """Keep exact typed payoff judgement beside the already saved review.
+
+    No model call, new score or separate repair loop is introduced here.
+    """
+    review = (getattr(llm, 'marketing_review', None) or {}).get('reader_value')
+    contract = getattr(llm, 'reader_value_contract', None)
+    if not isinstance(review, dict) or not isinstance(contract, dict):
+        result.strategy.pop('reader_value', None)
+        return
+    from .reader_value import reader_revision_brief
+    result.strategy['reader_value'] = {
+        'contract': deepcopy(contract), 'review': deepcopy(review),
+        'revision_brief': reader_revision_brief(review, contract),
+        'history': [deepcopy(row['reader_value']) for row in getattr(llm, 'marketing_review_history', [])
+                    if isinstance(row, dict) and isinstance(row.get('reader_value'), dict)][-4:],
+        'delivery_basis': 'validated public text and card copy; image files/pixels checked separately',
+    }
+
+
 def norm(value):
     return re.sub(r'[\s\-_·（）()]', '', value).casefold()
 
@@ -29,6 +50,23 @@ def norm(value):
 def qualifier_norm(value):
     """Typography changes are harmless; words, digits and negation stay significant."""
     return re.sub(r'[\W_]+','',value,flags=re.UNICODE).casefold()
+
+
+def promotion_assertions(text):
+    """Separate an offer assertion from an explicit disclaimer or question.
+
+    A quoted limitation such as '不代表本店当前价格、库存或优惠' makes
+    no promotion promise. Numeric offers and affirmative claims still require
+    supporting evidence and remain subject to the independent semantic review.
+    """
+    for match in re.finditer(r'国补|补贴|优惠|到手价|赠送|销量|获奖', text):
+        before = re.split(r'[。！？；;\n，,]', text[:match.start()])[-1]
+        after = re.split(r'[。！？；;\n，,]', text[match.end():])[0]
+        negative_or_question = re.search(
+            r'(?:不代表|不包含|不涉及|不提供|不承诺|不宣传|未提供|未包含|没有|并无|有无|是否有|有没有|能否享受)[^\d]{0,28}$', before)
+        if negative_or_question and not re.search(r'\d|[一二三四五六七八九十两]+折', before + after):
+            continue
+        yield match.group()
 
 
 def strip_selected_model_names(text, products):
@@ -56,7 +94,8 @@ def connector_platform_rule(task, bundle=None, strategy=None):
         raise ValueError('Connector must declare complete platform_rule')
     if not isinstance(rule['min_images'],int) or not isinstance(rule['max_images'],int) or not 0<=rule['min_images']<=rule['max_images']<=12:
         raise ValueError('Invalid connector image limits')
-    return rule
+    from .daily_delivery import daily_platform_rule
+    return daily_platform_rule(task.platform, rule)
 
 
 def scenario_plan(task, bundle):
@@ -195,7 +234,7 @@ class AgentWorkflow:
             return asset.id
         return None
 
-    def _audit(self, task, result, bundle):
+    def _audit(self, task, result, bundle, condition_exemptions=None):
         issues = []
         def add(category,message):
             issues.append(AuditItem(severity='error',category=category,message=message))
@@ -207,7 +246,7 @@ class AgentWorkflow:
             add('model','任务指定型号与知识包型号不一致，需要确认准确型号')
         if task.mode == 'live' and any(s.provider != 'ima' for s in bundle.sources):
             add('evidence','实时模式来源必须全部来自ima')
-        if task.mode == 'local' and any(s.provider not in ('local_archive','huawei_official','store_knowledge','store_upload') for s in bundle.sources):
+        if task.mode == 'local' and any(s.provider not in ('local_archive','huawei_official','store_knowledge','store_upload','campaign_reference') for s in bundle.sources):
             add('evidence','正式本地模式须使用赛事附件或华为官方原文，不能用演练资料替代')
         for fact in bundle.facts:
             source = source_map.get(fact.source_id)
@@ -227,6 +266,9 @@ class AgentWorkflow:
         card_labels=[f'创意卡片 {c.get("id",i+1)}' for i,c in enumerate(result.creative_plan.get('cards',[]))]
         variant_labels=[f'标题封面候选 {i+1}' for i,_ in enumerate(result.creative_plan.get('test_variants',[]))]
         block_labels=[f'正文第{i+1}段' for i in range(len(result.blocks))]+card_labels+variant_labels
+        surface_keys = ([f'body:{i}' for i in range(len(result.blocks))]
+            + [f'card:{c.get("id", i+1)}' for i,c in enumerate(result.creative_plan.get('cards', []))]
+            + [f'variant:{i}' for i,_ in enumerate(result.creative_plan.get('test_variants', []))])
         for block_index,block in enumerate(review_blocks):
             location=block_labels[block_index] if block_index<len(block_labels) else f'图文片段 {block_index+1}'
             valid = [fact_map[x] for x in block.fact_ids if x in fact_map]
@@ -254,7 +296,10 @@ class AgentWorkflow:
             for f in valid:
                 for qualifier in f.qualifiers:
                     if qualifier and qualifier_norm(qualifier) not in qualifier_norm(block.text+' '+' '.join(block.disclosures)):
-                        add('qualifier',f'正文遗漏事实 {f.id} 的限定条件：{qualifier}')
+                        from .claim_conditions import condition_exemption_matches
+                        if not condition_exemption_matches(condition_exemptions or [],
+                                surface=surface_keys[block_index], fact_id=f.id, qualifier=qualifier, text=block.text):
+                            add('qualifier',f'正文遗漏事实 {f.id} 的限定条件：{qualifier}')
                 if '右侧' in f.label and '供电' in f.value and '供电' in block.text:
                     if not re.search(r'右侧[^。；;\n]{0,160}供电',block.text):
                         add('qualifier','对外供电能力必须明确归属右侧接口，不能泛化到左侧或所有接口')
@@ -262,12 +307,12 @@ class AgentWorkflow:
         if re.search(r'\d+(?:\.\d+)?\s*(?:元|GB|TB|Hz|英寸|毫米|小时|%|g|kg|mm|nit|W)\b',other,re.I):
             add('citation','标题/导语/行动引导含未逐条引用的参数或价格')
         all_text = other + ' '.join(b.text+' '+' '.join(b.disclosures) for b in review_blocks) + ' '.join(i.caption for i in result.images)
-        for term in ['全国第一','行业第一','全网最低','百分百','100%保证','绝对不卡','永久免费','闭眼买','遥遥领先','最强','顶级','保证兼容','亲测','我用了']:
+        for term in ['全国第一','行业第一','全网最低','百分百','100%保证','绝对不卡','永久免费','保证兼容','亲测','我用了']:
             if term in all_text:
                 add('compliance',f'需删除无依据或高风险表达：{term}')
         if re.search(r'国补|补贴|优惠|到手价|赠送|销量|获奖',all_text):
             supporting = ' '.join(f.quote for f in bundle.facts)
-            for term in re.findall(r'国补|补贴|优惠|到手价|赠送|销量|获奖',all_text):
+            for term in promotion_assertions(all_text):
                 if term not in supporting:
                     add('price',f'缺少知识库依据：{term}')
         rule = connector_platform_rule(task,bundle,result.strategy)
@@ -329,7 +374,7 @@ class AgentWorkflow:
             existing=sum(t.stage=='model_usage' for t in result.trace)
             for metric in getattr(self.llm,'metrics',[])[existing:]:
                 result.trace.append(TraceItem(stage='model_usage',duration_ms=metric['duration_ms'],
-                    detail=f"模型调用 {metric['call']}/4；{metric.get('outcome','success')}；输入 {metric['prompt_tokens']} tokens，输出 {metric['completion_tokens']} tokens，总计 {metric['total_tokens']} tokens"))
+                    detail=f"模型调用 {metric['call']}/{getattr(self.llm,'max_calls',4)}；{metric.get('outcome','success')}；输入 {metric['prompt_tokens']} tokens，输出 {metric['completion_tokens']} tokens，总计 {metric['total_tokens']} tokens"))
         def semantic_verdict(items):
             supported=any(a.severity=='info' and a.category=='semantic' and
                 re.search('直接支持|核验通过|事实.*支持|supported',a.message,re.I) for a in items)
@@ -353,6 +398,18 @@ class AgentWorkflow:
                          'goal':task.goal or '让用户理解产品与自身需求的关系，并预约验证',
                          'angle':f'从{task.audience}在{task.scene}中的实际任务与阻碍切入',
                          'evidence_policy':'仅使用本次检索原文；不推断软件兼容、补贴资格或个人体验'}
+        if task.platform == 'moments':
+            familiar = bool(re.search('熟客|老顾客|已购|买过|购后', task.audience))
+            result.strategy['moments_strategy'] = {
+                'relationship': 'existing_customer' if familiar else 'unspecified_followers',
+                'purchase_stage': task.stage,
+                'opening': '从本次任务或真实素材里的一项具体观察开头，像当面说一句话',
+                'structure': '只讲清一件有用或有趣的事，图片和文字互相补充',
+                'tone': '自然、简洁，保留店员自己的表达；不用品牌发布会口吻',
+                'ending': '根据这篇内容自然收尾，确有需要时邀请回应，不强制加到店口号',
+                'tags': [],
+                'context_rule': '关注、到店、领礼或周边地点不代表购买阶段，也不据此推断好友画像',
+            }
         trace('strategy','已确定人群、场景、购买阶段与平台策略')
         try:
             bundle = EvidenceBundle.model_validate(await self.provider.retrieve(task.product, f'{task.audience} {task.scene} {task.requirements}'))
@@ -365,9 +422,17 @@ class AgentWorkflow:
         # Public result carries opaque asset routes and source titles, never private paths or signed URLs.
         result.assets=[a.model_copy(update={'url':'/api/assets/'+a.id,'local_path':''}) for a in bundle.assets]
         from .local_knowledge import official_url
-        result.sources=[s.model_copy(update={'url':s.url if s.provider=='huawei_official' and official_url(s.url) else ''}) for s in bundle.sources]
+        from .campaign_evidence import public_reference_url
+        result.sources=[s.model_copy(update={'url':s.url if (s.provider=='huawei_official' and official_url(s.url)) or
+            (s.provider=='campaign_reference' and public_reference_url(s.url)) else ''}) for s in bundle.sources]
         result.audit.extend(AuditItem(severity='warning',category='retrieval',message=w) for w in bundle.warnings)
         result.strategy.update(scenario_plan(task,bundle))
+        if task.assignment_id:
+            from .campaign_evidence import assignment_context
+            result.strategy['strategy_context'] = assignment_context(task)
+        from .strategy_registry import strategy_for_task
+        if task.platform in ('xiaohongshu', 'wechat', 'moments', 'poster'):
+            result.strategy['strategy_snapshot'] = strategy_for_task(task, bundle, result.strategy)
         trace('retrieval',f'收到 {len(bundle.facts)} 条事实、{len(bundle.assets)} 张素材和 {len(bundle.sources)} 个来源')
         if bundle.conflicts or not bundle.facts or (task.mode=='live' and not bundle.verified_live) or (task.mode=='local' and not bundle.verified_local):
             result.status='blocked'
@@ -395,6 +460,9 @@ class AgentWorkflow:
                 result.creative_plan={}
                 creative_plan_errors.append(AuditItem(severity='error',category='creative_schema',
                     message='创意分镜结构无效，必须在本轮修复中重新生成；未将无效卡片作为成品输出'))
+            creative_execution = getattr(self.llm, 'creative_execution', None)
+            if isinstance(creative_execution, dict):
+                result.strategy['creative_execution'] = deepcopy(creative_execution)
             proposal=data.get('strategy',{})
             if isinstance(proposal,dict):
                 valid_ids={f.id for f in bundle.facts}
@@ -472,21 +540,70 @@ class AgentWorkflow:
             result.editorial_review=editorial_review(task,result)
             if enabled:
                 semantic=semantic_verdict(await self.llm.verify(result,bundle))
-                result.audit.extend(semantic)
+                result.audit = [a for a in result.audit if a.category == 'retrieval']
+                result.audit.extend(self._audit(task, result, bundle, getattr(self.llm, 'condition_exemptions', None)) + creative_plan_errors + semantic)
+                if getattr(self.llm, 'condition_exemptions', None):
+                    result.strategy['condition_exemptions'] = deepcopy(self.llm.condition_exemptions)
+                if getattr(self.llm, 'marketing_review', None):
+                    result.strategy['marketing_review'] = deepcopy(self.llm.marketing_review)
+                    result.strategy['marketing_review_history'] = deepcopy(self.llm.marketing_review_history)
+                    result.strategy['marketing_context'] = deepcopy(getattr(self.llm, 'marketing_context', {}))
+                    _persist_reader_value(result, self.llm)
                 trace('semantic_verification','完成独立语义事实核验')
                 if (any(a.severity=='error' for a in result.audit) or any(a.severity=='warning' for a in result.editorial_review)) and hasattr(self.llm,'repair'):
-                    apply(await self.llm.repair(task,bundle,result.strategy,result))
+                    reselect = (getattr(self.llm, 'marketing_review', {}) or {}).get('decision') == 'reselect' and hasattr(self.llm, 'reselect')
+                    if reselect:
+                        rejected = {'draft': result.model_dump(include={'title','intro','blocks','cta','tags','creative_plan'}),
+                                    'review': deepcopy(self.llm.marketing_review)}
+                        result.strategy['marketing_rejected_drafts'] = [*result.strategy.get('marketing_rejected_drafts', []), rejected][-2:]
+                        apply(await self.llm.reselect(task,bundle,result.strategy,result))
+                    else:
+                        apply(await self.llm.repair(task,bundle,result.strategy,result))
                     if cover_assembly_allowed and await self._official_cover(task, result, bundle):
                         trace('cover_assembly','修订稿选入本次已核对官方产品封面，随后重新执行完整审查')
                     result.audit=[a for a in result.audit if a.category=='retrieval']
-                    result.audit.extend(self._audit(task,result,bundle))
+                    semantic = semantic_verdict(await self.llm.verify(result,bundle))
+                    result.audit.extend(self._audit(task,result,bundle,getattr(self.llm, 'condition_exemptions', None)))
                     result.audit.extend(creative_plan_errors)
-                    result.audit.extend(semantic_verdict(await self.llm.verify(result,bundle)))
-                    trace('repair','已执行唯一一次修复并重新核验')
+                    result.audit.extend(semantic)
+                    result.strategy['condition_exemptions'] = deepcopy(getattr(self.llm, 'condition_exemptions', []))
+                    if getattr(self.llm, 'marketing_review', None):
+                        result.strategy['marketing_review'] = deepcopy(self.llm.marketing_review)
+                        result.strategy['marketing_review_history'] = deepcopy(self.llm.marketing_review_history)
+                        result.strategy['marketing_context'] = deepcopy(getattr(self.llm, 'marketing_context', {}))
+                        _persist_reader_value(result, self.llm)
+                    trace('automatic_reselection' if reselect else 'repair',
+                          '已废弃被拒命题、自动重选题并重新核验' if reselect else '已保留创意执行一次局部修复并重新核验')
+                    # One failed local edit may reveal a premise problem. Use
+                    # the remaining shared budget for ONE reselection, never a
+                    # new unbounded generation request from the planner.
+                    latest = getattr(self.llm, 'marketing_review', {}) or {}
+                    remaining = getattr(self.llm, 'max_calls', 0) - getattr(self.llm, '_calls', 0)
+                    if (not reselect and latest.get('decision') in ('revise', 'reselect')
+                            and hasattr(self.llm, 'reselect') and remaining >= 3):
+                        result.strategy['marketing_rejected_drafts'] = [*result.strategy.get('marketing_rejected_drafts', []),
+                            {'draft': result.model_dump(include={'title','intro','blocks','cta','tags','creative_plan'}),
+                             'review': deepcopy(latest)}][-2:]
+                        apply(await self.llm.reselect(task, bundle, result.strategy, result))
+                        if cover_assembly_allowed:
+                            await self._official_cover(task, result, bundle)
+                        semantic = semantic_verdict(await self.llm.verify(result, bundle))
+                        result.audit = [a for a in result.audit if a.category == 'retrieval']
+                        result.audit.extend(self._audit(task,result,bundle,getattr(self.llm,'condition_exemptions',None)) + creative_plan_errors + semantic)
+                        result.strategy.update(marketing_review=deepcopy(self.llm.marketing_review),
+                            marketing_review_history=deepcopy(self.llm.marketing_review_history),
+                            marketing_context=deepcopy(getattr(self.llm,'marketing_context',{})),
+                            condition_exemptions=deepcopy(getattr(self.llm,'condition_exemptions',[])))
+                        _persist_reader_value(result, self.llm)
+                        trace('automatic_reselection', '局部修订未解决关系或创意问题，已在剩余预算内自动重选题并独立复核')
             else:
                 result.audit.append(AuditItem(severity='warning',category='semantic',message='未运行模型语义核验，不能用于发布'))
         except Exception as exc:
             model_metrics()
+            if getattr(self.llm, 'marketing_review_failure', None):
+                result.strategy['marketing_review_failure'] = deepcopy(self.llm.marketing_review_failure)
+            if getattr(self.llm, 'marketing_review_schema_errors', None):
+                result.strategy['marketing_review_schema_errors'] = deepcopy(self.llm.marketing_review_schema_errors)
             result.status='blocked'
             detail=getattr(exc,'safe_message',type(exc).__name__)
             explanation={
@@ -503,6 +620,10 @@ class AgentWorkflow:
         result.sales_plan=build_sales_plan(task,bundle,result.strategy)
         model_metrics()
         result.status='blocked' if errors else ('ready' if task.mode in ('local','live') else 'draft')
+        from .daily_delivery import daily_delivery_record
+        delivery = daily_delivery_record(task.platform, len(result.images))
+        if delivery:
+            result.strategy['content_delivery'] = delivery
         if task.mode=='demo':
             result.audit.append(AuditItem(severity='warning',category='demo',message='独立演练模式：结果仅为草稿，不代表正式生成与审查已完成'))
         trace('complete','已完成硬约束、来源与合规核验；'+('允许导出已审核稿' if result.status=='ready' else '保留草稿或阻断状态'))

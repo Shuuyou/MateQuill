@@ -25,6 +25,7 @@ from .tenancy import (authorize_resource, authorize_scope, get_engine, list_reso
 from .tenancy.context import MANAGERS
 from .tenancy.database import db_connection, metadata
 from .tenancy.resources import audit, service_update_body
+from .campaign_evidence import CampaignReference
 
 CHANNEL_CAMPAIGN = 'channel_campaign'
 ASSIGNMENT = 'channel_assignment'
@@ -60,6 +61,10 @@ class CampaignPackageInput(ChannelModel):
     editable_fields: list[str] = Field(default_factory=lambda: ['场景', '门店照片', '表达与联系入口'], max_length=20)
     starts_at: str | None = None
     ends_at: str | None = None
+    publisher_kind: str = Field(default='regional', pattern='^(brand|regional)$')
+    publisher_label: str = Field(default='', max_length=160)
+    is_simulation: bool = False
+    source_refs: list[CampaignReference] = Field(default_factory=list, max_length=8)
 
     @field_validator('title', 'brief', 'product')
     @classmethod
@@ -186,7 +191,11 @@ def _task(package, store, planned_task=None):
     instructions = json.loads(task['requirements'])
     instructions['campaign'] = {'title': package['title'], 'version': package['version'],
         'required_copy': package.get('required_copy', ''), 'editable_fields': package.get('editable_fields', []),
-        'starts_at': package.get('starts_at'), 'ends_at': package.get('ends_at')}
+        'starts_at': package.get('starts_at'), 'ends_at': package.get('ends_at'),
+        'publisher_kind': package.get('publisher_kind', 'regional'),
+        'publisher_label': package.get('publisher_label', ''),
+        'is_simulation': package.get('is_simulation', False),
+        'source_refs': package.get('source_refs', [])}
     task['requirements'] = json.dumps(instructions, ensure_ascii=False)
     return task
 
@@ -215,6 +224,7 @@ def _assign(package):
         body = {'id': identifier, 'campaign_id': package['id'], 'campaign_version': package['version'],
             'title': package['title'], 'store_id': store_id, 'store_name': store['name'],
             'status': 'pending', 'task': planned_task, 'claimed_by': None,
+            **{key: package.get(key) for key in ('publisher_kind', 'publisher_label', 'is_simulation', 'source_refs')},
             'submission_id': None, 'created_at': timestamp, 'updated_at': timestamp}
         save_body(ASSIGNMENT, identifier, body, store_id=store_id, visibility='store')
 
@@ -240,7 +250,7 @@ def create_campaign(payload: CampaignPackageInput):
     if payload.starts_at and payload.ends_at and payload.starts_at >= payload.ends_at:
         raise HTTPException(422, '活动结束时间需要晚于开始时间')
     timestamp = now_iso()
-    body = {**payload.model_dump(), 'store_ids': store_ids, 'id': uuid4().hex,
+    body = {**payload.model_dump(mode='json'), 'store_ids': store_ids, 'id': uuid4().hex,
         'tenant_id': context.tenant_id, 'version': 1, 'status': 'draft',
         'created_by': context.user_id, 'created_at': timestamp, 'updated_at': timestamp,
         'assignments_count': len(store_ids)}
@@ -258,7 +268,7 @@ def update_campaign(identifier, payload: CampaignPackageInput):
     store_ids = _store_ids(payload.store_ids)
     if payload.starts_at and payload.ends_at and payload.starts_at >= payload.ends_at:
         raise HTTPException(422, '活动结束时间需要晚于开始时间')
-    body = {**old, **payload.model_dump(), 'store_ids': store_ids, 'version': old['version'] + 1,
+    body = {**old, **payload.model_dump(mode='json'), 'store_ids': store_ids, 'version': old['version'] + 1,
             'status': 'draft', 'updated_at': now_iso(), 'assignments_count': len(store_ids)}
     _transition(CHANNEL_CAMPAIGN, meta, body)
     _revoke_package_grants(identifier)
@@ -404,6 +414,8 @@ def submit_content(payload: SubmissionInput):
     assignment.update(status='submitted', claimed_by=assignment.get('claimed_by') or context.user_id,
                       submission_id=body['id'], updated_at=timestamp)
     _transition(ASSIGNMENT, assignment_meta, assignment)
+    from .strategy_registry import record_workflow_event
+    record_workflow_event(payload.run_id, 'adopted')
     audit('content.submitted', SUBMISSION, body['id'], {'run_id': payload.run_id, 'revision': body['revision']})
     return body
 
@@ -509,6 +521,8 @@ def publish_submission(identifier, payload: PublicationInput):
     _transition(SUBMISSION, meta, body)
     assignment.update(status='published', updated_at=timestamp)
     _transition(ASSIGNMENT, assignment_meta, assignment)
+    from .strategy_registry import record_workflow_event
+    record_workflow_event(body['run_id'], 'published', publication_id=publication['id'])
     audit('publication.manually_confirmed', PUBLICATION, publication['id'])
     return body
 
@@ -570,7 +584,8 @@ def create_grant(identifier, payload: GrantInput):
     # Only the explicitly shared immutable campaign package is included, not any
     # source store profiles, customer input, drafts, recordings or private assets.
     shared_fields = {'id', 'title', 'brief', 'product', 'platform', 'ecosystem_products',
-                     'goal', 'required_copy', 'editable_fields', 'starts_at', 'ends_at', 'version', 'status'}
+                     'goal', 'required_copy', 'editable_fields', 'starts_at', 'ends_at', 'version', 'status',
+                     'publisher_kind', 'publisher_label', 'is_simulation', 'source_refs'}
     snapshot = {key: value for key, value in package.items() if key in shared_fields}
     row = {'id': uuid4().hex, 'sender_tenant_id': context.tenant_id,
            'recipient_tenant_id': payload.recipient_tenant_id, 'snapshot': json.dumps(snapshot, ensure_ascii=False),
