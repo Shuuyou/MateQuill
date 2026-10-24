@@ -134,6 +134,9 @@ def get_turn(conversation_id, identifier):
         projected['status'] = state
     elif state == 'cancelled':
         projected.update(status='failed',message='这次任务的权限已经更新，可以开始新的创作。')
+    from .progress import project_progress, project_process
+    projected['progress'] = project_progress(body, projected['status'])
+    projected['process'] = project_process(body, projected['status'])
     return projected
 
 

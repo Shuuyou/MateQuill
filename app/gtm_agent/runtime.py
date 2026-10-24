@@ -343,6 +343,8 @@ async def run_turn(identifier, *, planner=None, tools_factory=None, max_steps=No
             if decision.tool in {'generate_content','revise_content','create_poster','create_design_bundle','revise_design'}:
                 generation_attempted = True
             async with asyncio.timeout(max(1,deadline-time.monotonic())):
+                update_turn(identifier, lambda body: {**body, 'current_tool': decision.tool,
+                    'tool_started_at': time.time()})
                 result = await tools.execute(decision.tool, decision.arguments)
             failed_invocations.clear()
             if decision.tool == 'prepare_opportunity' and isinstance(result, dict) and isinstance(result.get('opportunity'), dict):
@@ -364,7 +366,7 @@ async def run_turn(identifier, *, planner=None, tools_factory=None, max_steps=No
             observations.append(observation)
             # Persist observations only after the tool actually returned.
             def apply(body):
-                return {**body,'source_ids':source_ids,'observations':observations[-12:],
+                return {**body,'current_tool': None,'source_ids':source_ids,'observations':observations[-12:],
                     'media_transcripts':turn['media_transcripts'],'updated_at':time.time()}
             assert_agent_lease()
             update_turn(identifier,apply)

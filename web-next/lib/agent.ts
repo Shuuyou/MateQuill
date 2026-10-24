@@ -59,6 +59,7 @@ export interface AgentTurn {
   conversation_id: string;
   status: "queued" | "running" | "completed" | "needs_input" | "failed";
   message?: string;
+  progress?: { stage: string; message: string } | null;
   artifact?: AgentArtifact | null;
   quotation?: { id: string } | null;
   questions?: AgentQuestion[];

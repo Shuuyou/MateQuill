@@ -131,6 +131,7 @@ export default function ConversationWorkspace({
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [reconnecting, setReconnecting] = useState(false);
+  const [workingMessage, setWorkingMessage] = useState("正在准备这次创作。");
   const [pending, setPending] = useState<PendingTurn | null>(null);
   const [questions, setQuestions] = useState<AgentQuestion[]>([]);
   const [error, setError] = useState("");
@@ -177,6 +178,7 @@ export default function ConversationWorkspace({
   }
   function rememberPending(value: PendingTurn | null) {
     setPending(value);
+    setWorkingMessage("正在准备这次创作。");
     if (value)
       sessionStorage.setItem(`${storage}:pending`, JSON.stringify(value));
     else sessionStorage.removeItem(`${storage}:pending`);
@@ -227,6 +229,7 @@ export default function ConversationWorkspace({
       while (live.current && token === epoch.current) {
         const turn = await readProgress(() => getAgentTurn(value.conversation_id, turnId!));
         if (!live.current || token !== epoch.current) return;
+        setWorkingMessage(turn.progress?.message || "正在准备这次创作。");
         if (terminal.has(turn.status)) {
           const current = await readProgress(() => getConversation(value.conversation_id));
           if (!live.current || token !== epoch.current) return;
@@ -668,7 +671,7 @@ export default function ConversationWorkspace({
           {busy && (
             <li className="mq-conversation-working" role="status">
               <Character state="thinking" />
-              <p>{reconnecting ? "正在接回最新进展。" : "我在接着做这件事。"}</p>
+              <p>{reconnecting ? "正在接回最新进展。" : workingMessage}</p>
             </li>
           )}
         </ol>

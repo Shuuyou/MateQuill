@@ -12,6 +12,21 @@ import time
 ROOT = Path(__file__).resolve().parents[1]
 
 
+def preview_environment(settings, inherited=None):
+    env = dict(os.environ if inherited is None else inherited)
+    review_keys = ('MATEQUILL_FACT_REVIEW_USE_PLANNER', 'MATEQUILL_MARKETING_REVIEW_USE_PLANNER')
+    env.update({key: str(value) for key, value in settings.items()
+                if key.startswith(('LLM_', 'IMAGE_', 'ASR_', 'DESIGN_', 'CONTENT_', 'DIVERSITY_EMBEDDING_'))
+                or key in review_keys})
+    # This dedicated preview uses the reviewed role configuration. Persisted or
+    # inherited explicit choices still win; ordinary application defaults do not
+    # change. Never enable a role without a complete existing LLM connection.
+    configured = all(str(env.get(key, '')).strip() for key in ('LLM_BASE_URL', 'LLM_API_KEY', 'LLM_MODEL'))
+    for key in review_keys:
+        env.setdefault(key, '1' if configured else '0')
+    return env
+
+
 def main():
     for port in (8026, 3004):
         with socket.socket() as probe:
@@ -32,9 +47,7 @@ def main():
     with sqlite3.connect(source.resolve().as_uri()+'?mode=ro', uri=True) as src, sqlite3.connect(database) as dst:
         src.backup(dst)
     settings = json.loads((ROOT/'runtime/owned-launch-settings.json').read_text(encoding='utf-8'))
-    env = dict(os.environ)
-    env.update({key: str(value) for key, value in settings.items()
-                if key.startswith(('LLM_', 'IMAGE_', 'ASR_', 'DESIGN_', 'CONTENT_', 'DIVERSITY_EMBEDDING_'))})
+    env = preview_environment(settings)
     env.update(MATEQUILL_DATABASE_URL='sqlite:///'+database.as_posix(),
                MATEQUILL_ALLOWED_ORIGINS='http://127.0.0.1:3004,http://localhost:3004,http://127.0.0.1:8026',
                MATEQUILL_PUBLIC_URL='', MATEQUILL_STUDIO_PUBLIC_ORIGIN='',
@@ -54,7 +67,9 @@ def main():
     shutil.copyfile(source.parent/'acceptance-cookies.json', folder/'acceptance-cookies.json')
     metadata = {'processes': processes, 'folder': str(folder), 'url': 'http://127.0.0.1:3004',
                 'api_origin': 'http://127.0.0.1:8026', 'database': str(database),
-                'copied_from_isolated_acceptance_only': True, 'main_services_changed': False}
+                'copied_from_isolated_acceptance_only': True, 'main_services_changed': False,
+                'review_roles': {key: env[key] == '1' for key in (
+                    'MATEQUILL_FACT_REVIEW_USE_PLANNER', 'MATEQUILL_MARKETING_REVIEW_USE_PLANNER')}}
     (ROOT/'runtime/final-upgrade-preview.json').write_text(json.dumps(metadata, indent=2), encoding='utf-8')
     print(json.dumps(metadata))
 
