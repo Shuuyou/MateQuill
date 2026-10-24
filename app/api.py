@@ -252,6 +252,19 @@ async def _execute_run_task(task: TaskInput, request: Request):
     except asyncio.TimeoutError:
         from .content_models import content_timing_snapshot
         timing = content_timing_snapshot(llm)
+        # Keep completed review evidence in the same private/store-scoped turn.
+        # This is diagnostic data, never an approved artifact or export.
+        from .gtm_agent.effects import _claim, assert_agent_lease
+        claim = _claim.get()
+        if claim:
+            diagnostics = {'timing': timing, 'approved': False,
+                'draft': getattr(llm, 'last_reviewed_draft', None),
+                'marketing_review': getattr(llm, 'marketing_review', None),
+                'product_claim_review': getattr(llm, 'product_claim_review', None)}
+            if len(json.dumps(diagnostics, ensure_ascii=False)) <= 100000:
+                from .gtm_agent.repository import update_turn
+                assert_agent_lease()
+                update_turn(claim[0], lambda body: {**body, 'generation_diagnostics': diagnostics})
         import logging
         logging.getLogger(__name__).warning('Content workflow timeout: %s', json.dumps(timing))
         raise HTTPException(504, {'code': 'content_workflow_timeout',

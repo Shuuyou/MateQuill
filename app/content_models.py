@@ -6,6 +6,7 @@ This factory performs no requests and adds no retry or provider fallback.
 """
 from .config import settings
 from .llm import ModelCallError, OpenAICompatibleLLM
+import re
 
 
 REASONING_CONTENT_MODELS = frozenset({'gpt-6-astra', 'gpt-6.1-sol'})
@@ -25,7 +26,7 @@ class ContentLLM(OpenAICompatibleLLM):
 
 
 def build_content_model(*, calls=4, tokens=2400, timeout=60, configuration=None,
-                        concept_preflight=False):
+                        concept_preflight=False, fact_reviewer=None):
     """Return one client with the caller's existing workflow budgets."""
     configuration = settings if configuration is None else configuration
     explicit = tuple(getattr(configuration, field, '') for field in
@@ -47,6 +48,20 @@ def build_content_model(*, calls=4, tokens=2400, timeout=60, configuration=None,
     # of the completed draft adds a serial judgement (and sometimes a second
     # exploration), with no publishable result yet. Batch callers can opt in.
     result.concept_preflight_enabled = bool(concept_preflight)
+    if fact_reviewer is None and getattr(configuration, 'fact_review_use_planner', False):
+        connection = tuple(getattr(configuration, field, '') for field in
+            ('llm_base_url', 'llm_api_key', 'llm_model'))
+        if any(not isinstance(value, str) for value in connection):
+            raise ModelCallError('invalid_fact_review_configuration')
+        connection = tuple(value.strip() for value in connection)
+        if not all(connection):
+            raise ModelCallError('incomplete_fact_review_configuration')
+        fact_reviewer = OpenAICompatibleLLM(*connection, timeout=45, max_calls=calls, max_tokens=tokens)
+    if fact_reviewer is not None:
+        if (not isinstance(fact_reviewer, OpenAICompatibleLLM) or not fact_reviewer.enabled
+                or getattr(fact_reviewer, 'fact_reviewer', None) is not None):
+            raise ModelCallError('invalid_fact_review_configuration')
+        result.fact_reviewer = fact_reviewer
     return result
 
 
@@ -62,6 +77,10 @@ def content_timing_snapshot(model):
         stage = stage if stage in stages else 'model'
         duration = metric.get('duration_ms', 0)
         duration = duration if isinstance(duration, int) and not isinstance(duration, bool) else 0
-        rows.append({'stage': stage, 'duration_ms': max(0, min(duration, 600000))})
+        row = {'stage': stage, 'duration_ms': max(0, min(duration, 600000))}
+        model_name = metric.get('model')
+        if isinstance(model_name, str) and re.fullmatch(r'[A-Za-z0-9._:/-]{1,100}', model_name):
+            row['model'] = model_name
+        rows.append(row)
     return {'completed_calls': len(rows), 'model_duration_ms': sum(row['duration_ms'] for row in rows),
             'calls': rows}

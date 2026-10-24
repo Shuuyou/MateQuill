@@ -143,6 +143,9 @@ class OpenAICompatibleLLM:
             raise ModelCallError('input_budget_exceeded')
         self._calls += 1
         started=time.monotonic()
+        fact_reviewer = getattr(self, 'fact_reviewer', None)
+        if isinstance(payload, dict) and 'assessment_scope' in payload and fact_reviewer is not None:
+            return await self._fact_review_once(fact_reviewer, system, payload, temperature, started)
         body = self._chat_body(system, serialized, temperature)
         if 'deepseek.com' in self.base_url:
             body['thinking'] = {'type':'disabled'}
@@ -208,10 +211,37 @@ class OpenAICompatibleLLM:
             outcome='invalid_model_json'
             raise ModelCallError(outcome) from None
         finally:
-            self.metrics.append({'call':self._calls,'stage':stage,'duration_ms':int((time.monotonic()-started)*1000),
+            self.metrics.append({'call':self._calls,'stage':stage,'model':self.model,'duration_ms':int((time.monotonic()-started)*1000),
                 'prompt_tokens':int(usage.get('prompt_tokens',0)),
                 'completion_tokens':int(usage.get('completion_tokens',0)),
                 'total_tokens':int(usage.get('total_tokens',0)),'outcome':outcome})
+
+    async def _fact_review_once(self, reviewer, system, payload, temperature, started):
+        """One explicit reviewer request under this client's shared call budget.
+
+        The outer _json owns any format retry. A transport failure never switches
+        back to the writer, and verify() still validates every returned claim.
+        """
+        before = len(reviewer.metrics)
+        outcome = 'success'
+        try:
+            if reviewer is self or getattr(reviewer, 'fact_reviewer', None) is not None:
+                raise ModelCallError('invalid_fact_review_configuration')
+            return await reviewer._json_once(system, payload, temperature)
+        except asyncio.CancelledError:
+            outcome = 'cancelled'
+            raise
+        except ModelCallError as exc:
+            outcome = exc.safe_message
+            raise
+        except Exception as exc:
+            outcome = type(exc).__name__
+            raise
+        finally:
+            actual = reviewer.metrics[-1] if len(reviewer.metrics) > before else {}
+            self.metrics.append({'call': self._calls, 'stage': 'fact_review', 'model': reviewer.model,
+                'duration_ms': int((time.monotonic()-started)*1000), 'outcome': outcome,
+                **{field: actual.get(field, 0) for field in ('prompt_tokens', 'completion_tokens', 'total_tokens')}})
 
     async def generate(self, task, bundle, strategy):
         prompt = (Path(__file__).resolve().parent.parent / 'prompts/system.txt').read_text(encoding='utf-8')
@@ -354,6 +384,9 @@ class OpenAICompatibleLLM:
             'user_materials':bundle.user_materials},temperature=0.8)
 
     async def verify(self, result, bundle):
+        # Private diagnostic checkpoint: a timeout during later refinement must
+        # not erase the actual draft that prompted the completed review.
+        self.last_reviewed_draft = deepcopy(self._draft(result))
         from .product_claim_wire import product_claim_wire_schema as grouped_claim_schema, decode_product_claim_wire
         from .claim_conditions import (CONDITION_SCOPE_SCHEMA, condition_surface_map,
                                        inspect_condition_exemptions, missing_condition_candidates)
