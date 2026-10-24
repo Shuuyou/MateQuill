@@ -18,6 +18,7 @@ class Settings:
     content_api_key: str = field(default_factory=lambda: os.getenv('CONTENT_API_KEY', ''), repr=False)
     content_model: str = field(default_factory=lambda: os.getenv('CONTENT_MODEL', ''))
     fact_review_use_planner: bool = field(default_factory=lambda: os.getenv('MATEQUILL_FACT_REVIEW_USE_PLANNER', '0') == '1')
+    marketing_review_use_planner: bool = field(default_factory=lambda: os.getenv('MATEQUILL_MARKETING_REVIEW_USE_PLANNER', '0') == '1')
     image_base_url: str = field(default_factory=lambda: os.getenv('IMAGE_BASE_URL', 'https://api.openai-next.com/v1'))
     image_api_key: str = field(default_factory=lambda: os.getenv('IMAGE_API_KEY', ''))
     image_model: str = field(default_factory=lambda: os.getenv('IMAGE_MODEL', 'gpt-image-2.5'))

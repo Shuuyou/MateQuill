@@ -146,6 +146,14 @@ class OpenAICompatibleLLM:
         fact_reviewer = getattr(self, 'fact_reviewer', None)
         if isinstance(payload, dict) and 'assessment_scope' in payload and fact_reviewer is not None:
             return await self._fact_review_once(fact_reviewer, system, payload, temperature, started)
+        marketing_reviewer = getattr(self, 'marketing_reviewer', None)
+        if isinstance(payload, dict) and 'public_surfaces' in payload and 'schema' in payload and marketing_reviewer is not None:
+            review_context = payload.get('context') or {}
+            preflight = (isinstance(review_context, dict) and
+                str(review_context.get('review_scope', '')).startswith('尚未发生的选题提案'))
+            if not preflight:
+                return await self._review_once(marketing_reviewer, system, payload, temperature, started,
+                                               stage='marketing_review')
         body = self._chat_body(system, serialized, temperature)
         if 'deepseek.com' in self.base_url:
             body['thinking'] = {'type':'disabled'}
@@ -217,6 +225,9 @@ class OpenAICompatibleLLM:
                 'total_tokens':int(usage.get('total_tokens',0)),'outcome':outcome})
 
     async def _fact_review_once(self, reviewer, system, payload, temperature, started):
+        return await self._review_once(reviewer, system, payload, temperature, started, stage='fact_review')
+
+    async def _review_once(self, reviewer, system, payload, temperature, started, *, stage):
         """One explicit reviewer request under this client's shared call budget.
 
         The outer _json owns any format retry. A transport failure never switches
@@ -225,8 +236,8 @@ class OpenAICompatibleLLM:
         before = len(reviewer.metrics)
         outcome = 'success'
         try:
-            if reviewer is self or getattr(reviewer, 'fact_reviewer', None) is not None:
-                raise ModelCallError('invalid_fact_review_configuration')
+            if reviewer is self or any(getattr(reviewer, role, None) is not None for role in ('fact_reviewer', 'marketing_reviewer')):
+                raise ModelCallError('invalid_' + stage + '_configuration')
             return await reviewer._json_once(system, payload, temperature)
         except asyncio.CancelledError:
             outcome = 'cancelled'
@@ -239,7 +250,7 @@ class OpenAICompatibleLLM:
             raise
         finally:
             actual = reviewer.metrics[-1] if len(reviewer.metrics) > before else {}
-            self.metrics.append({'call': self._calls, 'stage': 'fact_review', 'model': reviewer.model,
+            self.metrics.append({'call': self._calls, 'stage': stage, 'model': reviewer.model,
                 'duration_ms': int((time.monotonic()-started)*1000), 'outcome': outcome,
                 **{field: actual.get(field, 0) for field in ('prompt_tokens', 'completion_tokens', 'total_tokens')}})
 

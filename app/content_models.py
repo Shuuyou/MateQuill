@@ -26,7 +26,7 @@ class ContentLLM(OpenAICompatibleLLM):
 
 
 def build_content_model(*, calls=4, tokens=2400, timeout=60, configuration=None,
-                        concept_preflight=False, fact_reviewer=None):
+                        concept_preflight=False, fact_reviewer=None, marketing_reviewer=None):
     """Return one client with the caller's existing workflow budgets."""
     configuration = settings if configuration is None else configuration
     explicit = tuple(getattr(configuration, field, '') for field in
@@ -59,9 +59,23 @@ def build_content_model(*, calls=4, tokens=2400, timeout=60, configuration=None,
         fact_reviewer = OpenAICompatibleLLM(*connection, timeout=45, max_calls=calls, max_tokens=tokens)
     if fact_reviewer is not None:
         if (not isinstance(fact_reviewer, OpenAICompatibleLLM) or not fact_reviewer.enabled
-                or getattr(fact_reviewer, 'fact_reviewer', None) is not None):
+                or any(getattr(fact_reviewer, role, None) is not None for role in ('fact_reviewer', 'marketing_reviewer'))):
             raise ModelCallError('invalid_fact_review_configuration')
         result.fact_reviewer = fact_reviewer
+    if marketing_reviewer is None and getattr(configuration, 'marketing_review_use_planner', False):
+        connection = tuple(getattr(configuration, field, '') for field in
+            ('llm_base_url', 'llm_api_key', 'llm_model'))
+        if any(not isinstance(value, str) for value in connection):
+            raise ModelCallError('invalid_marketing_review_configuration')
+        connection = tuple(value.strip() for value in connection)
+        if not all(connection):
+            raise ModelCallError('incomplete_marketing_review_configuration')
+        marketing_reviewer = OpenAICompatibleLLM(*connection, timeout=45, max_calls=calls, max_tokens=tokens)
+    if marketing_reviewer is not None:
+        if (not isinstance(marketing_reviewer, OpenAICompatibleLLM) or not marketing_reviewer.enabled
+                or any(getattr(marketing_reviewer, role, None) is not None for role in ('fact_reviewer', 'marketing_reviewer'))):
+            raise ModelCallError('invalid_marketing_review_configuration')
+        result.marketing_reviewer = marketing_reviewer
     return result
 
 

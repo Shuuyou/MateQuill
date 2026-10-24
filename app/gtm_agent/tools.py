@@ -815,11 +815,23 @@ class AgentTools:
                 with daily_content_delivery(self.turn.get('execution_policy')), direction:
                     result = _value(await _invoke(self.generator, task))
                 if result.get('status') != 'ready':
+                    # This is workflow-owned metadata, not generated prose or
+                    # an editorial issue. Project only its safe machine fields.
+                    strategy = result.get('strategy')
+                    failure = strategy.get('generation_error') if isinstance(strategy, dict) else None
+                    error = {}
+                    if (isinstance(failure, dict) and isinstance(failure.get('code'), str)
+                            and re.fullmatch(r'[A-Za-z0-9_]{1,80}', failure['code'])):
+                        error['code'] = failure['code']
+                        status = failure.get('http_status')
+                        if type(status) is int and 100 <= status <= 599:
+                            error['http_status'] = status
                     return {'status':result.get('status','incomplete'),'questions':result.get('questions',[]),
                         'terminal': True, 'retry_policy': 'workflow_repair_budget_already_used',
+                        **({'error': error} if error else {}),
                         'issues':[{'category':item.get('category'), 'message':str(item.get('message',''))[:600]}
                             for item in result.get('audit',[]) if isinstance(item,dict) and item.get('severity')=='error'][:6],
-                        'message':'这份稿件还需调整，尚未完成交付'}
+                        'message':'生成服务未完成这次请求，需求已保留' if error else '这份稿件还需调整，尚未完成交付'}
                 identifier, kind = result.get('run_id') or result.get('id'), 'run'
                 if not identifier:
                     raise HTTPException(502, '生成结果缺少作品记录')

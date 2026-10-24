@@ -103,6 +103,10 @@ def _generation_transport_code(result):
     explicit = result.get('error_code') or (error.get('code') if isinstance(error, dict) else None)
     if explicit in codes:
         return explicit
+    http_status = error.get('http_status') if isinstance(error, dict) else None
+    if (explicit == 'model_http_error' and type(http_status) is int
+            and (500 <= http_status <= 599 or http_status in {401, 403, 429})):
+        return explicit
     # The workflow's legacy audit is a server-authored model failure message.
     # Do not classify customer copy, creative feedback or arbitrary result text.
     for issue in result.get('issues') or []:
@@ -382,9 +386,13 @@ async def run_turn(identifier, *, planner=None, tools_factory=None, max_steps=No
                 if transport_code:
                     if images_pending(generated):
                         return _partial_delivery(generated, reason='model_transport_error')
-                    return {'status': 'failed', 'message': '模型服务响应超时或中断，本次研究已保留，可以继续这段对话。',
+                    message = ('模型服务未完成这次请求，本次研究已保留。' if transport_code == 'model_http_error'
+                               else '模型服务响应超时或中断，本次研究已保留，可以继续这段对话。')
+                    provider_status = result.get('error', {}).get('http_status') if isinstance(result.get('error'), dict) else None
+                    return {'status': 'failed', 'message': message,
                         'artifact': None, 'questions': [],
-                        'error': {'code': 'model_transport_error', 'provider_code': transport_code}}
+                        'error': {'code': 'model_transport_error', 'provider_code': transport_code,
+                                  **({'http_status': provider_status} if type(provider_status) is int else {})}}
                 if images_pending(generated):
                     return _partial_delivery(generated, reason='creation_review_unresolved')
                 return {'status': 'failed', 'message': '这次创作还没有完成，已保留研究和修改记录。',

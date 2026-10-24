@@ -13,6 +13,7 @@ from .creative_connectors import get_connector
 from .editorial import (bind_legacy_images, choose_preview_images, image_editorial_audit,
                         editorial_review, preview_content_plan, finalize_editorial_layout)
 from .sales import build_sales_plan
+from .llm import ModelCallError
 
 
 PLATFORMS = {
@@ -619,6 +620,13 @@ class AgentWorkflow:
                 result.audit.append(AuditItem(severity='warning',category='semantic',message='未运行模型语义核验，不能用于发布'))
         except Exception as exc:
             model_metrics()
+            if isinstance(exc, ModelCallError):
+                # Preserve only provider status and a bounded machine code;
+                # never persist the response body, endpoint or credentials.
+                code = exc.code if isinstance(exc.code, str) and re.fullmatch(r'[A-Za-z0-9_]{1,80}', exc.code) else 'ModelCallError'
+                result.strategy['generation_error'] = {'code': code}
+                if type(exc.http_status) is int and 100 <= exc.http_status <= 599:
+                    result.strategy['generation_error']['http_status'] = exc.http_status
             if getattr(self.llm, 'marketing_review_failure', None):
                 result.strategy['marketing_review_failure'] = deepcopy(self.llm.marketing_review_failure)
             if getattr(self.llm, 'marketing_review_schema_errors', None):
