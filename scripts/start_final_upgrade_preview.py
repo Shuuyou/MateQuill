@@ -36,10 +36,10 @@ def main():
     env.update({key: str(value) for key, value in settings.items()
                 if key.startswith(('LLM_', 'IMAGE_', 'ASR_', 'DESIGN_', 'DIVERSITY_EMBEDDING_'))})
     env.update(MATEQUILL_DATABASE_URL='sqlite:///'+database.as_posix(),
-               MATEQUILL_ALLOWED_ORIGINS='http://127.0.0.1:3004,http://127.0.0.1:8026',
+               MATEQUILL_ALLOWED_ORIGINS='http://127.0.0.1:3004,http://localhost:3004,http://127.0.0.1:8026',
                MATEQUILL_PUBLIC_URL='', MATEQUILL_STUDIO_PUBLIC_ORIGIN='',
                MATEQUILL_COOKIE_SECURE='0', MATEQUILL_COOKIE_SAMESITE='lax',
-               MATEQUILL_DEMO_ACCOUNTS='0', ALLOW_LOCAL_SETTINGS='0',
+               MATEQUILL_DEMO_ACCOUNTS='1', ALLOW_LOCAL_SETTINGS='0',
                PYTHONIOENCODING='utf-8', API_ORIGIN='http://127.0.0.1:8026',
                MATEQUILL_BUILD_DIR='.next/final-upgrade-preview', NEXT_TELEMETRY_DISABLED='1')
     processes = []
