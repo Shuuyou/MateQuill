@@ -8,6 +8,8 @@ from __future__ import annotations
 import hashlib
 import inspect
 import io
+import json
+import time
 from typing import Callable
 from PIL import Image, ImageStat
 from .poster import PosterDocument, PosterLayer
@@ -105,7 +107,8 @@ def _review_failure_diagnostic(exc, *, stage):
     return result
 
 
-def validate_marketing_visual_review(raw, png_bytes: bytes, *, public_text: str = '', public_surfaces=None) -> dict:
+def validate_marketing_visual_review(raw, png_bytes: bytes, *, public_text: str = '', public_surfaces=None,
+                                   validated_product_claim_review=None) -> dict:
     """Shared six-dimensional contract, bound to the supplied final PNG bytes."""
     from .marketing_review import validate_marketing_review
     digest = hashlib.sha256(png_bytes).hexdigest()
@@ -126,8 +129,12 @@ def validate_marketing_visual_review(raw, png_bytes: bytes, *, public_text: str 
                             ('layer:', 'image_copy:', 'body:', 'card:', 'variant:', 'image:', 'tag:'))
                             and region not in public_surfaces):
                         raise ValueError('Unknown textual surface ID cannot become pixel evidence')
+        claims = (validated_product_claim_review or {}).get('claims', [])
         result = validate_marketing_review(raw, public_text=public_text, phase='final',
-                                          visual_observation_available=True, public_surfaces=public_surfaces)
+            visual_observation_available=True, public_surfaces=public_surfaces, product_claims=claims)
+        if validated_product_claim_review is not None:
+            from .product_claim_review import reconcile_marketing_product
+            result = reconcile_marketing_product(result, validated_product_claim_review)
     except (ValueError, TypeError) as exc:
         return {**incomplete, 'diagnostic': _review_failure_diagnostic(exc, stage='marketing_visual_schema')}
     action = {'accept': 'deliver', 'revise': 'revise', 'reselect': 'reselect'}[result['decision']]
@@ -260,6 +267,7 @@ async def review_design(png_bytes: bytes, document, *, vision_reviewer: Callable
         except (OSError, ValueError, Image.DecompressionBombError):
             checks.append({'category': 'render', 'severity': 'error', 'message': '成图无法解码'})
     visual_completed, suggestions, visual_score = False, [], None
+    visual_model, visual_duration_ms = '', None
     marketing_review = None
     if vision_reviewer is not None and pixel_valid:
         try:
@@ -273,6 +281,9 @@ async def review_design(png_bytes: bytes, document, *, vision_reviewer: Callable
                 suggestions = status.get('safe_layer_edits', []) if visual_completed else []
                 checks.extend(observations if visual_completed else [])
             elif isinstance(raw, dict):
+                visual_model = raw.get('review_model', '') if isinstance(raw.get('review_model', ''), str) else ''
+                elapsed = raw.get('duration_ms')
+                visual_duration_ms = elapsed if isinstance(elapsed, int) and not isinstance(elapsed, bool) and 0 <= elapsed <= 600000 else None
                 if 'marketing_review' in raw:
                     marketing_review = raw['marketing_review']
                     if (not isinstance(marketing_review, dict) or marketing_review.get('render_sha256') != hashlib.sha256(png_bytes).hexdigest()):
@@ -304,6 +315,7 @@ async def review_design(png_bytes: bytes, document, *, vision_reviewer: Callable
             'render_sha256': hashlib.sha256(png_bytes).hexdigest() if isinstance(png_bytes, bytes) else '',
             'errors': errors, 'warnings': warnings, 'score': visual_score,
             'edits': edits, 'rejected_edits': rejected,
+            **({'review_model': visual_model, 'visual_duration_ms': visual_duration_ms} if visual_model else {}),
             **({'marketing_review': marketing_review, 'marketing_action': marketing_review['action']}
                if marketing_review else {})}
 
@@ -312,6 +324,30 @@ def _rank(review):
     # Hard errors dominate refinement. Among equally safe renders a real
     # aesthetic score takes precedence; warning counts break score ties only.
     return (-review['errors'], review['score'] if review['score'] is not None else -1, -review['warnings'])
+
+
+def render_input_signature(document):
+    """Fingerprint every painted input, excluding editorial state and history."""
+    doc = _doc(document)
+    return hashlib.sha256(json.dumps(doc.model_dump(mode='json',
+        include={'width', 'height', 'canvas', 'layers', 'assets'}),
+        sort_keys=True, ensure_ascii=False).encode('utf8')).hexdigest()
+
+
+def cached_design_renderer(render, *, byte_budget=32000000):
+    """Per-execution PNG reuse only; every contextual/final review still runs."""
+    cache = {}
+    async def cached(document):
+        key = render_input_signature(document)
+        if key in cache:
+            return cache[key]
+        png = await _call(render, document)
+        if isinstance(png, bytes) and len(png) <= min(16000000, byte_budget):
+            while cache and sum(len(value) for value in cache.values()) + len(png) > byte_budget:
+                cache.pop(next(iter(cache)))
+            cache[key] = png
+        return png
+    return cached
 
 
 async def refine_design(document, render: Callable, *, reviewer: Callable | None = None,
@@ -334,7 +370,7 @@ async def refine_design(document, render: Callable, *, reviewer: Callable | None
                 or current_review.get('marketing_action') in ('reselect', 'incomplete')):
             break
         candidate, edits, _ = safe_design_edits(current, current_review['edits'])
-        if not edits:
+        if not edits or render_input_signature(candidate) == render_input_signature(current):
             break
         try:
             candidate_image = await _call(render, candidate)
@@ -383,6 +419,7 @@ async def review_with_model(png_bytes: bytes, document, base_url: str, api_key: 
     import json
     from urllib.parse import urlparse
     import httpx
+    started = time.monotonic()
     from .design.review_schema import (visual_response_format, decode_nullable_edits,
                                        explicitly_unsupported_schema)
     parsed = urlparse(base_url)
@@ -439,6 +476,17 @@ art_direction、visual_devices和设计意图只是待验证的创作主张；�
     if isinstance(marketing_context, dict) and isinstance(marketing_context.get('task'), dict):
         from .marketing_review import review_task
         marketing_context['task'] = review_task(marketing_context['task'])
+    validated_claims = None
+    if isinstance(marketing_context, dict) and isinstance(marketing_context.get('validated_product_claim_review'), dict):
+        known = marketing_context['validated_product_claim_review']
+        # A new image layer or rewritten field cannot borrow an old text verdict.
+        # Match the exact source surface before sharing a completed claim check.
+        rows = [deepcopy(claim) for claim in known.get('claims', []) if isinstance(claim, dict)
+                and claim.get('surface') in public_surfaces
+                and claim.get('quote') == public_surfaces[claim['surface']]]
+        if rows:
+            validated_claims = {'claims': rows}
+            review_context['validated_product_claim_review'] = validated_claims
     metadata = {'canvas': doc.canvas.model_dump(), 'intent': doc.brief.purpose,
                 'public_surfaces': public_surfaces, 'public_surface_roles': public_surface_roles,
                 'context': review_context,
@@ -510,10 +558,12 @@ art_direction、visual_devices和设计意图只是待验证的创作主张；�
         if not isinstance(edits, list):
             raise ValueError('invalid edits')
         result = {'review_completed': True, 'checks': checks, 'score': score, 'edits': edits[:40],
-                  'response_format_used': body['response_format']['type']}
+                  'response_format_used': body['response_format']['type'], 'review_model': model,
+                  'duration_ms': int((time.monotonic()-started)*1000)}
         if marketing_required:
             marketing = validate_marketing_visual_review(review.get('marketing_review'), png_bytes,
-                public_text=public_text, public_surfaces=public_surfaces)
+                public_text=public_text, public_surfaces=public_surfaces,
+                **({'validated_product_claim_review': validated_claims} if validated_claims is not None else {}))
             result['marketing_review'] = marketing
         return result
     except (httpx.HTTPError, ValueError, KeyError, TypeError, IndexError) as exc:
@@ -521,7 +571,10 @@ art_direction、visual_devices和设计意图只是待验证的创作主张；�
         # swallow left jobs undiagnosable, so record the exception class only.
         import logging
         logging.getLogger(__name__).warning('design render review incomplete: %s', type(exc).__name__)
-        return {'review_completed': False, 'checks': [], 'edits': []}
+        return {'review_completed': False, 'checks': [], 'edits': [], 'review_model': model,
+                'duration_ms': int((time.monotonic()-started)*1000),
+                'failure': {'error_class': type(exc).__name__,
+                    **({'http_status': exc.response.status_code} if isinstance(exc, httpx.HTTPStatusError) else {})}}
 
 
 async def review_design_element(metadata, base_url: str, api_key: str, model: str) -> dict:

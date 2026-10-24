@@ -20,6 +20,7 @@ from .models import TaskInput
 
 @asynccontextmanager
 async def lifespan(application):
+    application.state.runtime_started_at = time.time()
     from .generation_jobs import start_workers, stop_workers
     from .gtm_agent.jobs import start_agent_workers, stop_agent_workers
     await start_workers()
@@ -449,6 +450,24 @@ async def report():
 @app.get('/health')
 async def health():
     return {'ok':True}
+
+
+@app.get('/api/runtime/status')
+async def runtime_status():
+    """Authenticated, non-secret proof of the loaded deployment settings."""
+    import os
+    from .tenancy import require_context
+    require_context()
+    fact = bool(settings.fact_review_use_planner)
+    marketing = bool(settings.marketing_review_use_planner)
+    return {'pid': os.getpid(), 'build_revision': os.getenv('MATEQUILL_BUILD_REVISION', ''),
+        'started_at': getattr(app.state, 'runtime_started_at', None),
+        'review_roles': {'fact': fact, 'marketing': marketing},
+        'models': {'writer': settings.content_model or settings.llm_model,
+                   'fact_review': settings.llm_model if fact else settings.content_model or settings.llm_model,
+                   'marketing_review': settings.llm_model if marketing else settings.content_model or settings.llm_model,
+                   'art_direction': settings.design_text_model,
+                   'visual_review': settings.image_review_model}}
 
 
 # Mount last: API routes must retain precedence.

@@ -1,5 +1,6 @@
 """Small permission-aware tools; the model chooses operations, never authority."""
 import hashlib
+import asyncio
 import inspect
 import json
 import re
@@ -58,6 +59,50 @@ def project_catalog(rows, query=''):
     keys = ('id','name','system','category','aliases','catalog_source','spu_id','parameter_sku_id')
     return {'source_id':'catalog', 'products':[{k:row[k] for k in keys if k in row} for row in selected[:50]],
             'query':query, 'total_count':len(rows), 'match_count':len(selected), 'truncated':len(selected)>50}
+
+
+def exact_requested_products(rows, text):
+    """Match only catalog-authored names/aliases, without inferring a model.
+
+    Longer overlapping names win (a Pro mention inside Pro S is not a second
+    request). Shared aliases remain ambiguous and are left for the planner.
+    """
+    def normalized(value):
+        return ''.join(unicodedata.normalize('NFKC', value).casefold().split())
+    source = unicodedata.normalize('NFKC', str(text or '')).casefold()
+    offsets = [index for index, char in enumerate(source) if not char.isspace()]
+    value = ''.join(source[index] for index in offsets)
+    matches = []
+    for row in rows:
+        name = row.get('name')
+        if not isinstance(name, str) or not name:
+            continue
+        for label in [name, *(row.get('aliases') or [])]:
+            if not isinstance(label, str):
+                continue
+            needle = normalized(label)
+            if len(needle) < 3:
+                continue
+            for match in re.finditer(re.escape(needle), value):
+                start, end = match.span()
+                before = source[offsets[start] - 1] if offsets[start] else ''
+                after = source[offsets[end - 1] + 1] if offsets[end - 1] + 1 < len(source) else ''
+                # Never read Band 1 as Band 10 or Pro as ProMax.
+                if (needle[0].isascii() and needle[0].isalnum() and before
+                        and before.isascii() and before.isalnum()):
+                    continue
+                if (needle[-1].isascii() and needle[-1].isalnum() and after
+                        and after.isascii() and after.isalnum()):
+                    continue
+                matches.append((start, end, name))
+    maximal = [match for match in matches if not any(
+        other[0] <= match[0] and other[1] >= match[1] and other[1] - other[0] > match[1] - match[0]
+        for other in matches)]
+    spans = {}
+    for start, end, name in maximal:
+        spans.setdefault((start, end), set()).add(name)
+    names = list(dict.fromkeys(next(iter(names)) for _, names in sorted(spans.items()) if len(names) == 1))
+    return names if len(names) <= 3 else []
 
 
 def project_design_plan(body, *, focus='', limit=18000):
@@ -277,6 +322,8 @@ class AgentTools:
         self.catalog = None
         self.product_evidence = {}
         self.transcripts = []
+        self._bootstrapped_place = False
+        self._bootstrap_observations = []
         self.work_brief = next((item['result'].get('work_brief')
             for item in reversed(turn.get('observations', []))
             if item.get('tool') == 'prepare_work_brief' and isinstance(item.get('result'), dict)), None)
@@ -357,11 +404,67 @@ class AgentTools:
                              'context_restore': 'revalidated_current_provider'})
         return restored
 
+    async def bootstrap_context(self):
+        """Preload independent, reversible facts for a new creative request.
+
+        Exact product retrieval and a neutral current-store query run together.
+        This chooses no audience, place interpretation, claim or creative angle.
+        Explicit new-place requests and artifact edits stay model-directed.
+        """
+        text = self.turn.get('text', '')
+        if (self._continuing or self.turn.get('reply_to_artifact') or self.conversation.get('current_artifact')
+                or re.match(r'\s*(?:请|帮我)?(?:记住|记得|以后|下次)', text)
+                or self.turn.get('observations') or not re.search(r'创作|宣传|营销|内容|图文|朋友圈|小红书|海报|公众号|推广|配图', text)):
+            return []
+        profile = self.store_profile()
+
+        async def products():
+            if self.catalog is None:
+                self.catalog = await _invoke((await self.base()).catalog)
+            names = exact_requested_products(self.catalog, text)
+            matched = [row for row in self.catalog if row.get('name') in names]
+            self._bootstrap_observations.append({'tool': 'read_catalog', 'result': {
+                **project_catalog(matched if names else self.catalog),
+                'catalog_total_count': len(self.catalog)}, 'context_bootstrap': 'current_provider_catalog'})
+            async def retrieve(name):
+                if name in self.product_evidence:
+                    return None
+                bundle = await _invoke((await self.base()).retrieve, name, text)
+                if bundle.product != name or bundle.conflicts or not bundle.facts:
+                    result = {'tool': 'read_product', 'result': {'product': name,
+                        'conflicts': bundle.conflicts, 'facts': []}, 'context_bootstrap': 'exact_user_product'}
+                else:
+                    self.product_evidence[name] = bundle
+                    result = {'tool': 'read_product', 'result': project_product_evidence(bundle),
+                              'context_bootstrap': 'exact_user_product'}
+                self._bootstrap_observations.append(result)
+            await asyncio.gather(*(retrieve(name) for name in names))
+
+        async def place():
+            location = str(profile.get('location') or '').strip()
+            if not location or self.needs_place_refresh or self.store_research:
+                return []
+            # Use only the authorized active-store profile, never a guessed
+            # location parsed from customer prose or a preselected audience.
+            query = f'"{profile.get("name", "")}" {location} 地址 周边'
+            result = await self.execute('research_store', {'query': query[:1000]})
+            self._bootstrapped_place = True
+            self._bootstrap_observations.append({'tool': 'research_store', 'result': result,
+                     'context_bootstrap': 'neutral_current_store_query'})
+
+        await asyncio.gather(products(), place())
+        return list(self._bootstrap_observations)
+
     def context_summary(self):
         return {'ready_products': list(self.product_evidence),
+                'catalog_loaded': self.catalog is not None,
                 'place_grounded': self.place_selection is not None,
+                'locality_cross_check_needed': self._bootstrapped_place and len({
+                    item.get('query') for item in self.store_research if item.get('query')}) < 2,
                 'requires_fresh_research': self.needs_place_refresh and not self._researched_this_turn,
-                'instruction': 'ready_products为本轮已重新读取的准确资料；不要重复读取已就绪的产品。'}
+                'instruction': 'ready_products为本轮已重新读取的准确资料；不要重复读取已就绪的产品。'
+                    'context_bootstrap中的结果是已执行的只读工具，不是待办；可直接使用其中实际返回的事实与来源ID。'
+                    'locality_cross_check_needed为true时，依据首查真实实体再做一次不同周边查询，然后自行ground_store选择本次方向。'}
 
     async def base(self):
         if self.provider is None:
@@ -439,14 +542,17 @@ class AgentTools:
         if args.revision_intent is not None and name != 'revise_content':
             raise HTTPException(422, 'revision_intent只能用于当前文稿的修改')
         if name == 'read_catalog':
-            self.catalog = await _invoke((await self.base()).catalog)
+            if self.catalog is None:
+                self.catalog = await _invoke((await self.base()).catalog)
             return project_catalog(self.catalog, args.query)
         if name == 'read_product':
             if self.catalog is None:
                 self.catalog = await _invoke((await self.base()).catalog)
             if args.product not in {item.get('name') for item in self.catalog}:
                 raise HTTPException(422, '从目录中确认准确型号后再查询')
-            bundle = await _invoke((await self.base()).retrieve, args.product, self.turn['text'])
+            bundle = self.product_evidence.get(args.product)
+            if bundle is None:
+                bundle = await _invoke((await self.base()).retrieve, args.product, self.turn['text'])
             if bundle.conflicts or not bundle.facts:
                 return {'product':args.product, 'conflicts':bundle.conflicts, 'facts':[]}
             self.product_evidence[args.product] = bundle
@@ -518,7 +624,7 @@ class AgentTools:
             queries = {' '.join(str(item.get('query') or '').split()).casefold() for item in self.store_research}
             queries.discard('')
             has_sources = any(item.get('items') or item.get('sources') for item in self.store_research)
-            if (policy.get('source') == 'daily_store' and args.grounding.location_status == 'resolved'
+            if ((policy.get('source') == 'daily_store' or self._bootstrapped_place) and args.grounding.location_status == 'resolved'
                     and has_sources and len(queries) < 2):
                 raise HTTPException(422, '先依据已发现的道路、学校、园区等具体实体，用不同查询交叉核验位置与周边，并比较候选人群后再ground_store；不能用首条检索直接确定客群。无结果仍可用unresolved。')
             try:

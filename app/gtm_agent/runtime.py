@@ -190,6 +190,20 @@ async def run_turn(identifier, *, planner=None, tools_factory=None, max_steps=No
         observations = (observations + list(restored))[-12:]
         failed_invocations = _unresolved_invocations(observations)
         update_turn(identifier, lambda body: {**body, 'observations': observations})
+    if hasattr(tools, 'bootstrap_context'):
+        try:
+            async with asyncio.timeout(25):
+                bootstrapped = await tools.bootstrap_context()
+        except TimeoutError:
+            # Keep only actual completed reads; a canceled read is never
+            # represented as evidence or an inferred product/place result.
+            bootstrapped = [*getattr(tools, '_bootstrap_observations', []),
+                {'tool': 'context_bootstrap', 'error_code': 'context_bootstrap_timeout',
+                 'instruction': '预读取未全部完成，按tool_context补齐仍缺少的资料。'}]
+        if bootstrapped:
+            observations = (observations + list(bootstrapped))[-12:]
+            failed_invocations = _unresolved_invocations(observations)
+            update_turn(identifier, lambda body: {**body, 'observations': observations})
     from .memory import relevant_memories
     working_memory = relevant_memories(audience=conversation['audience'],query=turn['text'])
     remembered = False

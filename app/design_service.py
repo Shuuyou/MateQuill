@@ -42,8 +42,8 @@ def _design_review_model():
     An arbitrary text-only art model must not become a visual reviewer.
     """
     from .design_review import REASONING_VISUAL_MODELS
-    return (settings.design_text_model if settings.design_text_model in REASONING_VISUAL_MODELS
-            else settings.image_review_model)
+    return (settings.image_review_model or
+            (settings.design_text_model if settings.design_text_model in REASONING_VISUAL_MODELS else ''))
 
 
 def _design_model(fallback, *, calls, tokens):
@@ -90,7 +90,8 @@ def _visual_marketing_context(source, task_data, store_context, identity):
 
     public_copy = {key: str(source.get(key) or '')[:16000]
                    for key in ('title', 'intro', 'body', 'cta')}
-    public_copy['blocks'] = [{'text': str(row.get('text') or '')[:4000]}
+    public_copy['blocks'] = [{'text': str(row.get('text') or '')[:4000],
+                             **({'disclosures': deepcopy(row['disclosures'])} if row.get('disclosures') else {})}
                             for row in source.get('blocks', [])[:20] if isinstance(row, dict)]
     public_copy['images'] = [{'caption': str(row.get('caption') or '')[:1000]}
                             for row in source.get('images', [])[:12] if isinstance(row, dict)]
@@ -105,8 +106,29 @@ def _visual_marketing_context(source, task_data, store_context, identity):
         public_copy = {'title': public_copy['title'], 'tags': public_copy['tags']}
     public_text = public_marketing_text(public_copy)
     facts = [row for row in source.get('facts', []) if isinstance(row, dict)]
-    referenced = [row for row in facts if str(row.get('value', ''))
-                  and str(row['value']) in public_text]
+    cited_ids = set()
+    def cited(value):
+        if isinstance(value, dict):
+            for key, item in value.items():
+                if key in {'fact_ids', 'supported_fact_ids'} and isinstance(item, list):
+                    cited_ids.update(identifier for identifier in item if isinstance(identifier, str))
+                elif isinstance(item, (dict, list)):
+                    cited(item)
+        elif isinstance(value, list):
+            for item in value:
+                cited(item)
+    for key in ('blocks', 'creative_plan', 'images', '_design_copy'):
+        cited(source.get(key, []))
+    referenced = [row for row in facts if row.get('id') in cited_ids or
+                  (str(row.get('value', '')) and str(row['value']) in public_text)]
+    # A prose realization need not repeat a complete raw value verbatim. Keep
+    # actually cited rows even beyond the old first-12 cut, with their complete
+    # values, original spans and qualifications; missing context must not force
+    # another paid rewrite of a correct statement.
+    product_facts = deepcopy(referenced or facts[:12])
+    if len(json.dumps(product_facts, ensure_ascii=False).encode('utf8')) > 100000:
+        raise HTTPException(422, {'code': 'visual_review_evidence_budget',
+                                 'message': '请减少本次图片中的产品主张后继续'})
     strategy = source.get('strategy') or {}
     if not isinstance(strategy, dict):
         strategy = {}
@@ -119,7 +141,9 @@ def _visual_marketing_context(source, task_data, store_context, identity):
             'task': {'audience': str(task_data.get('audience') or '')[:700],
                      'scene': str(task_data.get('scene') or '')[:1000], 'requirements': requirements},
             'published_copy': public_copy, 'publication': publication.model_dump(),
-            'product_facts': bounded((referenced or facts)[:12]),
+            'product_facts': product_facts,
+            **({'validated_product_claim_review': deepcopy(strategy['product_claim_review'])}
+               if isinstance(strategy.get('product_claim_review'), dict) else {}),
             'marketing_context': research,
             'previous_text_review': bounded(strategy.get('marketing_review')),
             'text_review_history': bounded(strategy.get('marketing_review_history', [])[-3:]),
@@ -586,11 +610,12 @@ async def _commercial_treatment(board, plan, state, identifier, *, assets, page_
 
 async def execute_design(parameters):
     from .design import plan_design, compose_design, DesignPlan
-    from .design_review import refine_design, review_with_model, review_design, compare_candidates
+    from .design_review import refine_design, review_with_model, review_design, compare_candidates, cached_design_renderer
     from .creative_agent_routes import model
     from .generation_jobs import generation_budget, commit_artifact_result
     from .design.source_integrity import RENDER_POLICY, native_source_proof
     identifier = parameters['design_id']
+    render_current = cached_design_renderer(render_document)
     source, task = source_record(parameters['source_run_id'])
     parent = load_design(parameters['parent_id'], edit=True) if parameters.get('parent_id') else None
     craft_edit = parameters.get('craft_edit')
@@ -840,13 +865,12 @@ async def execute_design(parameters):
         if not (state.get('concept_selection') or {}).get('selected_id'):
             candidates = []
             measured = state.setdefault('concept_reviews', {})
-            for concept in plan.concepts[:2]:
+            async def inspect_concept(concept):
                 candidate_plan = plan.model_copy(update={'selected_concept_id': concept.id})
                 candidate = compose_design(task_data, record, candidate_plan, assets)[0]
                 if (concept.id in measured
                         and measured[concept.id].get('execution_id') == candidate.id):
-                    candidates.append({'id': concept.id, 'review': measured[concept.id]})
-                    continue
+                    return {'id': concept.id, 'review': measured[concept.id]}
                 if concept.id in measured:
                     state.setdefault('legacy_concept_review_history', []).append(
                         {'concept_id': concept.id, 'review': measured.pop(concept.id)})
@@ -860,9 +884,8 @@ async def execute_design(parameters):
                         'score': None, 'deterministic_completed': False, 'review_completed': False,
                         'status': 'layout_needs_revision', 'edits': [], 'execution_id': candidate.id}
                     measured[concept.id] = review
-                    candidates.append({'id': concept.id, 'review': review})
                     _checkpoint(identifier, state)
-                    continue
+                    return {'id': concept.id, 'review': review}
                 try:
                     candidate.document = await _design_elements_treatment(
                         identifier, state, candidate_plan, candidate, assets)
@@ -878,9 +901,8 @@ async def execute_design(parameters):
                         'deterministic_completed': False, 'review_completed': False,
                         'status': code, 'edits': [], 'execution_id': candidate.id}
                     measured[concept.id] = review
-                    candidates.append({'id': concept.id, 'review': review})
                     _checkpoint(identifier, state)
-                    continue
+                    return {'id': concept.id, 'review': review}
                 native_source_proof(candidate.document, assets)
                 async def compare_reviewer(png, doc):
                     return await review_with_model(png, doc, settings.image_base_url,
@@ -894,7 +916,7 @@ async def execute_design(parameters):
                             'source_reference_images': [value['data_url'] for value in candidate.document.assets.values()
                                 if isinstance(value.get('data_url'), str)
                                 and value.get('provenance') != 'ai_generated_design_elements'][:3]})
-                refined_candidate = await refine_design(candidate.document, render_document,
+                refined_candidate = await refine_design(candidate.document, render_current,
                     reviewer=compare_reviewer if settings.image_api_key and _design_review_model() else None,
                     max_rounds=2)
                 candidate.document = refined_candidate['document']
@@ -903,9 +925,13 @@ async def execute_design(parameters):
                 review = refined_candidate['review']
                 review['execution_id'] = candidate.id
                 state.setdefault('candidate_boards', {})[concept.id] = candidate.model_dump(mode='json')
-                candidates.append({'id': concept.id, 'review': review})
                 measured[concept.id] = review
                 _checkpoint(identifier, state)
+                return {'id': concept.id, 'review': review}
+            # Candidate preparation shares checkpointed image work. Keep its
+            # mutations serial; the explicit visual role and exact-pixel render
+            # reuse reduce latency without overlapping writes or image effects.
+            candidates = [await inspect_concept(concept) for concept in plan.concepts[:2]]
             selection = compare_candidates(candidates)
             if not selection['selected_id']:
                 if state.get('art_direction_replans', 0) < 1 and design_llm_enabled:
@@ -1018,7 +1044,7 @@ async def execute_design(parameters):
                                     {'id': key, 'purpose': 'abstract_design_only_not_scene_or_product_evidence'}
                                     for key, value in doc.assets.items()
                                     if value.get('provenance') == 'ai_generated_design_elements']})
-            refined = await refine_design(board.document, render_document, reviewer=reviewer,
+            refined = await refine_design(board.document, render_current, reviewer=reviewer,
                                           max_rounds=0 if craft_edit is not None else 2)
             board.document = refined['document']
             _validate_delivered_copy(board.document, state.get('design_copy', {}), instruction=instruction)
