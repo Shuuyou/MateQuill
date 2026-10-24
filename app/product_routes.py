@@ -5,7 +5,7 @@ import httpx
 from pydantic import BaseModel, Field
 
 from .product_knowledge import (ProductPreviewInput, ProductConfirmInput, ProductRepository,
-                                load_products, summary, source_preview, resolve_ecosystem)
+                                load_products, load_product_catalog, summary, source_preview, resolve_ecosystem)
 
 router = APIRouter(prefix='/api', tags=['product-knowledge'])
 _ingestion_slots = asyncio.Semaphore(2)
@@ -13,7 +13,7 @@ _ingestion_slots = asyncio.Semaphore(2)
 
 @router.get('/knowledge/products')
 def products():
-    return {'products': [summary(row) for row in load_products()]}
+    return {'products': [summary(row) for row in load_product_catalog()]}
 
 
 def require_editor(request):

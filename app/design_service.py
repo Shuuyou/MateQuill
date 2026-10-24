@@ -262,6 +262,20 @@ async def _design_elements_treatment(identifier, state, plan, board, assets):
     brief = plan.get('brief') if isinstance(plan, dict) else getattr(plan, 'brief', None)
     instruction = brief.get('instruction', '') if isinstance(brief, dict) else getattr(brief, 'instruction', '')
     treatment = concept.get('treatment', '') if isinstance(concept, dict) else getattr(concept, 'treatment', '')
+    production_method = concept.get('production_method', 'auto') if isinstance(concept, dict) else getattr(concept, 'production_method', 'auto')
+    if production_method in {'native_assembly', 'source_photo'}:
+        # Product arrays, typography, source photography and native light/shadow
+        # are complete design choices. A transparent subject is not a request
+        # for a paid decorative plate. Final actual-render reviews still run.
+        from .design.source_integrity import native_source_proof
+        trace={'method':production_method,'new_image_generated':False,
+               'visual_thesis':concept.get('visual_thesis','') if isinstance(concept,dict) else getattr(concept,'visual_thesis',''),
+               'source_integrity':native_source_proof(board.document,assets),
+               'scope':'Authored native composition; actual-render and marketing review remain pending.'}
+        if state.setdefault('native_design_composition',{}).get(board.id)!=trace:
+            state['native_design_composition'][board.id]=trace
+            _checkpoint(identifier,state)
+        return board.document
     role = getattr(board, 'role', '')
     contract = native_visual_contract(brief, role=role, assets=assets)
     photographs = [layer for layer in board.document.layers if layer.type == 'image'
@@ -918,6 +932,8 @@ async def execute_design(parameters):
             item['source_integrity'] = native_source_proof(board.document, assets)
             if board.id in state.get('source_preservation', {}):
                 item['source_preservation'] = deepcopy(state['source_preservation'][board.id])
+            if board.id in state.get('native_design_composition', {}):
+                item['production_route'] = deepcopy(state['native_design_composition'][board.id])
             item['review'] = refined['review']
             publication_findings = [check for entry in board.document.audit
                 if entry.get('type') == 'reference_comparison' for check in entry.get('checks', [])

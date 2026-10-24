@@ -238,6 +238,10 @@ class AgentWorkflow:
         issues = []
         def add(category,message):
             issues.append(AuditItem(severity='error',category=category,message=message))
+        from .vmall_catalog import valid_vmall_source
+        for source in bundle.sources:
+            if source.provider == 'vmall_storefront' and not valid_vmall_source(source):
+                add('evidence','商城来源缺少准确商品页面或快照完整性记录')
         source_map = {s.id:s for s in bundle.sources}
         fact_map = {f.id:f for f in bundle.facts}
         asset_map = {a.id:a for a in bundle.assets}
@@ -246,7 +250,7 @@ class AgentWorkflow:
             add('model','任务指定型号与知识包型号不一致，需要确认准确型号')
         if task.mode == 'live' and any(s.provider != 'ima' for s in bundle.sources):
             add('evidence','实时模式来源必须全部来自ima')
-        if task.mode == 'local' and any(s.provider not in ('local_archive','huawei_official','store_knowledge','store_upload','campaign_reference') for s in bundle.sources):
+        if task.mode == 'local' and any(s.provider not in ('local_archive','huawei_official','vmall_storefront','store_knowledge','store_upload','campaign_reference') for s in bundle.sources):
             add('evidence','正式本地模式须使用赛事附件或华为官方原文，不能用演练资料替代')
         for fact in bundle.facts:
             source = source_map.get(fact.source_id)
@@ -330,9 +334,13 @@ class AgentWorkflow:
                 add('image','图片型号与选定型号不一致')
             if asset.source_id not in source_map:
                 add('image','图片缺少本次检索来源')
+            if asset.provenance == 'vmall_storefront' and (
+                    asset.source_id not in source_map or source_map[asset.source_id].provider != 'vmall_storefront'
+                    or not valid_vmall_source(source_map[asset.source_id])):
+                add('image','商城图片必须绑定同次已校验的商城商品来源')
             if task.mode == 'live' and (not asset.verified or asset.provenance != 'ima_direct'):
                 add('image','图片尚未确认来自本次ima直接返回素材')
-            if task.mode == 'local' and (not asset.verified or asset.provenance not in ('local_archive','huawei_official','store_upload') or not re.fullmatch(r'[0-9a-f]{64}',asset.sha256)):
+            if task.mode == 'local' and (not asset.verified or asset.provenance not in ('local_archive','huawei_official','vmall_storefront','store_upload') or not re.fullmatch(r'[0-9a-f]{64}',asset.sha256)):
                 add('image','本地正式图片缺少附件/官方来源或图片完整性记录')
         for card in result.creative_plan.get('cards', []):
             for asset_id in card.get('asset_ids', []):
@@ -342,9 +350,13 @@ class AgentWorkflow:
                     continue
                 if norm(asset.product) not in product_scope or asset.source_id not in source_map:
                     add('image','创意卡片图片型号或来源不匹配')
+                if asset.provenance == 'vmall_storefront' and (
+                        asset.source_id not in source_map or source_map[asset.source_id].provider != 'vmall_storefront'
+                        or not valid_vmall_source(source_map[asset.source_id])):
+                    add('image','创意卡片商城图片缺少绑定的商城商品来源')
                 if task.mode=='live' and (not asset.verified or asset.provenance!='ima_direct'):
                     add('image','创意卡片图片尚未完成ima直接来源验证')
-                if task.mode=='local' and (not asset.verified or asset.provenance not in ('local_archive','huawei_official','store_upload') or not re.fullmatch(r'[0-9a-f]{64}',asset.sha256)):
+                if task.mode=='local' and (not asset.verified or asset.provenance not in ('local_archive','huawei_official','vmall_storefront','store_upload') or not re.fullmatch(r'[0-9a-f]{64}',asset.sha256)):
                     add('image','创意卡片图片缺少本地正式来源或图片完整性记录')
                 if card.get('supported_fact_ids') and asset.visual_role in ('product_overview','unknown'):
                     add('image','产品外观图不能在创意卡片中作为功能或场景实证，请改用信息卡或匹配素材')
@@ -423,7 +435,9 @@ class AgentWorkflow:
         result.assets=[a.model_copy(update={'url':'/api/assets/'+a.id,'local_path':''}) for a in bundle.assets]
         from .local_knowledge import official_url
         from .campaign_evidence import public_reference_url
+        from .vmall_catalog import valid_vmall_source
         result.sources=[s.model_copy(update={'url':s.url if (s.provider=='huawei_official' and official_url(s.url)) or
+            (s.provider=='vmall_storefront' and valid_vmall_source(s)) or
             (s.provider=='campaign_reference' and public_reference_url(s.url)) else ''}) for s in bundle.sources]
         result.audit.extend(AuditItem(severity='warning',category='retrieval',message=w) for w in bundle.warnings)
         result.strategy.update(scenario_plan(task,bundle))
@@ -493,7 +507,7 @@ class AgentWorkflow:
                 (asset := by_asset_id.get(image.asset_id)) is not None
                 and norm(asset.product) in selected_products
                 and asset.source_id in source_ids and asset.verified
-                and asset.provenance in ('local_archive', 'huawei_official', 'store_upload')
+                and asset.provenance in ('local_archive', 'huawei_official', 'vmall_storefront', 'store_upload')
                 and re.fullmatch(r'[0-9a-f]{64}', asset.sha256)
                 and set(image.supported_fact_ids).issubset(fact_ids)
                 for image in result.images)

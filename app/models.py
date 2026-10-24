@@ -41,6 +41,8 @@ class Fact(BaseModel):
     source_id: str
     qualifiers: list[str] = Field(default_factory=list)
     system: str = ''
+    # Internal evidence applicability, not a public advertising disclosure.
+    sku_scope: str = ''
 
 
 class Asset(BaseModel):

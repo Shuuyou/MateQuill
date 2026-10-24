@@ -24,11 +24,14 @@ def official_url(value):
 
 
 class LocalKnowledgeProvider(DemoProvider):
-    def __init__(self, root=None, official_products=None, official_assets=None):
+    def __init__(self, root=None, official_products=None, official_assets=None, *, include_vmall=None):
         super().__init__(root)
         self.products_file = Path(official_products) if official_products else ROOT/'data/official_products.json'
         self.assets_file = Path(official_assets) if official_assets else ROOT/'data/official_assets.json'
         self._asset_digests = {}
+        # Explicit fixture/import catalogs stay isolated unless the caller opts
+        # into the shared official storefront snapshot. Normal service uses it.
+        self._use_vmall = official_products is None if include_vmall is None else bool(include_vmall)
 
     async def get_asset(self, asset_id):
         path = self._assets.get(asset_id)
@@ -39,6 +42,14 @@ class LocalKnowledgeProvider(DemoProvider):
             # Never let an archive-index fallback accept bytes which failed an
             # already-known official/archive digest in this process.
             return None
+        if str(asset_id).startswith('vmall-'):
+            from .vmall_knowledge import restore_asset
+            restored = restore_asset(asset_id)
+            if restored:
+                self._assets[asset_id] = restored
+                self._asset_digests[asset_id] = hashlib.sha256(restored.read_bytes()).hexdigest()
+            # GET restores only verified local bytes; it never starts downloads.
+            return restored
         # Persisted creations outlive the process-local retrieval cache. Restore
         # only a public, hash-pinned official asset, never a caller-supplied path.
         for row in self._records(self.assets_file, 'assets'):
@@ -104,6 +115,9 @@ class LocalKnowledgeProvider(DemoProvider):
                 item['system'] = os_fact['value']
             elif record.get('system'):
                 item['system'] = record['system']
+        if getattr(self, '_use_vmall', False):
+            from .vmall_knowledge import catalog_entries
+            rows.extend(catalog_entries(item['name'] for item in rows))
         return rows
 
     async def status(self):
@@ -162,7 +176,26 @@ class LocalKnowledgeProvider(DemoProvider):
                     source_id=sid, qualifiers=record.get('qualifiers') or [], system=record.get('system','')))
             if records:
                 bundle.warnings.append('补充官方网页快照；不同代际、销售配置及页面限定条件不能交叉拼成一个 SKU。')
-        self._add_official_assets(bundle, product, query)
+        # Existing exact-model evidence takes precedence. Never attach another
+        # storefront default SKU's parameters or images to an older namesake.
+        vmall_supplied = False
+        if not bundle.facts and getattr(self, '_use_vmall', False):
+            from .vmall_knowledge import match_vmall_product, parameter_evidence, prepare_assets
+            match = match_vmall_product(product)
+            if match is not None:
+                vmall_supplied = True
+                supplied = parameter_evidence(match, product=product)
+                bundle.facts.extend(supplied.facts)
+                bundle.sources.extend(supplied.sources)
+                bundle.warnings.extend(supplied.warnings)
+                bundle.conflicts.extend(supplied.conflicts)
+                images, sources, paths = await prepare_assets(match, product)
+                bundle.assets.extend(images)
+                bundle.sources.extend(sources)
+                self._assets.update(paths)
+        if not vmall_supplied:
+            self._add_official_assets(bundle, product, query)
+        bundle.assets = rank_assets_for_scene(bundle.assets, query)[:12]
         for asset in bundle.assets:
             self._asset_digests[asset.id] = asset.sha256
         systems = {f.value for f in bundle.facts if f.label=='操作系统'}

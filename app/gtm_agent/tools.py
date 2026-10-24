@@ -3,6 +3,7 @@ import hashlib
 import inspect
 import json
 import time
+import unicodedata
 from datetime import datetime, timezone
 from typing import Annotated, Literal
 
@@ -24,7 +25,7 @@ TOOLS = {
     'read_price_rules': 'sku:可选准确SKU,rule_id:可选规则ID；只读当前门店价格规则及资格、适用期限，不授予审批权。规则中的金额来自原始规则，不得自行填写或改写。',
     'prepare_quote': 'rule_id:刚查询的价格规则ID,quantity:整数数量默认1,subject_id:可选已有顾客资格主体ID。由确定性算价工具生成报价；不能输入金额、优惠、资格或审批。只有工具真实ready才能交付报价卡。无资格不能仅凭口头声称享受学生优惠。',
     'prepare_opportunity': 'opportunity:基于已查门店和产品事实准备具体营销机会，包含真实来源ID、核心事实ID、顾客任务、图文切角、随手拍摄步骤、总计不超过180秒的体验步骤、物料、待确认门店能力与下一步；计划保存后再generate_content。门店能力只作为待执行建议，不写成已有服务。',
-    'read_catalog': '查询当前准确产品目录，无参数。不能凭照片猜测产品配置。',
+    'read_catalog': 'query:可选产品名称/系列关键词；查询准确产品目录，结果超过50项时细化query，不把前50项当全目录。不能凭照片猜测产品配置。',
     'read_product': 'product:目录中的准确型号，读取事实与完整条件。返回未展开事实索引时，可用fact_ids指定最多4条原文精读；不截断事实或条件。',
     'read_media': '读取本次或当前对话已提供的照片观察/录音转写，无参数。',
     'read_history': '读取允许范围内本店近期创作摘要，避免重复，无参数。',
@@ -43,6 +44,17 @@ TOOLS = {
     'create_design_bundle': 'instruction:为当前文稿一键制作适合平台的精美图片组；platform可为xiaohongshu/moments/wechat/bilibili/douyin。先read_artifact。',
     'revise_design': 'instruction:用自然语句调整当前图片作品，保留原版；先read_artifact。',
 }
+
+
+def project_catalog(rows, query=''):
+    def key(value):
+        return ''.join(unicodedata.normalize('NFKC', value).casefold().split())
+    needle = key(query)
+    selected = [row for row in rows if not needle or any(needle in key(value)
+        for value in [row.get('name', ''), *(row.get('aliases') or [])] if isinstance(value, str))]
+    keys = ('id','name','system','category','aliases','catalog_source','spu_id','parameter_sku_id')
+    return {'source_id':'catalog', 'products':[{k:row[k] for k in keys if k in row} for row in selected[:50]],
+            'query':query, 'total_count':len(rows), 'match_count':len(selected), 'truncated':len(selected)>50}
 
 
 class WordingRevisionIntent(BaseModel):
@@ -298,7 +310,7 @@ class AgentTools:
             raise HTTPException(422, 'revision_intent只能用于当前文稿的修改')
         if name == 'read_catalog':
             self.catalog = await _invoke((await self.base()).catalog)
-            return {'source_id':'catalog', 'products':self.catalog[:50]}
+            return project_catalog(self.catalog, args.query)
         if name == 'read_product':
             if self.catalog is None:
                 self.catalog = await _invoke((await self.base()).catalog)

@@ -558,6 +558,8 @@ async def review_design_element(metadata, base_url: str, api_key: str, model: st
         'documentary_scene: photorealistic/depicted real shops, streets, buildings, landmarks, windows or views '
         'that appear to document an actual location. Deliberately abstract studio materials, geometric spaces, '
         'lighting, graphic framing and pedestals are allowed and are not automatically documentary scenes. '
+        'Recognizable ordinary unbranded bowls, chopsticks, plates, books or fabric in an editorial illustration '
+        'or deliberately designed still-life are also allowed; their recognizability alone does not document a real shop or location. '
         'text_or_logo: any words, letters, numerals, logos, brand marks, QR codes or watermarks, even incidental. '
         'For every category give status absent/present/uncertain, a concrete pixel observation and localized '
         'region when present or uncertain. For absent, region may be empty. Do not invent observations, '

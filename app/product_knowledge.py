@@ -119,6 +119,11 @@ class ProductRepository:
 
 
 def load_products(repository=None):
+    """Evidence-ready knowledge only; storefront discovery is a separate view.
+
+    The generation provider depends on exact-name matching here. A storefront
+    listing with the same marketing name must not replace these versioned facts.
+    """
     rows = read_products(ROOT/'data/official_products.json') + read_products(ROOT/'data/ecosystem_products.json')
     for row in rows:
         row.setdefault('category', 'computer')
@@ -130,7 +135,32 @@ def load_products(repository=None):
     return [row for name, row in by_name.items() if name and row.get('facts')]
 
 
+def load_product_catalog(repository=None):
+    """Read-only knowledge plus verified storefront listings, without fact joins.
+
+    Storefront availability is supplied by the snapshot reader, not inferred
+    from a legacy ``collected`` status or from a product having specifications.
+    A listing stays distinct even if its display name matches existing knowledge.
+    """
+    from .vmall_catalog import load_vmall_products
+    rows = list(load_products(repository))
+    seen = set()
+    for row in load_vmall_products():
+        if not isinstance(row, dict) or not row.get('catalog_key') or not row.get('name'):
+            continue
+        if row['catalog_key'] in seen:
+            continue
+        seen.add(row['catalog_key'])
+        # Service-owned marker, not a caller's publishing identity or permission.
+        # Do not transfer any legacy facts, OS, assets, prices or store inventory.
+        rows.append({**row, '_catalog_source': 'vmall'})
+    return rows
+
+
 def summary(row):
+    if row.get('_catalog_source') == 'vmall':
+        from .vmall_catalog import vmall_summary
+        return vmall_summary(row)
     name = row.get('name') or row['product']
     os_fact = next((f for f in row.get('facts', []) if f.get('label') == '操作系统'), {})
     return {'id': 'product-'+hashlib.sha256(name.encode()).hexdigest()[:16], 'name': name,

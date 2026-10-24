@@ -98,6 +98,24 @@ def test_source_native_route_rejects_tampered_bytes_not_just_metadata_labels(sou
         asyncio.run(design_service._design_elements_treatment('design',{},plan,board,assets))
 
 
+def test_explicit_native_product_composition_skips_paid_decor_without_skipping_source_proof(source_photo,monkeypatch):
+    plan,board,assets,raw,checkpoints=source_photo
+    plan.concepts[0].production_method='native_assembly'
+    plan.concepts[0].treatment='product'
+    board.document.layers[0].role='product'
+    from app.image_service import ImageService
+    monkeypatch.setattr(ImageService,'generate_background',lambda *a,**k:pytest.fail('Native product design is not a background-generation request'))
+    state={}
+    result=asyncio.run(design_service._design_elements_treatment('design',state,plan,board,assets))
+    assert result is board.document
+    proof=state['native_design_composition'][board.id]
+    assert proof['method']=='native_assembly' and proof['new_image_generated'] is False
+    assert proof['source_integrity']['placements'][0]['render_asset_sha256']==hashlib.sha256(raw).hexdigest()
+    board.document.assets['photo']['sha256']='0'*64
+    with pytest.raises(ValueError,match='source_hash_mismatch'):
+        asyncio.run(design_service._design_elements_treatment('design',state,plan,board,assets))
+
+
 def test_source_native_route_requires_the_actual_photograph_layer(source_photo,monkeypatch):
     plan,board,assets,_,_=source_photo
     board.document.layers[0].role='product'

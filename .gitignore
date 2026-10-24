@@ -21,3 +21,5 @@ web-next/evidence/
 *.tsbuildinfo
 *.zip
 *.tar.gz
+data/vmall_catalog.json
+data/vmall_assets.json

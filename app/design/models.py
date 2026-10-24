@@ -127,6 +127,7 @@ class DesignConcept(BaseModel):
     id: str=Field(max_length=80)
     name: str=Field(max_length=80)
     visual_thesis: str=Field(max_length=600)
+    production_method: Literal['native_assembly','generated_editorial','source_photo','auto']='auto'
     art_direction: ArtDirection=Field(default_factory=ArtDirection)
     visual_devices: list[VisualDevice]=Field(default_factory=list,max_length=6)
     composition: list[LayoutRegion]=Field(min_length=1,max_length=20)

@@ -239,3 +239,29 @@ def test_already_authored_below_background_stays_at_original_z():
     result = attach_design_elements(board.document, meta)
     assert next(item for item in result.layers if item.id == layer.id).z == -30
     assert result.assets[meta['id']]['attachment_adjustments'] == []
+
+
+def test_editorial_still_life_survives_translation_without_product_or_copy_leak():
+    from app.design.elements import ELEMENT_DIRECTION_SYSTEM
+    plan, board, service, calls = fixture()
+    original = deepcopy(board.document.model_dump())
+    class Director:
+        enabled = True
+        async def _json(self, system, payload):
+            assert '同一可辨物件只能由一个图层负责' in system
+            return {'motif': '右下一个无品牌陶碗和一双筷子，作为编辑静物而非本店照片',
+                    'material': '细瓷与木质筷子', 'light': '暖色柔光',
+                    'spatial_instructions': '保留左侧产品与标题区域；没有重复碗筷或圆圈',
+                    'native_layer_ids': ['native-phone','native-title']}
+    async def execute():
+        direction = await plan_design_elements(plan, board, Director())
+        return await generate_design_elements(plan, board, service, element_brief=direction)
+    meta = asyncio.run(execute())
+    prompt = calls[0][0]
+    assert '无品牌陶碗和一双筷子' in prompt
+    assert 'Each object has ONE owner' in prompt
+    assert 'Do not render or redraw any product' in prompt
+    assert 'NO real streets' in prompt and 'people, hands' in prompt
+    assert 'COPY-CANARY' not in prompt and 'data:image' not in prompt
+    assert meta['pixel_review_required'] is True
+    assert board.document.model_dump() == original
