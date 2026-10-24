@@ -634,7 +634,20 @@ class AgentTools:
             self.save_place_research()
             return self.place_context()
         if name in {'search_signals', 'research_store'}:
-            if name == 'research_store' and self.search is None:
+            reused = None
+            refresh_pattern = r'重新.{0,5}(?:检索|查询|查|调研|调查|研究)|实时|不要.{0,6}(?:旧|缓存|之前)|强制刷新'
+            force_fresh = bool(re.search(refresh_pattern + '|最新', args.query)
+                or re.search(refresh_pattern, self.turn.get('text', ''))
+                or re.search(r'最新.{0,12}(?:门店|周边|位置|地址|地理)|(?:门店|周边|位置|地址|地理).{0,12}最新',
+                             self.turn.get('text', '')))
+            if name == 'research_store' and not self.needs_place_refresh and not force_fresh:
+                from .research_memory import recover_own_research
+                reused = recover_own_research(args.query, discovery={}, profile=self.store_profile(),
+                    audience=self.audience, reuse_before_search=True)
+            if reused:
+                discovery = {}
+                rows = reused['items']
+            elif name == 'research_store' and self.search is None:
                 from ..place_discovery import discover_place
                 discovery = await _invoke(lambda query: discover_place(query, profile=self.store_profile()), args.query)
                 rows = discovery.get('items', [])
@@ -647,8 +660,8 @@ class AgentTools:
             if name == 'research_store':
                 profile = self.store_profile()
                 from .research_memory import recover_own_research
-                remembered_research = recover_own_research(args.query, discovery=discovery,
-                    profile=profile, audience=self.audience)
+                remembered_research = reused or (None if force_fresh else recover_own_research(
+                    args.query, discovery=discovery, profile=profile, audience=self.audience))
                 result = {'source_id': 'store-research:' + hashlib.sha256(args.query.encode()).hexdigest()[:16],
                     'query': args.query, 'profile': profile, 'items': rows[:6],
                     'state': discovery.get('state', discovery.get('status')) or ('found' if rows else 'no_results'),
@@ -658,8 +671,9 @@ class AgentTools:
                     'turn_id': self.turn['id'],
                     'use': '根据位置、周边学校/办公园区/住宅提出本次创作受众与场景；地理线索不能证明微信好友身份、比例或购买阶段。无结果时不能声称已查明。'}
                 if remembered_research:
-                    result = {**remembered_research, 'turn_id': self.turn['id'],
-                        'use': '本次网络检索不可用，复用本人同门店24小时内同查询的真实研究；不是本次联网新结果。位置线索不证明好友身份或购买阶段。'}
+                    result = {**remembered_research, 'turn_id': self.turn['id']}
+                    if not reused:
+                        result['use'] = '本次网络检索不可用，复用本人同门店24小时内同查询的真实研究；不是本次联网新结果。位置线索不证明好友身份或购买阶段。'
                 # A fresh investigation replaces old-turn location assumptions.
                 if not self._researched_this_turn:
                     self.store_research = []

@@ -23,6 +23,37 @@ from .resource_access import ensure_live_context, validate_task_resources
 PLATFORMS = {'xiaohongshu', 'moments', 'wechat', 'bilibili', 'douyin', 'poster'}
 
 
+async def _timed_design_stage(state, stage, operation):
+    """Record actual stage work, including failed attempts, without payloads."""
+    started = time.monotonic()
+    status = 'completed'
+    try:
+        return await operation
+    except BaseException:
+        status = 'incomplete'
+        raise
+    finally:
+        row = {'stage': stage, 'duration_ms': round((time.monotonic()-started)*1000), 'status': status}
+        state['stage_timing'] = [*state.get('stage_timing', []), row][-100:]
+
+
+async def _collect_catalog_design_materials(state, product, assets):
+    from .design.product_subjects import collect_product_subjects
+    from .design_brand_materials import collect_brand_materials
+    # No shared asset mapping is mutated while these independent readers run.
+    tasks = [asyncio.create_task(_timed_design_stage(state, 'product_subjects',
+                 collect_product_subjects(product, dict(assets), max_subjects=8))),
+             asyncio.create_task(_timed_design_stage(state, 'brand_materials',
+                 collect_brand_materials(product, dict(assets))))]
+    try:
+        return await asyncio.gather(*tasks)
+    except BaseException:
+        for task in tasks:
+            task.cancel()
+        await asyncio.gather(*tasks, return_exceptions=True)
+        raise
+
+
 def _copy_auditor():
     """Use the configured independent reviewer for factual speech-act checks."""
     if not settings.image_api_key or not settings.image_review_model:
@@ -619,7 +650,7 @@ async def execute_design(parameters):
     from .generation_jobs import generation_budget, commit_artifact_result
     from .design.source_integrity import RENDER_POLICY, native_source_proof
     identifier = parameters['design_id']
-    render_current = cached_design_renderer(render_document)
+    cached_render = cached_design_renderer(render_document)
     source, task = source_record(parameters['source_run_id'])
     parent = load_design(parameters['parent_id'], edit=True) if parameters.get('parent_id') else None
     craft_edit = parameters.get('craft_edit')
@@ -646,6 +677,9 @@ async def execute_design(parameters):
         if exc.status_code != 404:
             raise
         state = {'id': identifier, 'created_at': time.time(), 'source_run_id': parameters['source_run_id']}
+    async def render_current(document):
+        return await _timed_design_stage(state, 'raster_render', cached_render(document))
+
     task_data = task.model_dump()
     task_data['platform'] = parameters['platform']
     task_data['design_surface'] = parameters.get('surface', '')
@@ -671,15 +705,18 @@ async def execute_design(parameters):
             # The revised composition still receives actual-render review.
             state.setdefault('element_pixel_reviews', deepcopy(parent_work.get('element_pixel_reviews', {})))
         else:
-            assets = await collect_assets(parameters['source_run_id'], source)
+            assets = await _timed_design_stage(state, 'source_assets', collect_assets(parameters['source_run_id'], source))
             from .design.vmall_materials import collect_vmall_design_materials
-            material_assets, material_sources = await collect_vmall_design_materials(source,task.product,assets)
+            material_assets, material_sources = await _timed_design_stage(state, 'vmall_materials',
+                collect_vmall_design_materials(source,task.product,assets))
             assets.update(material_assets)
-            from .design.product_subjects import collect_product_subjects
-            product_subjects, subject_sources = await collect_product_subjects(task.product, assets, max_subjects=8)
+            # These readers select disjoint catalogue roles (packshot vs KV).
+            # Both see the same already authorized VMALL/source snapshot; merge
+            # only after both complete, in the original deterministic order.
+            subject_result, brand_result = await _collect_catalog_design_materials(state, task.product, assets)
+            product_subjects, subject_sources = subject_result
+            brand_assets, brand_sources = brand_result
             assets.update(product_subjects)
-            from .design_brand_materials import collect_brand_materials
-            brand_assets, brand_sources = await collect_brand_materials(task.product, assets)
             assets.update(brand_assets)
         record['sources'] = list(record.get('sources') or [])
         known_sources = {item['id'] for item in record['sources']}
@@ -689,8 +726,9 @@ async def execute_design(parameters):
                 known_sources.add(item['id'])
         if 'asset_observations' not in state:
             from .design_image_tools import describe_design_assets
-            state['asset_observations'] = await describe_design_assets(assets, settings.image_base_url,
-                settings.image_api_key, settings.image_review_model) if settings.image_api_key and settings.image_review_model else {}
+            state['asset_observations'] = await _timed_design_stage(state, 'asset_observation',
+                describe_design_assets(assets, settings.image_base_url,
+                    settings.image_api_key, settings.image_review_model)) if settings.image_api_key and settings.image_review_model else {}
             _checkpoint(identifier, state)
         record['asset_observations'] = state['asset_observations']
         for asset_id, observation in state['asset_observations'].items():
@@ -788,12 +826,12 @@ async def execute_design(parameters):
             no_type = no_overlay_text_requested(parameters.get('instruction', ''))
             if 'design_copy' not in state:
                 from .design import get_platform_connector
-                state['design_copy'] = await prepare_design_copy(task_data, record,
+                state['design_copy'] = await _timed_design_stage(state, 'design_copy', prepare_design_copy(task_data, record,
                     brand_identity=identity, store_context=context, instruction=parameters.get('instruction', ''),
                     copy_craft_contract=copy_craft_contract,
                     max_pages=get_platform_connector(parameters['platform'], parameters.get('surface', '')).suggested_pages,
                     repair_rejections=True, auditor=_copy_auditor() if not no_type else None,
-                    llm=_design_model(model, calls=6, tokens=3500) if design_llm_enabled and not no_type else None)
+                    llm=_design_model(model, calls=6, tokens=3500) if design_llm_enabled and not no_type else None))
             _checkpoint(identifier, state)
         record['_design_copy'] = state['design_copy']
         report('copy', f'画面文案 {len(state["design_copy"].get("cards") or [])} 条'
@@ -841,8 +879,9 @@ async def execute_design(parameters):
             llm = _design_model(model, calls=2, tokens=4800) if design_llm_enabled else None
             from .design.planner import DesignInputNeeded
             try:
-                plan = await plan_design(task_data, record, instruction=instruction,
-                                         platform=parameters['platform'], llm=llm)
+                plan = await _timed_design_stage(state, 'art_direction',
+                    plan_design(task_data, record, instruction=instruction,
+                        platform=parameters['platform'], llm=llm))
             except DesignInputNeeded as exc:
                 raise HTTPException(422, str(exc)) from None
             state['plan'] = plan.model_dump(mode='json')
@@ -920,9 +959,9 @@ async def execute_design(parameters):
                             'source_reference_images': [value['data_url'] for value in candidate.document.assets.values()
                                 if isinstance(value.get('data_url'), str)
                                 and value.get('provenance') != 'ai_generated_design_elements'][:3]})
-                refined_candidate = await refine_design(candidate.document, render_current,
+                refined_candidate = await _timed_design_stage(state, 'candidate_render_review', refine_design(candidate.document, render_current,
                     reviewer=compare_reviewer if settings.image_api_key and _design_review_model() else None,
-                    max_rounds=2)
+                    max_rounds=2))
                 candidate.document = refined_candidate['document']
                 native_source_proof(candidate.document, assets)
                 _validate_delivered_copy(candidate.document, state.get('design_copy', {}), instruction=instruction)
@@ -1048,8 +1087,9 @@ async def execute_design(parameters):
                                     {'id': key, 'purpose': 'abstract_design_only_not_scene_or_product_evidence'}
                                     for key, value in doc.assets.items()
                                     if value.get('provenance') == 'ai_generated_design_elements']})
-            refined = await refine_design(board.document, render_current, reviewer=reviewer,
-                                          max_rounds=0 if craft_edit is not None else 2)
+            refined = await _timed_design_stage(state, 'final_render_review',
+                refine_design(board.document, render_current, reviewer=reviewer,
+                    max_rounds=0 if craft_edit is not None else 2))
             board.document = refined['document']
             _validate_delivered_copy(board.document, state.get('design_copy', {}), instruction=instruction)
             item = board.model_dump(mode='json')

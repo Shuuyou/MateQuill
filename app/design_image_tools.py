@@ -6,6 +6,9 @@ White in a protection mask means copy the original pixel verbatim.
 from __future__ import annotations
 
 import hashlib
+from collections import OrderedDict
+from copy import deepcopy
+import time
 import io
 from PIL import Image, ImageOps, ImageDraw
 
@@ -93,6 +96,10 @@ def enhance_photo(data: bytes, *, crop: tuple[int, int, int, int] | None = None,
             'source_sha256': hashlib.sha256(data).hexdigest(),
             'operations': [*(['crop'] if crop else []), *(['autocontrast'] if autocontrast else [])]}
 
+_ASSET_OBSERVATION_CACHE = OrderedDict()
+_OBSERVATION_TTL = 6 * 3600
+
+
 async def describe_design_assets(assets: dict, base_url: str, key: str, model: str) -> dict:
     """Observe up to eight already-authorized raster data URLs in one contact sheet.
 
@@ -112,6 +119,8 @@ async def describe_design_assets(assets: dict, base_url: str, key: str, model: s
                 or parsed.port not in (None, 443) or not isinstance(assets, dict)):
             return {}
         selected = []
+        cacheable = True
+        pixel_binding = []
         # A run may contain many nearly identical product angles. Reserve room
         # for the launch visual and the current store's real photos before
         # filling the contact sheet with the remaining product references.
@@ -138,6 +147,13 @@ async def describe_design_assets(assets: dict, base_url: str, key: str, model: s
                 continue
             image.thumbnail((300, 240), Image.Resampling.LANCZOS)
             selected.append((asset_id, image))
+            digest = hashlib.sha256(decoded).hexdigest()
+            pixel_binding.append((asset_id, digest))
+            # Only public, verified product material may cross job boundaries.
+            # Store/customer photos and unknown provenance always run normally.
+            cacheable = cacheable and (metadata.get('verified') is True
+                and metadata.get('provenance') in {'huawei_official', 'vmall_storefront'}
+                and metadata.get('sha256') == digest)
         if not selected:
             return {}
         columns = min(2, len(selected))
@@ -161,6 +177,16 @@ framing：简短描述主体角度、取景、是否多人/多设备、画面留
 不能识别或推断具体型号、配置、功能、价格、性能、版权。不能将看不清的背面说成正面。
 返回严格JSON：{"assets":[{"id":"a0","view":"front|rear|side|detail|scene|unknown","framing":"所见画面","photo":false}]}。
 必须且只能包含给定标签，每个标签一项。无法确定时view写unknown，仍说明可观察到的内容。'''
+        binding = {'protocol': 1, 'model': model, 'endpoint': base_url.rstrip('/'),
+            'credential_hash': hashlib.sha256(key.encode()).hexdigest(),
+            'pixels': pixel_binding, 'instruction': system}
+        cache_key = hashlib.sha256(json.dumps(binding, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
+        if cacheable:
+            cached = _ASSET_OBSERVATION_CACHE.get(cache_key)
+            if cached and time.monotonic()-cached[0] < _OBSERVATION_TTL:
+                _ASSET_OBSERVATION_CACHE.move_to_end(cache_key)
+                return deepcopy(cached[1])
+            _ASSET_OBSERVATION_CACHE.pop(cache_key, None)
         payload = {'model': model, 'messages': [{'role': 'system', 'content': system},
             {'role': 'user', 'content': [{'type': 'text', 'text': '需要观察的标签：' + ', '.join(aliases)},
                 {'type': 'image_url', 'image_url': {'url': 'data:image/jpeg;base64,' + base64.b64encode(stream.getvalue()).decode()}}]}],
@@ -197,6 +223,11 @@ framing：简短描述主体角度、取景、是否多人/多设备、画面留
                     or not isinstance(entry['photo'], bool)):
                 return {}
             described[aliases[alias]] = {name: entry[name] for name in ('view', 'framing', 'photo')}
+        if cacheable:
+            _ASSET_OBSERVATION_CACHE[cache_key] = (time.monotonic(), deepcopy(described))
+            _ASSET_OBSERVATION_CACHE.move_to_end(cache_key)
+            while len(_ASSET_OBSERVATION_CACHE) > 64:
+                _ASSET_OBSERVATION_CACHE.popitem(last=False)
         return described
     except (httpx.HTTPError, ValueError, KeyError, TypeError, IndexError, OSError):
         return {}

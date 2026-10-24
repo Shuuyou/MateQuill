@@ -95,6 +95,12 @@ def content_timing_snapshot(model):
         model_name = metric.get('model')
         if isinstance(model_name, str) and re.fullmatch(r'[A-Za-z0-9._:/-]{1,100}', model_name):
             row['model'] = model_name
+        payload = metric.get('writer_payload')
+        if stage in {'draft', 'repair', 'reselection'} and isinstance(payload, dict):
+            for key in ('original_bytes', 'wire_bytes'):
+                amount = payload.get(key)
+                if isinstance(amount, int) and not isinstance(amount, bool) and 0 <= amount <= 1000000:
+                    row['writer_' + key] = amount
         rows.append(row)
     return {'completed_calls': len(rows), 'model_duration_ms': sum(row['duration_ms'] for row in rows),
             'calls': rows}

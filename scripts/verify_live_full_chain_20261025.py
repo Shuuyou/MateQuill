@@ -94,6 +94,12 @@ def main():
             report['source_run_id'] = design['source_run_id']
             report['copy_title'] = source.get('title')
             report['text_timing'] = source.get('strategy', {}).get('generation_timing')
+            report['repair_decision'] = source.get('strategy', {}).get('repair_decision')
+            image_start = next((row['elapsed_seconds'] for row in report.get('progress', [])
+                                if row.get('stage') == 'create_design_bundle'), None)
+            if image_start is not None:
+                report['text_and_planning_seconds'] = image_start
+                report['image_delivery_seconds'] = round(report['generation_seconds'] - image_start, 2)
             (OUTPUT/'copy.json').write_text(json.dumps(source, ensure_ascii=False, indent=2), encoding='utf8')
             exports = []
             for index, board in enumerate(design['artboards'], 1):

@@ -1,8 +1,10 @@
-"""Recover the caller's recent real place research only after network failure.
+"""Reuse the caller's recent real place research with explicit provenance.
 
 This is server resource memory, never an imported answer or a fresh-search claim.
 An ordinary empty search must remain empty. Queries and store location snapshots
 must match exactly; discovery, rather than this cache, owns disambiguation.
+Proactive reuse requires a complete store name/address and an explicit caller
+opt-in; tools exclude location-bearing or refresh requests from that path.
 """
 from copy import deepcopy
 from datetime import datetime, timezone
@@ -28,9 +30,12 @@ def _observed_timestamp(value):
         return None
 
 
-def recover_own_research(query, *, discovery, profile, now=None, audience='private'):
+def recover_own_research(query, *, discovery, profile, now=None, audience='private',
+                         reuse_before_search=False):
     """Return only a same-owner/store exact-query research snapshot, or None."""
-    if discovery.get('network_state') != 'unavailable' or discovery.get('items'):
+    if not reuse_before_search and (discovery.get('network_state') != 'unavailable' or discovery.get('items')):
+        return None
+    if reuse_before_search and not all(str(profile.get(key) or '').strip() for key in ('name', 'location')):
         return None
     context = require_context()
     if context.is_legacy or not context.store_id:
@@ -79,6 +84,15 @@ def recover_own_research(query, *, discovery, profile, now=None, audience='priva
     if not candidates:
         return None
     _, identifier, selected = max(candidates, key=lambda row: row[0])
+    if reuse_before_search:
+        result = deepcopy(selected)
+        # Never carry a previous failed attempt forward as a current one.
+        for key in ('fresh_attempt_failed', 'fresh_attempt_observed_at'):
+            result.pop(key, None)
+        return {**result, 'cache_hit': True, 'research_origin': 'own_prior_research',
+            'prior_conversation_id': identifier, 'network_state': 'not_requested',
+            'cache_policy': 'same_owner_store_profile_exact_query_24h',
+            'use': '复用本人同门店、同地址、同查询24小时内的真实研究；保留原始观测时间，不是本次联网新结果。地理线索不证明好友身份或购买阶段。'}
     return {**deepcopy(selected), 'cache_hit': True, 'research_origin': 'own_prior_research',
         'prior_conversation_id': identifier, 'fresh_attempt_failed': True,
         'network_state': 'unavailable', 'fresh_attempt_observed_at': discovery.get('observed_at')}

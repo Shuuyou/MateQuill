@@ -129,7 +129,12 @@ class OpenAICompatibleLLM:
     async def _json(self, system, payload, temperature=0.2):
         if isinstance(payload, dict) and 'creative_brief' in payload and 'output_contract' in payload:
             from .writer_payload import compact_writer_payload
+            original_bytes = len(json.dumps(payload, ensure_ascii=False).encode('utf8'))
             payload = compact_writer_payload(payload)
+            self.last_writer_payload_stats = {
+                'original_bytes': original_bytes,
+                'wire_bytes': len(json.dumps(payload, ensure_ascii=False).encode('utf8')),
+            }
         # Retry a malformed response once, within the shared call budget. A fresh
         # request retains the original evidence; never guess or repair fact text.
         for attempt in range(2):
@@ -250,6 +255,8 @@ class OpenAICompatibleLLM:
             raise ModelCallError(outcome) from None
         finally:
             self.metrics.append({'call':self._calls,'stage':stage,'model':self.model,'duration_ms':int((time.monotonic()-started)*1000),
+                **({'writer_payload': dict(self.last_writer_payload_stats)}
+                   if stage in {'draft', 'repair', 'reselection'} and getattr(self, 'last_writer_payload_stats', None) else {}),
                 'prompt_tokens':int(usage.get('prompt_tokens',0)),
                 'completion_tokens':int(usage.get('completion_tokens',0)),
                 'total_tokens':int(usage.get('total_tokens',0)),'outcome':outcome})
