@@ -8,7 +8,9 @@ import inspect
 import io
 import os
 import traceback
+import json
 from pathlib import Path
+from pydantic import TypeAdapter, ValidationError
 from .models import (TaskInput, EvidenceBundle, RunResult, ContentBlock, ImagePlacement,
                      AuditItem, TraceItem, creative_review_blocks)
 from .creative_connectors import get_connector
@@ -24,6 +26,52 @@ PLATFORMS = {
     'moments': {'name':'门店朋友圈','structure':'一个场景 → 一个核心卖点 → 咨询引导','tone':'简短、直接、有人情味','min_images':1,'max_images':3,'cta':'私信沟通你的使用需求，预约到店体验'},
     'poster': {'name':'门店海报','structure':'主标题 → 副标题 → 不超过三个卖点 → 行动引导','tone':'精炼、醒目','min_images':1,'max_images':1,'cta':'扫码咨询或预约到店体验'},
 }
+
+
+def normalize_generated_images(images, plan, block_count):
+    """Bridge legacy placement display fields without supplying new evidence."""
+    if not isinstance(images, list):
+        return images
+    cards = plan.get('cards', []) if isinstance(plan, dict) else []
+    cards = cards if isinstance(cards, list) else []
+    cover_assets = {asset_id for card in cards if isinstance(card, dict) and card.get('role') == 'cover'
+                    and isinstance(card.get('asset_ids'), list)
+                    for asset_id in card['asset_ids'] if isinstance(asset_id, str)}
+    normalized = []
+    for value in images:
+        if not isinstance(value, dict):
+            normalized.append(value)
+            continue
+        item = deepcopy(value)
+        for field in ('caption', 'reason'):
+            if item.get(field) is None:
+                item[field] = ''
+        if item.get('position') is None or item.get('position') == '':
+            index = item.get('block_index')
+            if item.get('role') == 'cover':
+                item['position'] = '封面'
+            elif type(index) is int and 0 <= index < block_count:
+                item['position'] = f'第{index + 1}段后'
+            elif isinstance(item.get('asset_id'), str) and item['asset_id'] in cover_assets:
+                item['position'] = '封面'
+        normalized.append(item)
+    return normalized
+
+
+def _private_writer_failure(llm, schema_errors):
+    """Raw failed writer JSON stays in the scoped, unapproved agent turn."""
+    from .gtm_agent.effects import _claim, assert_agent_lease
+    claim = _claim.get()
+    if not claim:
+        return
+    from .gtm_agent.repository import update_turn
+    diagnostics = {'approved': False, 'schema_errors': schema_errors,
+                   'raw_writer_output': deepcopy(getattr(llm, 'last_generated_data', None))}
+    if len(json.dumps(diagnostics, ensure_ascii=False, default=str)) > 100000:
+        diagnostics.pop('raw_writer_output')
+        diagnostics['raw_writer_output_omitted'] = 'size_limit'
+    assert_agent_lease()
+    update_turn(claim[0], lambda body: {**body, 'generation_diagnostics': diagnostics})
 
 
 def _persist_reader_value(result, llm):
@@ -500,6 +548,8 @@ class AgentWorkflow:
         cover_assembly_allowed = False
         def apply(data):
             nonlocal creative_plan_errors, cover_assembly_allowed
+            if self.llm is not None:
+                self.llm.last_generated_data = deepcopy(data)
             creative_plan_errors=[]
             # A repair replaces the plan. Never retain stale cards from a prior
             # draft when the repaired model response omits them.
@@ -529,10 +579,23 @@ class AgentWorkflow:
                 if proposal.get('jobs') and proposal.get('concerns') and proposal.get('priority_fact_ids'):
                     result.strategy['planning_method']='模型任务分析与证据排序；平台约束由程序锁定'
             for key in ['title','intro','cta']:
-                setattr(result,key,str(data.get(key,'')))
-            result.tags=[str(x) for x in data.get('tags',[])]
-            result.blocks=[ContentBlock.model_validate(x) for x in data.get('blocks',[])]
-            result.images=bind_legacy_images([ImagePlacement.model_validate(x) for x in data.get('images',[])],len(result.blocks))
+                value = data.get(key, '')
+                setattr(result,key,'' if value is None else str(value))
+            result.tags=[str(x) for x in (data.get('tags') or [])]
+            for name, model in (('blocks', ContentBlock), ('images', ImagePlacement)):
+                values = data.get(name, [])
+                if name == 'images':
+                    values = normalize_generated_images(values, data.get('creative_plan'), len(result.blocks))
+                try:
+                    parsed = TypeAdapter(list[model]).validate_python(values)
+                except ValidationError as exc:
+                    self.llm.generation_validation_errors = [{'field': '.'.join(map(str, (name, *item['loc']))),
+                        'type': item['type']} for item in exc.errors(include_input=False, include_context=False, include_url=False)][:20]
+                    raise
+                if name == 'blocks':
+                    result.blocks = parsed
+                else:
+                    result.images = bind_legacy_images(parsed, len(result.blocks))
             # Editorial cleanup may remove a valid product overview that the
             # model incorrectly positioned as a detail image. Reassemble only
             # when all original references themselves were legitimate; never
@@ -652,6 +715,13 @@ class AgentWorkflow:
                 result.audit.append(AuditItem(severity='warning',category='semantic',message='未运行模型语义核验，不能用于发布'))
         except Exception as exc:
             model_metrics()
+            if isinstance(exc, ValidationError):
+                schema_errors = getattr(self.llm, 'generation_validation_errors', None) or [
+                    {'field': '.'.join(map(str, item['loc'])), 'type': item['type']}
+                    for item in exc.errors(include_input=False, include_context=False, include_url=False)][:20]
+                result.strategy['generation_error'] = {'code': 'invalid_generated_structure'}
+                result.strategy['generation_schema_errors'] = schema_errors
+                _private_writer_failure(self.llm, schema_errors)
             if isinstance(exc, ModelCallError):
                 # Preserve only provider status and a bounded machine code;
                 # never persist the response body, endpoint or credentials.

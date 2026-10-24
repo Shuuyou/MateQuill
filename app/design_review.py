@@ -526,7 +526,7 @@ art_direction、visual_devices和设计意图只是待验证的创作主张；�
                         # A 429/5xx rejection arrives before any verdict exists,
                         # so a bounded Retry-After retry is safe. Timeouts and a
                         # malformed response stay unretried, never made a pass.
-                        if response.status_code in (429, 500, 502, 503, 504) and upstream_attempt < 2:
+                        if response.status_code in (429, 502, 503, 504) and upstream_attempt < 2:
                             wait = _retry_wait(response.headers, upstream_attempt + 1)
                             retriable = True
                             break

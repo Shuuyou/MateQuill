@@ -127,6 +127,9 @@ class OpenAICompatibleLLM:
         return context
 
     async def _json(self, system, payload, temperature=0.2):
+        if isinstance(payload, dict) and 'creative_brief' in payload and 'output_contract' in payload:
+            from .writer_payload import compact_writer_payload
+            payload = compact_writer_payload(payload)
         # Retry a malformed response once, within the shared call budget. A fresh
         # request retains the original evidence; never guess or repair fact text.
         for attempt in range(2):
@@ -398,7 +401,16 @@ class OpenAICompatibleLLM:
         self.creative_execution['editorial_voice'] = deepcopy(editorial_voice)
         if brief.get('local_editorial_context'):
             self.creative_execution['local_editorial_context'] = deepcopy(brief['local_editorial_context'])
-        return await self._json(prompt, {'task':task.model_dump(), 'strategy':strategy,
+        from .models import ContentBlock, ImagePlacement
+        block_schema = ContentBlock.model_json_schema()
+        image_schema = ImagePlacement.model_json_schema()
+        selected_ids = list(dict.fromkeys(fact.id for fact in selected))
+        block_schema['properties']['fact_ids']['items']['enum'] = selected_ids
+        image_schema['properties']['supported_fact_ids']['items']['enum'] = selected_ids
+        asset_ids = list(dict.fromkeys(asset.id for asset in bundle.assets))
+        if asset_ids:
+            image_schema['properties']['asset_id']['enum'] = asset_ids
+        generated = await self._json(prompt, {'task':task.model_dump(), 'strategy':strategy,
             'local_editorial_context': brief.get('local_editorial_context'),
             'marketing_context': self.marketing_context,
             'editorial_voice': editorial_voice,
@@ -415,11 +427,16 @@ class OpenAICompatibleLLM:
             'publication_context': {'current_date': datetime.now(ZoneInfo('Asia/Shanghai')).date().isoformat(),
                 'event_use': '按本次选题选择必要事实；已过去的发布或开售日期只作历史背景，不写成即将发生，不为凑事实数插入无关活动。'},
             'output_contract': {'required_top_level': ['title', 'intro', 'blocks', 'cta', 'tags', 'images', 'creative_plan'],
+                'blocks': {'type': 'array', 'items': block_schema},
+                'images': {'type': 'array', 'items': image_schema, **({'maxItems': 0} if not asset_ids else {})},
+                'image_placement': '每张图片须有准确asset_id、字符串caption和position；asset_id及fact_ids必须逐字复制枚举中的完整ID，不截断、不重写哈希。封面role=cover、position=封面；正文图绑定实际block_index。没有图用空数组，不写null，不用image_brief替代images。',
                 'creative_plan': '必须是完整对象，含非空cards，服从creative_brief.output_schema。修订也返回完整分镜，不省略。'},
             'platform_playbook':playbook, 'creative_brief':brief,
             'evidence':evidence,
             'assets':[a.model_dump(exclude={'local_path'}) for a in bundle.assets],
             'user_materials':bundle.user_materials},temperature=0.8)
+        self.last_generated_data = deepcopy(generated)
+        return generated
 
     async def verify(self, result, bundle):
         # Private diagnostic checkpoint: a timeout during later refinement must
