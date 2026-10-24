@@ -665,7 +665,22 @@ class AgentWorkflow:
                     result.strategy['marketing_context'] = deepcopy(getattr(self.llm, 'marketing_context', {}))
                     _persist_reader_value(result, self.llm)
                 trace('semantic_verification','完成独立语义事实核验')
-                if (any(a.severity=='error' for a in result.audit) or any(a.severity=='warning' for a in result.editorial_review)) and hasattr(self.llm,'repair'):
+                repair_errors = [a for a in result.audit if a.severity == 'error']
+                editorial_advice = [a for a in result.editorial_review if a.severity == 'warning']
+                accepted = (getattr(self.llm, 'marketing_review', {}) or {}).get('decision') == 'accept'
+                # Advisory heuristics must not override an actual accepted
+                # review with a costly rewrite of otherwise valid content.
+                # Every hard, factual, reader-value and marketing error still
+                # enters the existing repair/review loop below.
+                needs_repair = bool(repair_errors or (editorial_advice and not accepted))
+                result.strategy['repair_decision'] = {
+                    'required': needs_repair,
+                    'marketing_decision': (getattr(self.llm, 'marketing_review', {}) or {}).get('decision'),
+                    'errors': [a.model_dump() for a in repair_errors],
+                    'editorial_advice': [a.model_dump() for a in editorial_advice],
+                    'policy': 'repair_errors; advisory_only_rewrite_unless_independently_accepted',
+                }
+                if needs_repair and hasattr(self.llm,'repair'):
                     reselect = (getattr(self.llm, 'marketing_review', {}) or {}).get('decision') == 'reselect' and hasattr(self.llm, 'reselect')
                     if reselect:
                         rejected = {'draft': result.model_dump(include={'title','intro','blocks','cta','tags','creative_plan'}),
