@@ -178,8 +178,10 @@ def parameter_evidence(row, *, product=None):
         bundle.facts.append(Fact(id=fid,product=product,label=item['label'],value=item['value'],quote=quote,
             source_id=sid,qualifiers=qualifiers,sku_scope='vmall:'+row['spu_id']+':'+sku))
         quotes.append(quote)
+    excerpt = '\n\n'.join(quotes)
     bundle.sources.append(Source(id=sid,title=_source_title(row,product,'当前规格资料'),provider='vmall_storefront',
-        url=row['source_url'],sha256=row['source_sha256'],captured_at=row.get('captured_at',''),excerpt='\n\n'.join(quotes)))
+        url=row['source_url'],sha256=row['source_sha256'],captured_at=row.get('captured_at',''),excerpt=excerpt,
+        excerpt_sha256=hashlib.sha256(excerpt.encode('utf-8')).hexdigest()))
     systems={p['value'] for p in params if p['label']=='操作系统'}
     if len(systems)==1:bundle.system=next(iter(systems))
     elif len(systems)>1:bundle.conflicts.append('商城当前参数SKU的操作系统记录存在冲突。')

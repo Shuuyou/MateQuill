@@ -86,8 +86,10 @@ def _snapshot_bundle(task, result):
         quotes = [fact.quote for fact in facts if fact.source_id == source.id]
         if quotes:
             excerpt = '\n\n'.join(dict.fromkeys(quotes))
+            digest = hashlib.sha256(excerpt.encode()).hexdigest()
             sources.append(source.model_copy(update={
-                'excerpt': excerpt, 'sha256': hashlib.sha256(excerpt.encode()).hexdigest()}))
+                'excerpt': excerpt,
+                **({'excerpt_sha256': digest} if source.provider == 'vmall_storefront' else {'sha256': digest})}))
         else:
             sources.append(source.model_copy(deep=True))
     systems = {fact.system for fact in facts if fact.product == task.product and fact.system}

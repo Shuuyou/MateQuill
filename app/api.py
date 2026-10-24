@@ -286,13 +286,22 @@ async def _execute_run_task(task: TaskInput, request: Request):
         # Sources use document titles + public hashes. Never return signed URLs.
         from .local_knowledge import official_url
         from .campaign_evidence import public_reference_url
+        from .vmall_catalog import valid_vmall_source
         public_source = (source.get('provider') == 'huawei_official' and official_url(source.get('url',''))) or (
-            source.get('provider') == 'campaign_reference' and public_reference_url(source.get('url','')))
+            source.get('provider') == 'campaign_reference' and public_reference_url(source.get('url',''))) or (
+            source.get('provider') == 'vmall_storefront' and valid_vmall_source(source))
         if not public_source:
             source['url'] = ''
         quotes=[fact.get('quote','') for fact in record.get('facts',[])
                 if fact.get('source_id')==source.get('id') and fact.get('quote')]
-        source['excerpt']='\n\n'.join(dict.fromkeys(quotes))[:8000] if quotes else '仅展示本次引用的资料名称，不公开资料全文。'
+        quoted_excerpt = '\n\n'.join(dict.fromkeys(quotes))
+        # VMALL parameter excerpts remain authoritative inputs to image
+        # production. Cutting them can orphan facts near the end of the SKU.
+        source['excerpt'] = (quoted_excerpt if source.get('provider') == 'vmall_storefront'
+                             else quoted_excerpt[:8000]) if quotes else '仅展示本次引用的资料名称，不公开资料全文。'
+        if source.get('provider') == 'vmall_storefront' and source.get('excerpt_sha256'):
+            import hashlib
+            source['excerpt_sha256'] = hashlib.sha256(source['excerpt'].encode('utf8')).hexdigest()
     run_id = record.get('id') or record.get('run_id')
     if run_id:
         runs[run_id] = record

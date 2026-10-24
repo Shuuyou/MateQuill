@@ -72,6 +72,9 @@ class Source(BaseModel):
     provider: str = 'ima'
     excerpt: str = ''
     sha256: str = ''
+    # VMALL sha256 identifies captured page bytes; its extracted, SKU-scoped
+    # audit text is a different byte sequence and carries this separate digest.
+    excerpt_sha256: str = ''
     captured_at: str = ''
 
 

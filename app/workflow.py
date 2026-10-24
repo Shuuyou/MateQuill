@@ -237,7 +237,8 @@ class AgentWorkflow:
             return asset.id
         return None
 
-    def _audit(self, task, result, bundle, condition_exemptions=None):
+    def _audit_bundle_evidence(self, task, bundle):
+        """Content-independent evidence checks, before any paid writing call."""
         issues = []
         def add(category,message):
             issues.append(AuditItem(severity='error',category=category,message=message))
@@ -246,8 +247,6 @@ class AgentWorkflow:
             if source.provider == 'vmall_storefront' and not valid_vmall_source(source):
                 add('evidence','商城来源缺少准确商品页面或快照完整性记录')
         source_map = {s.id:s for s in bundle.sources}
-        fact_map = {f.id:f for f in bundle.facts}
-        asset_map = {a.id:a for a in bundle.assets}
         product_scope = {norm(task.product), *(norm(name) for name in task.ecosystem_products)}
         if task.mode in ('local','live') and norm(task.product) != norm(bundle.product):
             add('model','任务指定型号与知识包型号不一致，需要确认准确型号')
@@ -259,14 +258,30 @@ class AgentWorkflow:
             source = source_map.get(fact.source_id)
             if not source or not fact.quote.strip() or fact.quote not in source.excerpt:
                 add('evidence',f'事实 {fact.id} 原文摘录无法在来源中精确定位')
-            if task.mode=='local' and source and (not source.sha256 or source.sha256!=hashlib.sha256(source.excerpt.encode('utf-8')).hexdigest()):
-                add('evidence',f'本地正式事实 {fact.id} 的原文缺少可复核内容哈希')
+            if task.mode == 'local' and source:
+                # A captured VMALL HTML page and its extracted SKU parameter
+                # text are different byte sequences. Preserve the original page
+                # digest for association and check the actual excerpt separately.
+                digest = source.excerpt_sha256 if source.provider == 'vmall_storefront' else source.sha256
+                if not digest or digest != hashlib.sha256(source.excerpt.encode('utf-8')).hexdigest():
+                    add('evidence',f'本地正式事实 {fact.id} 的原文缺少可复核内容哈希')
             if norm(fact.product) not in product_scope:
                 add('model',f'事实 {fact.id} 型号与选定产品不一致')
             if norm(fact.product)==norm(bundle.product) and fact.system and bundle.system and norm(fact.system) != norm(bundle.system):
                 add('system',f'事实 {fact.id} 的操作系统与产品知识包不一致')
             if fact.value not in fact.quote:
                 add('evidence',f'事实 {fact.id} 的值不在对应原文摘录中')
+        return issues
+
+    def _audit(self, task, result, bundle, condition_exemptions=None):
+        issues = self._audit_bundle_evidence(task, bundle)
+        def add(category,message):
+            issues.append(AuditItem(severity='error',category=category,message=message))
+        from .vmall_catalog import valid_vmall_source
+        source_map = {source.id: source for source in bundle.sources}
+        product_scope = {norm(task.product), *(norm(name) for name in task.ecosystem_products)}
+        fact_map = {f.id:f for f in bundle.facts}
+        asset_map = {a.id:a for a in bundle.assets}
         if not result.blocks:
             add('structure','正文为空')
         review_blocks=[*result.blocks,*creative_review_blocks(result.creative_plan)]
@@ -465,6 +480,13 @@ class AgentWorkflow:
             result.status='blocked'
             result.audit.extend(AuditItem(severity='error',category='conflict',message=c) for c in bundle.conflicts)
             result.audit.append(AuditItem(severity='error',category='evidence',message='存在资料冲突、缺少产品事实或尚未完成所选来源验证；停止生成'))
+            return result
+        evidence_issues = self._audit_bundle_evidence(task, bundle)
+        if evidence_issues:
+            result.status = 'blocked'
+            result.audit.extend(evidence_issues)
+            trace('evidence_preflight', '资料完整性检查未通过，未调用生成或自动改稿')
+            model_metrics()
             return result
         enabled=bool(self.llm and getattr(self.llm,'enabled',True))
         if getattr(self.llm, 'supports_creative_plan', False):
