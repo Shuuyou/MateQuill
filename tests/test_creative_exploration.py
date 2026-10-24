@@ -92,6 +92,27 @@ def test_empty_evidence_cannot_be_replaced_by_ids_in_style_context():
     assert result['reason_code'] == 'unknown_concept_reference'
 
 
+def test_planning_uses_same_source_aware_voice_before_choosing_an_angle():
+    model = Model(response())
+    bundle = EvidenceBundle(product='HUAWEI FreeBuds Neo', assets=[
+        Asset(id='a1', product='HUAWEI FreeBuds Neo', url='/image', source_id='s1', title='产品图')],
+        user_materials=[{'id': 'photo-actual', 'kind': 'photo', 'observations': {
+            'caption': '耳机盒在帆布包旁边', 'scene_hints': ['准备出门'],
+            'ocr': 'UNTRUSTED_OCR_NOT_A_STORY', 'product_candidates': ['UNTRUSTED_MODEL_GUESS']}}])
+    result = asyncio.run(explore_creative_directions(model,
+        TaskInput(product='HUAWEI FreeBuds Neo', audience='本店好友', scene='准备出门', platform='moments'),
+        bundle, {}, {'account_voice': {'publisher_identity': 'salesperson'}},
+        evidence={'facts': [{'id': 'f1', 'value': '星河银', 'qualifiers': []}]}))
+    assert result['status'] == 'selected' and len(model.calls) == 1
+    voice = model.calls[0][1]['editorial_voice']
+    assert voice['publisher_identity'] == 'salesperson'
+    assert voice['observation_atoms'][0]['material_id'] == 'photo-actual'
+    assert voice['observation_atoms'][0]['caption_excerpt'] == '耳机盒在帆布包旁边'
+    assert voice['scene_proposal']['basis'] == 'editorial_scenario_not_claimed_event'
+    assert 'UNTRUSTED_' not in json.dumps(voice)
+    assert model.calls[0][1]['approved_facts'] == [{'id': 'f1', 'value': '星河银', 'qualifiers': []}]
+
+
 @pytest.mark.parametrize('error,code', [
     (RuntimeError('https://secret.example/?key=CANARY'), 'concept_service_unavailable'),
     (asyncio.TimeoutError(), 'concept_timeout'),

@@ -44,6 +44,17 @@ def _catalog_revision():
     return digest.hexdigest()
 
 
+def _content_revision():
+    """A saved daily suggestion must not masquerade as a new writing policy.
+
+    Only policy/model identifiers enter this hash; credentials and endpoint
+    addresses never enter proposal records or public responses.
+    """
+    from .config import settings
+    return _digest(['living-content-20261024.1',
+                    settings.content_model or settings.llm_model])
+
+
 def _scope(now):
     from .resource_access import ensure_live_context
     from .tenancy.auth import guest_state
@@ -57,7 +68,7 @@ def _scope(now):
                for key in ('name', 'location', 'audience', 'core_tasks', 'voice', 'materials')}
     day = datetime.fromtimestamp(now, CHINA).date().isoformat()
     key = _digest(['daily-store-v1', context.tenant_id, context.user_id, context.store_id, day])
-    fingerprint = _digest([store['version'], profile, _catalog_revision()])
+    fingerprint = _digest([store['version'], profile, _catalog_revision(), _content_revision()])
     return context, profile, day, key, fingerprint
 
 

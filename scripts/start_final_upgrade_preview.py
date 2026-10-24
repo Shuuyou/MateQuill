@@ -34,7 +34,7 @@ def main():
     settings = json.loads((ROOT/'runtime/owned-launch-settings.json').read_text(encoding='utf-8'))
     env = dict(os.environ)
     env.update({key: str(value) for key, value in settings.items()
-                if key.startswith(('LLM_', 'IMAGE_', 'ASR_', 'DESIGN_', 'DIVERSITY_EMBEDDING_'))})
+                if key.startswith(('LLM_', 'IMAGE_', 'ASR_', 'DESIGN_', 'CONTENT_', 'DIVERSITY_EMBEDDING_'))})
     env.update(MATEQUILL_DATABASE_URL='sqlite:///'+database.as_posix(),
                MATEQUILL_ALLOWED_ORIGINS='http://127.0.0.1:3004,http://localhost:3004,http://127.0.0.1:8026',
                MATEQUILL_PUBLIC_URL='', MATEQUILL_STUDIO_PUBLIC_ORIGIN='',

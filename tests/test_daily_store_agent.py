@@ -131,6 +131,21 @@ def test_cross_tenant_and_store_cannot_adopt_private_daily_card(stores):
         daily.daily_action(view['id'], action='adopt', now=NOW)
     assert exc.value.status_code == 404
 
+def test_content_policy_change_invalidates_without_replaying_an_active_turn(stores, monkeypatch):
+    owner = stores[0]
+    view = ensure(owner)
+    monkeypatch.setattr(daily, '_content_revision', lambda: 'new-content-policy')
+    with acting(owner):
+        stale = daily.read_daily_proposal(now=NOW)
+        assert stale['status'] == 'stale' and stale['in_progress']
+        recovered = daily.ensure_daily_proposal(now=NOW)
+        assert recovered['turn_id'] == view['turn_id']
+    complete(owner, view)
+    with acting(owner):
+        fresh = daily.ensure_daily_proposal(now=NOW)
+        assert fresh['turn_id'] != view['turn_id']
+
+
 def test_profile_and_official_catalog_change_invalidate_draft(stores, monkeypatch):
     owner = stores[0]
     view = ensure(owner)

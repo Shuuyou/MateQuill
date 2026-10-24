@@ -66,6 +66,9 @@ regional_diversity_context包含当前权限内明确共享或已采用的历史
 至少覆盖3种mechanism；detail_reveal细节揭晓、emotional_scene情绪场景、contrast反差、
 humor幽默、practical_demo具体演示、cultural_connection文化连接。按当前任务选择，不强行玩梗。
 用account_voice保持账号辨识度，用cultural_context理解表达机制，不抄案例文案。
+editorial_voice若存在，规划时就落实本次原话、可见素材与说话身份，不能先套选购难题再在末端添加口语词。
+候选要在正在看的细节、叙述动作和读者得到的感受上真正不同；不要为了覆盖mechanism标签编经历或硬玩梗。
+观察、态度、审美、物件关系和有用方法都可成立，结尾可以自然停住，不必每个候选都以反问、总结或到店邀请收束。
 每个字段写一句约20–40字，候选总体简洁，全部输出不超过1800汉字。
 候选是创意提案，不冒充已发生的顾客故事、拍摄或实测；产品能力只能来自approved_facts，
 fact_ids仅引用所提供的ID。asset_ids仅选existing_assets；没有合适图可以提出待拍分镜或文字设计，
@@ -172,11 +175,17 @@ async def explore_creative_directions(llm, task, bundle, strategy, brief, *, evi
     from .regional_diversity import diversity_context, select_candidates
     from .tenancy import get_context
     regional = diversity_context(task) if get_context() else {'history': [], 'history_count': 0}
+    from .editorial_voice import build_editorial_voice
+    editorial_voice = build_editorial_voice(task,
+        user_materials=_get(bundle, 'user_materials', ()) or (),
+        account_voice=_get(brief, 'account_voice'),
+        local_context=_get(brief, 'local_editorial_context'))
     payload = {
         'task': {**{key: str(_get(task, key, ''))[:limit] for key, limit in (
             ('product', 180), ('platform', 64), ('audience', 350), ('scene', 1000),
             ('goal', 400))}, 'requirements': active_creative_requirements(task)[:2200]},
         'account_voice': _safe_context(_get(brief, 'account_voice'), 5000),
+        'editorial_voice': _safe_context(editorial_voice, 10000),
         'local_editorial_context': _safe_context(_get(brief, 'local_editorial_context'), 6500),
         'cultural_context': _safe_context(_get(brief, 'cultural_context'), 7500),
         'platform_playbook': _safe_context(_get(brief, 'playbook', {}), 3500),

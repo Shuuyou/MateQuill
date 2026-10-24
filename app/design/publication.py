@@ -10,6 +10,24 @@ from pydantic import BaseModel, Field
 from .connectors import ALIASES
 
 
+def no_overlay_text_requested(instruction):
+    """An explicit caller request, never a proposal's self-declared exemption.
+
+    No headline alone can still allow a caption, so it is not the same policy.
+    Original product markings inside source pixels are not overlay typography.
+    """
+    if not isinstance(instruction, str):
+        return False
+    text = re.sub(r'“[^”]*”|「[^」]*」|‘[^’]*’|"[^"]*"', '', instruction.casefold())
+    if re.search(r'(?:不要|别|不能|不是|并非)(?:改成|改为|变成|做成|做|制作|生成|采用|用)?(?:一张)?(?:无字(?:图|照片|海报)?|纯照片)', text):
+        return False
+    direct = any(token in text for token in ('不要文字', '不要加文字', '不加文字', '不添加文字',
+        '不加字', '无文字', '纯照片', '无叠字', '不叠字', '不叠加文字', '不添加叠字',
+        'no overlay text', 'no text', 'without text'))
+    wordless = re.search(r'无字(?=$|[\s，。；、！!?;,.]|(?:图片|配图|海报|照片|画面|版本|版|图)(?:$|[\s，。；、！!?;,.]|即可|就好))', text)
+    return direct or bool(wordless)
+
+
 class PublicationStrategy(BaseModel):
     mode: str
     version: str = '2026-10-23.1'

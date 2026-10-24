@@ -14,6 +14,7 @@ from .models import AuditItem
 from .marketing_surfaces import marketing_public_surfaces, marketing_surface_role, resolve_surface_finding
 from .reader_value import (ReaderValueReview, build_reader_contract, validate_reader_value,
                            reader_revision_brief, READER_VALUE_INSTRUCTION)
+from .voice_quality import build_voice_review_context, VOICE_REVIEW_INSTRUCTION
 
 DIMENSIONS = ('product', 'world', 'legal', 'empathy', 'community', 'timeliness')
 MAX_REVIEW_JSON_BYTES = 28_000
@@ -304,7 +305,7 @@ async def review_marketing(llm, *, task, draft, evidence, context=None, phase='d
                            and not str(context.get('review_scope', '')).startswith('尚未发生的选题提案'))
     reader_contract = None
     schema = MARKETING_REVIEW_SCHEMA
-    system = REVIEW_SYSTEM
+    system = REVIEW_SYSTEM + VOICE_REVIEW_INSTRUCTION
     if reader_required:
         from copy import deepcopy
         execution = getattr(llm, 'creative_execution', {}) or {}
@@ -316,10 +317,14 @@ async def review_marketing(llm, *, task, draft, evidence, context=None, phase='d
         schema['required'] = [*schema.get('required', []), 'reader_value']
         llm.reader_value_contract = deepcopy(reader_contract)
         system += READER_VALUE_INSTRUCTION
+    execution_voice = getattr(llm, 'creative_execution', {}) or {}
+    execution_voice = execution_voice.get('editorial_voice') if isinstance(execution_voice, dict) else None
     payload = {'phase': phase, 'task': review_task(task), 'draft': draft,
                'public_text': public_text, 'evidence': _plain(evidence), 'context': context,
                'public_surfaces': public_surfaces,
                'public_surface_roles': {key: marketing_surface_role(key) for key in public_surfaces},
+               'voice_review_context': build_voice_review_context(task, draft, context=context,
+                                                                 editorial_voice=execution_voice),
                'visual_observation_available': visual_available, 'schema': schema}
     if reader_contract is not None:
         payload['reader_value_contract'] = reader_contract

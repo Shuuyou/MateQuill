@@ -14,6 +14,7 @@ from PIL import Image, ImageOps
 from pydantic import BaseModel, ConfigDict, Field
 
 from ..poster import PosterDocument, PosterLayer
+from .native_visual import native_visual_contract
 
 PROVENANCE = 'ai_generated_design_elements'
 MAX_BYTES = 20_000_000
@@ -103,7 +104,9 @@ async def plan_design_elements(plan, board, llm) -> dict:
         raise ValueError('design_element_director_required')
     concept, doc = _selected(plan, board)
     layout = _native_layout(doc)
-    context = {'art_direction': _dump(_get(concept, 'art_direction')),
+    context = {'native_visual_contract': native_visual_contract(_get(plan, 'brief'),
+                   role=str(_get(board, 'role', '')), assets=doc.assets),
+               'art_direction': _dump(_get(concept, 'art_direction')),
                'page_visual_brief': str(_get(board, 'visual_brief', ''))[:2400],
                'palette': {key: _get(concept, key, '') for key in ('background', 'foreground', 'accent')},
                'native_layout': layout}

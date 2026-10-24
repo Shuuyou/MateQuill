@@ -3,8 +3,9 @@ from __future__ import annotations
 import hashlib,json,re,math
 from .models import DesignBrief,DesignPlan,DesignConcept,DesignPage,LayoutRegion,ArtDirection,VisualDevice
 from .connectors import get_platform_connector
-from .publication import publication_strategy
+from .publication import publication_strategy, no_overlay_text_requested
 from .typography import measure
+from .native_visual import native_visual_contract, NATIVE_VISUAL_INSTRUCTION, apply_native_photo_canvas
 
 
 class DesignInputNeeded(ValueError):
@@ -371,7 +372,11 @@ def _candidate_sources(candidate,brief,asset_ids):
     if not any(r.role=='image' for r in candidate.composition):raise ValueError('missing_product_region')
     approved_headlines={key for key in brief.texts if key.startswith('design-copy-') and key.endswith('-headline')}
     used={key for page in candidate.pages for key in page.text_ids}|{r.text_id for page in candidate.pages for r in page.composition if r.text_id}
-    if approved_headlines and not (approved_headlines & used) and not any(word in brief.instruction for word in ('不要文字','不加字','无字','纯照片')):
+    if no_overlay_text_requested(brief.instruction) and any(
+            region.role not in ('image','shape','rule') for region in
+            [*candidate.composition, *(region for page in candidate.pages for region in page.composition)]):
+        raise ValueError('unexpected_overlay_text_in_wordless_design')
+    if approved_headlines and not (approved_headlines & used) and not no_overlay_text_requested(brief.instruction):
         raise ValueError('missing_approved_design_headline_identity_is_not_a_replacement')
 
 
@@ -434,7 +439,7 @@ def _default_pages(brief,concept,observations=None):
     return pages[:brief.platform.suggested_pages]
 
 def _apply_page_copy_instruction(concepts,instruction):
-    no_type=any(word in instruction for word in ('不要文字','不加字','无字','纯照片'))
+    no_type=no_overlay_text_requested(instruction)
     less_type=any(word in instruction for word in ('少一点字','少点字','字少一点','精简文字'))
     for concept in concepts:
         for page in concept.pages:
@@ -487,9 +492,11 @@ async def plan_design(task:dict,record:dict,instruction:str='',platform:str='',l
         product=str(task.get('product','')),publisher_kind=str(task.get('publisher_kind') or 'store'),
         audience=str(task.get('audience') or ''),scene=str(task.get('scene') or ''),requirements=str(task.get('requirements') or ''),
         publisher_label=str(task.get('publisher_label') or task.get('store_name') or ''),instruction=instruction,
-        source_run_id=str(record.get('id') or record.get('run_id') or ''),texts=source_texts(record),asset_ids=asset_ids)
+        source_run_id=str(record.get('id') or record.get('run_id') or ''),
+        texts={} if no_overlay_text_requested(instruction) else source_texts(record),asset_ids=asset_ids)
     brief.brand_identity=record.get('_brand_identity') or {}
     brief.store_context=record.get('_store_context') or {}
+    native_contract=native_visual_contract(brief, assets={row.get('id') or row.get('asset_id'):row for row in record.get('assets',[]) if isinstance(row,dict)})
     brief.publication=publication_strategy(platform or task.get('platform') or '小红书',
         task.get('design_surface',''), instruction, result)
     constraints=_revision_constraints(task,instruction)
@@ -529,7 +536,7 @@ async def plan_design(task:dict,record:dict,instruction:str='',platform:str='',l
         for candidate in concepts:
             candidate.text_ids=[key for key in candidate.text_ids if key=='title']
             candidate.composition=[region for region in candidate.composition if region.role in ('headline','image')]
-    if any(word in instruction for word in ('不要文字','不加字','无字','纯照片')):
+    if no_overlay_text_requested(instruction):
         for candidate in concepts:
             candidate.text_ids=[]
             candidate.composition=[region for region in candidate.composition if region.role=='image']
@@ -548,12 +555,14 @@ async def plan_design(task:dict,record:dict,instruction:str='',platform:str='',l
         refs=record.get('design_references') or {}
         actual_feedback=_compact_render_feedback(record.get('_design_feedback') or task.get('design_feedback'))
         typography_constraints=_typography_constraints(brief,catalog)
-        payload={'actual_render_feedback':actual_feedback,'typography_constraints':typography_constraints,
+        payload={'native_visual_contract':native_contract,
+            'actual_render_feedback':actual_feedback,'typography_constraints':typography_constraints,
             'feedback_role':'observations_of_previously_completed_artifacts_and_editable_design_actions_not_new_product_claims',
             'brief':{'product':brief.product,'publisher_kind':brief.publisher_kind,'publisher_label':brief.publisher_label,
             'audience':brief.audience,'scene':brief.scene,'requirements':brief.requirements,
             'platform':brief.platform.platform,'surface':brief.platform.surface,'width':brief.platform.width,'height':brief.platform.height,
             'max_pages':brief.platform.suggested_pages,'instruction':instruction,'approved_copy':catalog,'asset_ids':asset_ids,
+            'text_policy':'no_overlay_text' if no_overlay_text_requested(instruction) else 'approved_copy',
             'publication':brief.publication.model_dump()},
             'brand_identity':brief.brand_identity, 'store_context':brief.store_context,
             'previous_direction':previous_summary,'revision_constraints':{'locked_fields':constraints.get('locked_fields',[]),
@@ -625,6 +634,7 @@ async def plan_design(task:dict,record:dict,instruction:str='',platform:str='',l
             '大字可以承担主视觉，不再一律限制300像素；仍须按真实字形测量、在画布内完整排布并保证批准标题可读，不能借大字丢失词语。'
             'shape可给geometry(rect/ellipse/line/path)、path_d（0到100坐标、仅SVG绘图命令、最多5000字符）、fill、stroke、stroke_width(0到100)、opacity、fill_style(solid/linear/radial)、gradient_end；颜色均六位HEX，唯shape/rule的fill可为none且仅配solid。开放路径、分段M/L折角和纯描边取景线须fill=none并明确stroke与stroke_width，避免SVG隐式闭合填成三角；闭合路径才按设计意图填色。stroke仍为六位HEX不能为none。抽象图形必须帮助阅读，不伪装成产品或实景。'
             '示例配色只是语法示意；色调来自真实产品与主题，用户明确指定优先。两个方向应有不同构图与阅读路径。')
+        system += NATIVE_VISUAL_INSTRUCTION
         for attempt in range(2):
             if hasattr(llm,'_calls') and llm._calls>=getattr(llm,'max_calls',2):break
             invalid_directions=[]
@@ -683,8 +693,15 @@ async def plan_design(task:dict,record:dict,instruction:str='',platform:str='',l
         # An exact source swap has one continuing design, not three identical
         # competitors that spend extra vision calls to "choose" the same layout.
         concepts=[next(concept for concept in concepts if concept.id==selected)]
+    native_canvas = None
+    if len(concepts) == 1 and 'composition' not in constraints.get('locked_fields', []):
+        native_canvas = apply_native_photo_canvas(brief, next(concept for concept in concepts if concept.id==selected),
+            {row.get('id') or row.get('asset_id'):row for row in record.get('assets',[]) if isinstance(row,dict)})
     digest=hashlib.sha256(json.dumps({'task':task,'texts':brief.texts,'assets':asset_ids},ensure_ascii=False,sort_keys=True,default=str).encode()).hexdigest()
     return DesignPlan(brief=brief,concepts=concepts,selected_concept_id=selected,provenance={'planner':method,'fallback_reason':error,
+        'native_visual_contract':native_contract,
+        'native_photo_canvas':native_canvas,
+        'text_policy':'no_overlay_text' if no_overlay_text_requested(instruction) else 'approved_copy',
         'commercial_quality':'pending_actual_render_review','fallback_used':method!='model_art_direction',
         'source_digest':digest,'font':'Noto Sans / Serif SC variable / OFL','revision_constraints':constraints,
         'preferred_primary_asset_id':primary,'explicit_page_assignments':{str(index+1):aid for index,aid in page_assignments.items()},'model_attempts':attempts})

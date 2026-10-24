@@ -9,9 +9,13 @@ _gate = asyncio.Semaphore(2)
 
 def model(*, calls=4, tokens=2400):
     from .config import settings
-    from .llm import OpenAICompatibleLLM
-    result = OpenAICompatibleLLM(settings.llm_base_url, settings.llm_api_key,
-        settings.llm_model, max_calls=calls, max_tokens=tokens, timeout=45)
+    from .content_models import build_content_model
+    from .llm import ModelCallError
+    timeout = 90 if all((settings.content_base_url, settings.content_api_key, settings.content_model)) else 45
+    try:
+        result = build_content_model(calls=calls, tokens=tokens, timeout=timeout, configuration=settings)
+    except ModelCallError:
+        raise HTTPException(503, '创作服务连接尚未完整设置，请联系团队管理员') from None
     if not result.enabled:
         raise HTTPException(503, '创作服务尚未连接')
     return result
@@ -27,9 +31,11 @@ class RevisionInput(BaseModel):
 async def revise(run_id: str, payload: RevisionInput):
     from .creative_revision import revise_creation
     from .api import run_view
+    from .config import settings
+    deadline = 210 if all((settings.content_base_url, settings.content_api_key, settings.content_model)) else 135
     async with _gate:
         record = await asyncio.wait_for(revise_creation(run_id, payload.instruction,
-            selection=payload.selection, llm=model(calls=3, tokens=4000)), timeout=135)
+            selection=payload.selection, llm=model(calls=3, tokens=4000)), timeout=deadline)
     return run_view(record, record['run_id'])
 
 

@@ -43,6 +43,7 @@ class OpenAICompatibleLLM:
     supports_creative_plan = True
     supports_marketing_review = True
     supports_reader_value_contract = True
+    supports_visual_copy_clause_contract = True
 
     def __init__(self, base_url='https://api.deepseek.com', api_key='', model='deepseek-flash', timeout=60,
                  max_tokens=5000, max_calls=4):
@@ -197,6 +198,8 @@ class OpenAICompatibleLLM:
         prompt = (Path(__file__).resolve().parent.parent / 'prompts/system.txt').read_text(encoding='utf-8')
         from .marketing_review import review_context_instruction
         prompt += '\n' + review_context_instruction()
+        from .editorial_voice import build_editorial_voice, generation_instruction
+        prompt += generation_instruction()
         connector=get_connector(task.platform,task.creative_connector)
         brief=connector.build_brief(task,bundle,strategy)
         self.local_editorial_context = brief.get('local_editorial_context')
@@ -296,11 +299,16 @@ class OpenAICompatibleLLM:
         # This execution record is assembled by the service, not returned by the
         # writer. The workflow persists it independently of model-supplied JSON.
         self.creative_execution = deepcopy(execution)
+        editorial_voice = build_editorial_voice(task, user_materials=bundle.user_materials,
+            account_voice=brief.get('account_voice'), local_context=brief.get('local_editorial_context'),
+            concept=execution['exploration'].get('selected_concept'))
+        self.creative_execution['editorial_voice'] = deepcopy(editorial_voice)
         if brief.get('local_editorial_context'):
             self.creative_execution['local_editorial_context'] = deepcopy(brief['local_editorial_context'])
         return await self._json(prompt, {'task':task.model_dump(), 'strategy':strategy,
             'local_editorial_context': brief.get('local_editorial_context'),
             'marketing_context': self.marketing_context,
+            'editorial_voice': editorial_voice,
             'speaker_origin_contract': {
                 'publisher_identity': '仅使用用户已明确提供的店员/门店身份',
                 'first_person_style': '可以表达建议、邀请、态度；不等于获得编写第一人称已发生经历的许可',

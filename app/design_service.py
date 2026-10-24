@@ -26,9 +26,12 @@ def _copy_auditor():
     """Use the configured independent reviewer for factual speech-act checks."""
     if not settings.image_api_key or not settings.image_review_model:
         return None
-    from .llm import OpenAICompatibleLLM
-    return OpenAICompatibleLLM(settings.image_base_url, settings.image_api_key,
-        settings.image_review_model, max_calls=2, max_tokens=2200, timeout=60)
+    from .content_models import ContentLLM
+    # Match the explicitly selected reasoning reviewer's supported wire rather
+    # than relying on legacy temperature/max_tokens defaults. This is still
+    # the image role's own connection, not a content-service fallback.
+    return ContentLLM(settings.image_base_url, settings.image_api_key,
+        settings.image_review_model, max_calls=2, max_tokens=4000, timeout=90)
 
 
 def _design_review_model():
@@ -253,6 +256,33 @@ def _checkpoint(identifier, value):
 
 async def _design_elements_treatment(identifier, state, plan, board, assets):
     """Generate a checkpointed abstract design plate; retain real product layers."""
+    from .design.native_visual import native_visual_contract
+    concepts = plan.get('concepts', []) if isinstance(plan, dict) else getattr(plan, 'concepts', [])
+    concept = next((item for item in concepts if (item.get('id') if isinstance(item, dict) else item.id) == board.concept_id), None)
+    brief = plan.get('brief') if isinstance(plan, dict) else getattr(plan, 'brief', None)
+    instruction = brief.get('instruction', '') if isinstance(brief, dict) else getattr(brief, 'instruction', '')
+    treatment = concept.get('treatment', '') if isinstance(concept, dict) else getattr(concept, 'treatment', '')
+    role = getattr(board, 'role', '')
+    contract = native_visual_contract(brief, role=role, assets=assets)
+    photographs = [layer for layer in board.document.layers if layer.type == 'image'
+                   and layer.visible and layer.role == 'photograph'
+                   and layer.asset_id in contract['authorized_photo_ids']]
+    if (contract['selected'] == 'source_observation' and photographs and concept is not None
+            and (role == 'photo' or treatment == 'photo'
+                 or any(token in instruction for token in ('保留原图', '保留照片', '不要重画', '不要换背景')))):
+        # Preserve the actual native source layers, rather than paying for an
+        # abstract plate that would turn an existing scene into another poster.
+        # Existing copy, geometry, source and final-pixel gates remain downstream.
+        from .design.source_integrity import native_source_proof
+        proof = native_source_proof(board.document, assets)
+        trace = {'method': 'source_photo_native_composition', 'native_visual_contract': contract,
+                 'source_integrity': proof, 'new_image_generated': False,
+                 'product_identity_verified': False,
+                 'scope': 'Authorized original image bytes with recorded display transforms; final composition still requires review.'}
+        if state.setdefault('source_preservation', {}).get(board.id) != trace:
+            state['source_preservation'][board.id] = trace
+            _checkpoint(identifier, state)
+        return board.document
     if not (settings.image_api_key and settings.image_model
             and any(value.get('prepared_subject') for value in board.document.assets.values())):
         return board.document
@@ -339,8 +369,14 @@ async def _audit_embedded_elements(identifier, state, document):
                 'design_id': identifier})
 
 
-def _validate_delivered_copy(document, prepared):
+def _validate_delivered_copy(document, prepared, *, instruction=''):
     """An art pass may reflow approved wording, never silently replace the hook."""
+    from .design.publication import no_overlay_text_requested
+    if no_overlay_text_requested(instruction):
+        if any(layer.visible and layer.type == 'text' and layer.text for layer in document.layers):
+            raise HTTPException(422, {'code': 'unexpected_overlay_text_in_wordless_design',
+                                     'message': '本次要求无叠字，画面仍含新增文字，原素材已保留'})
+        return
     if prepared.get('status') != 'approved' or not prepared.get('audit', {}).get('completed'):
         return
     compact = lambda value: re.sub(r'\s+', '', str(value))
@@ -650,7 +686,8 @@ async def execute_design(parameters):
                 cited = {eid for card in previous_copy.get('cards', []) for eid in card.get('evidence_ids', [])}
                 if previous_copy.get('status') == 'approved' and all(eid in live_evidence and old_evidence.get(eid) == live_evidence[eid] for eid in cited):
                     state['design_copy'] = deepcopy(previous_copy)
-            no_type = any(word in parameters.get('instruction', '') for word in ('不要文字', '不加字', '无字', '纯照片'))
+            from .design.publication import no_overlay_text_requested
+            no_type = no_overlay_text_requested(parameters.get('instruction', ''))
             if 'design_copy' not in state:
                 from .design import get_platform_connector
                 state['design_copy'] = await prepare_design_copy(task_data, record,
@@ -724,7 +761,7 @@ async def execute_design(parameters):
                 if concept.id in measured:
                     state.setdefault('legacy_concept_review_history', []).append(
                         {'concept_id': concept.id, 'review': measured.pop(concept.id)})
-                _validate_delivered_copy(candidate.document, state.get('design_copy', {}))
+                _validate_delivered_copy(candidate.document, state.get('design_copy', {}), instruction=instruction)
                 from .design_review import audit_design_document
                 compile_checks = audit_design_document(candidate.document)
                 compile_errors = sum(row.get('severity') == 'error' for row in compile_checks)
@@ -773,7 +810,7 @@ async def execute_design(parameters):
                     max_rounds=2)
                 candidate.document = refined_candidate['document']
                 native_source_proof(candidate.document, assets)
-                _validate_delivered_copy(candidate.document, state.get('design_copy', {}))
+                _validate_delivered_copy(candidate.document, state.get('design_copy', {}), instruction=instruction)
                 review = refined_candidate['review']
                 review['execution_id'] = candidate.id
                 state.setdefault('candidate_boards', {})[concept.id] = candidate.model_dump(mode='json')
@@ -852,7 +889,7 @@ async def execute_design(parameters):
                 from .poster import PosterDocument
                 board.document = PosterDocument.model_validate(existing['document'])
             board.render_mode = 'native'
-            _validate_delivered_copy(board.document, state.get('design_copy', {}))
+            _validate_delivered_copy(board.document, state.get('design_copy', {}), instruction=instruction)
             board.document = await _design_elements_treatment(identifier, state, plan, board, assets)
             native_source_proof(board.document, assets)
             reviewer = None
@@ -876,9 +913,11 @@ async def execute_design(parameters):
                                     if value.get('provenance') == 'ai_generated_design_elements']})
             refined = await refine_design(board.document, render_document, reviewer=reviewer, max_rounds=2)
             board.document = refined['document']
-            _validate_delivered_copy(board.document, state.get('design_copy', {}))
+            _validate_delivered_copy(board.document, state.get('design_copy', {}), instruction=instruction)
             item = board.model_dump(mode='json')
             item['source_integrity'] = native_source_proof(board.document, assets)
+            if board.id in state.get('source_preservation', {}):
+                item['source_preservation'] = deepcopy(state['source_preservation'][board.id])
             item['review'] = refined['review']
             publication_findings = [check for entry in board.document.audit
                 if entry.get('type') == 'reference_comparison' for check in entry.get('checks', [])

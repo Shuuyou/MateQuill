@@ -204,7 +204,7 @@ async def run_task(task: TaskInput, request: Request):
 
 async def _execute_run_task(task: TaskInput, request: Request):
     from .workflow import AgentWorkflow
-    from .llm import OpenAICompatibleLLM
+    from .llm import ModelCallError
     from .creative_connectors import get_connector
     from .models import EvidenceBundle
     from .resource_access import validate_task_resources, request_budget_key
@@ -233,7 +233,12 @@ async def _execute_run_task(task: TaskInput, request: Request):
     # Optional concept exploration uses at most two calls including its format
     # retry, reserving four for writing, review, one repair and final review.
     # All format retries share this same bounded budget.
-    llm = OpenAICompatibleLLM(settings.llm_base_url,settings.llm_api_key,settings.llm_model,max_calls=12)
+    from .content_models import build_content_model
+    content_timeout = 90 if all((settings.content_base_url, settings.content_api_key, settings.content_model)) else 60
+    try:
+        llm = build_content_model(calls=12, tokens=5000, timeout=content_timeout, configuration=settings)
+    except ModelCallError:
+        raise HTTPException(503, '创作服务连接尚未完整设置，请联系团队管理员') from None
     try:
         async with semaphore:
             result = await asyncio.wait_for(AgentWorkflow(provider,llm).run(task),timeout=300)

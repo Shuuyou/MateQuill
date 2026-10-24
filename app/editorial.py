@@ -121,20 +121,20 @@ def editorial_review(task, result):
     if task.platform == 'xiaohongshu':
         if len(result.title) > 20:
             warn('小红书标题偏长，建议压缩为一个具体问题或阅读收益')
-        invitation=re.search(r'(?:评论|留言|告诉我|私信).{0,24}(?:专业|软件|需求|问题|顾虑|哪|什么)',result.cta)
-        if intent not in {'aesthetic_emotion', 'everyday_observation'} and not invitation and '收藏' not in result.cta and not any(('？' in b.text or '?' in b.text) for b in result.blocks) and not re.search(r'什么|哪|？|\?', result.cta):
-            warn('笔记缺少与选购问题有关的具体互动问题')
+        # An answered question or a vivid observation may simply end. Whether
+        # the actual promise was delivered belongs to reader-value review;
+        # absence of a comment prompt is not an editorial defect by itself.
         if any(len(b.text) > 240 for b in result.blocks):
             warn('笔记段落偏长，建议拆成一屏能读完的小段')
     elif task.platform == 'moments':
         total=len(result.title)+len(result.intro)+len(result.cta)+sum(len(b.text) for b in result.blocks)
         if len(result.blocks) > 2 or total > 180:
-            warn('朋友圈信息过密，建议只保留一个具体困扰和一个回应')
+            warn('朋友圈信息过密，删去重复铺垫，保留本篇核心观察、态度或必要信息及原有节奏')
         if len(result.tags) > 1:
             warn('朋友圈不宜直接套用小红书的话题标签串')
     elif task.platform == 'wechat':
         if len(result.blocks) < 3 and intent not in {'aesthetic_emotion', 'everyday_observation'}:
-            warn('公众号缺少展开论证，建议补上场景、方案解释和选购边界')
+            warn('公众号展开不足，围绕本篇核心观察或问题补足叙述与依据，不用重复参数凑段落')
     elif task.platform == 'poster':
         if len(result.title) > 18 or len(result.intro) > 45:
             warn('海报标题或副标题偏长，建议控制为一眼可读的核心信息')
@@ -146,7 +146,7 @@ def editorial_review(task, result):
             warn('行动引导包含多个目标，建议只保留本次最重要的一步')
     formula = ['给你的一份场景选购草稿', '首先，其次，最后', '赋能你的', '开启全新体验']
     if any(term in ' '.join([result.intro, *[b.text for b in result.blocks]]) for term in formula):
-        warn('存在模板式营销表达，需要改成客户的具体动作和问题')
+        warn('存在空泛套话，删去不承担内容的表达，让本篇已有的具体细节、观察或判断承担推进')
     if not findings:
         findings.append(AuditItem(severity='info', category='editorial',
             message='通过基础平台结构检查；阅读吸引力与咨询效果仍需人工评阅和实际发布验证'))
@@ -155,12 +155,12 @@ def editorial_review(task, result):
 
 def preview_content_plan(task):
     return {
-        'interaction_goal': task.goal or '帮助读者判断适合与否，再沟通一个具体需求',
-        'reader_value': '看懂自己的使用条件，带着问题核对产品，而不是只看参数',
-        'hook': '从客户已描述的阻碍切入；未描述的阻碍只作为待确认问题',
-        'cover_copy': '先看任务，再选电脑',
+        'interaction_goal': task.goal or '让读者看懂本次值得分享的内容，不强制互动或到店',
+        'reader_value': '围绕本次场景兑现一个具体观察、感受、判断或方法，不默认选购指南',
+        'hook': '从当前场景与实际材料选一个具体入口；构思场景不冒充亲历记录',
+        'cover_copy': '',
         'image_brief': [
-            {'role': 'cover', 'intent': '一个明确问题与同型号产品素材，避免虚构客户实拍'},
+            {'role': 'cover', 'intent': '服务本次观察或主题的真实素材；没有合适照片时保留拍摄提案，不虚构实拍'},
             {'role': 'detail', 'intent': '只选与具体段落相符的素材；缺少时提出补图需求，不凑数量'},
         ],
         'basis': '本地结构演练，不是模型创作结果或流量预测',

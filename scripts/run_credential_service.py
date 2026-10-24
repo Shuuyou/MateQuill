@@ -21,7 +21,7 @@ def credential_environment(directory: str, inherited=None):
         raise RuntimeError('Service credential payload must be an object')
     environment = dict(os.environ if inherited is None else inherited)
     for name, value in values.items():
-        if not isinstance(name, str) or not (name.startswith(('LLM_', 'IMAGE_', 'IMA_', 'ASR_', 'DESIGN_', 'DIVERSITY_EMBEDDING_')) or name == 'MATEQUILL_DATABASE_URL'):
+        if not isinstance(name, str) or not (name.startswith(('LLM_', 'IMAGE_', 'IMA_', 'ASR_', 'DESIGN_', 'CONTENT_', 'DIVERSITY_EMBEDDING_')) or name == 'MATEQUILL_DATABASE_URL'):
             raise RuntimeError('Unexpected service credential field')
         if not isinstance(value, str) or len(value) > 8192 or '\x00' in value:
             raise RuntimeError('Invalid service credential value')
