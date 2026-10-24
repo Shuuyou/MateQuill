@@ -24,7 +24,8 @@ class ContentLLM(OpenAICompatibleLLM):
         return body
 
 
-def build_content_model(*, calls=4, tokens=2400, timeout=60, configuration=None):
+def build_content_model(*, calls=4, tokens=2400, timeout=60, configuration=None,
+                        concept_preflight=False):
     """Return one client with the caller's existing workflow budgets."""
     configuration = settings if configuration is None else configuration
     explicit = tuple(getattr(configuration, field, '') for field in
@@ -40,4 +41,27 @@ def build_content_model(*, calls=4, tokens=2400, timeout=60, configuration=None)
         base, key, model = (getattr(configuration, field, '') for field in
             ('llm_base_url', 'llm_api_key', 'llm_model'))
     client = ContentLLM if all(explicit) and model in REASONING_CONTENT_MODELS else OpenAICompatibleLLM
-    return client(base, key, model, timeout=timeout, max_calls=calls, max_tokens=tokens)
+    result = client(base, key, model, timeout=timeout, max_calls=calls, max_tokens=tokens)
+    # Interactive creation keeps divergent exploration and the mandatory review
+    # of the actual draft. Reviewing a proposed concept before the same review
+    # of the completed draft adds a serial judgement (and sometimes a second
+    # exploration), with no publishable result yet. Batch callers can opt in.
+    result.concept_preflight_enabled = bool(concept_preflight)
+    return result
+
+
+def content_timing_snapshot(model):
+    """Bounded numeric diagnostics, never prompts, responses or credentials."""
+    stages = {'concept', 'concept_preflight', 'draft', 'repair', 'reselection',
+              'fact_review', 'marketing_review', 'model'}
+    rows = []
+    for metric in getattr(model, 'metrics', [])[:12]:
+        if not isinstance(metric, dict):
+            continue
+        stage = metric.get('stage')
+        stage = stage if stage in stages else 'model'
+        duration = metric.get('duration_ms', 0)
+        duration = duration if isinstance(duration, int) and not isinstance(duration, bool) else 0
+        rows.append({'stage': stage, 'duration_ms': max(0, min(duration, 600000))})
+    return {'completed_calls': len(rows), 'model_duration_ms': sum(row['duration_ms'] for row in rows),
+            'calls': rows}

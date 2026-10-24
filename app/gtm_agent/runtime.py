@@ -1,5 +1,6 @@
 """A bounded model-directed tool loop, grounded in real observations and effects."""
 import asyncio
+import hashlib
 import inspect
 import json
 import time
@@ -77,6 +78,42 @@ def _partial_delivery(generated, *, reason='images_pending'):
         'error':{'code':'partial_delivery', 'missing':['images'], 'reason':reason}}
 
 
+def _invocation_key(tool, arguments):
+    """Private, stable identity for a failed invocation; never hashes model prose."""
+    return hashlib.sha256(json.dumps([tool, arguments], sort_keys=True,
+        ensure_ascii=False, default=str).encode('utf-8')).hexdigest()
+
+
+def _unresolved_invocations(observations):
+    """Only a returned tool result can change the prerequisites for a retry."""
+    failed = set()
+    for observation in observations:
+        if 'result' in observation and observation.get('tool') not in {'completion_check', 'decision_validation'}:
+            failed.clear()
+        elif observation.get('invocation_key') and 'error' in observation:
+            failed.add(observation['invocation_key'])
+    return failed
+
+
+def _generation_transport_code(result):
+    """Keep provider/transport failures separate from an editorial rejection."""
+    codes = {'ReadTimeout', 'ConnectTimeout', 'WriteTimeout', 'PoolTimeout',
+             'TimeoutError', 'ConnectError', 'ReadError', 'RemoteProtocolError'}
+    error = result.get('error')
+    explicit = result.get('error_code') or (error.get('code') if isinstance(error, dict) else None)
+    if explicit in codes:
+        return explicit
+    # The workflow's legacy audit is a server-authored model failure message.
+    # Do not classify customer copy, creative feedback or arbitrary result text.
+    for issue in result.get('issues') or []:
+        if isinstance(issue, dict) and issue.get('category') == 'model':
+            message = str(issue.get('message', ''))
+            for code in codes:
+                if f'（{code}）' in message or f'({code})' in message:
+                    return code
+    return None
+
+
 def quotation_delivery(identifier, execution_policy):
     """Only a committed, still-valid server quote can complete a quote task."""
     reference = authorize_resource(TURN, identifier)['body'].get('quotation')
@@ -111,6 +148,7 @@ async def run_turn(identifier, *, planner=None, tools_factory=None, max_steps=No
     tools = (tools_factory or AgentTools)(conversation, turn)
     store_profile = tools.store_profile() if hasattr(tools, 'store_profile') else {}
     observations = list(turn.get('observations', []))[-12:]
+    failed_invocations = _unresolved_invocations(observations)
     # Delivery requirements survive tool-local research refreshes and resumed
     # turns. A design from an older text revision does not complete this run.
     delivery_plan = getattr(tools, 'opportunity', None) or conversation.get('current_opportunity') or {}
@@ -134,6 +172,20 @@ async def run_turn(identifier, *, planner=None, tools_factory=None, max_steps=No
             return {'status':'completed','message':'作品已经准备好，可以接着修改或打开编辑。','artifact':generated,'questions':[]}
         if any(item.get('retry_policy') == 'no_new_image_attempt' for item in observations):
             return _partial_delivery(generated, reason='image_attempt_stopped')
+    # A committed artifact above needs no fresh research or provider request.
+    # Restore only unfinished work that will actually return to the planner.
+    restored = []
+    if hasattr(tools, 'restore_context'):
+        try:
+            async with asyncio.timeout(20):
+                restored = await tools.restore_context()
+        except TimeoutError:
+            restored = [{'tool': 'context_restore', 'error_code': 'context_restore_timeout',
+                         'instruction': '资料恢复超时，读取本轮需要的准确产品资料后再继续。'}]
+    if restored:
+        observations = (observations + list(restored))[-12:]
+        failed_invocations = _unresolved_invocations(observations)
+        update_turn(identifier, lambda body: {**body, 'observations': observations})
     from .memory import relevant_memories
     working_memory = relevant_memories(audience=conversation['audience'],query=turn['text'])
     remembered = False
@@ -161,8 +213,13 @@ async def run_turn(identifier, *, planner=None, tools_factory=None, max_steps=No
         payload = {'goal':turn['text'], 'history':conversation.get('messages',[])[-12:],
             'current_artifact':conversation.get('current_artifact'), 'media_ids':turn.get('media_ids',[]),
             'observations':observations[-12:], 'completed_effects':checkpoint.get('effects',{}),
+            'tool_recovery': next(({'tool': item.get('tool'), 'error': item['error'],
+                'required_tool': item.get('required_tool'),
+                'instruction': '先补齐这个前置条件，不能原样重发已失败参数；成功读取资料后再继续。'}
+                for item in reversed(observations) if item.get('invocation_key') in failed_invocations), None),
             'working_memory':working_memory,
             'store_profile': store_profile,
+            'tool_context': tools.context_summary() if hasattr(tools, 'context_summary') else {},
             'place_context': current_place_context,
             'opportunity_contract': opportunity_contract,
             'current_opportunity': getattr(tools, 'opportunity', None),
@@ -257,6 +314,13 @@ async def run_turn(identifier, *, planner=None, tools_factory=None, max_steps=No
         if not decision.tool:
             observations.append({'tool':'decision_validation','result':'tool动作需要指定工具名'})
             continue
+        invocation_key = _invocation_key(decision.tool, decision.arguments)
+        if invocation_key in failed_invocations:
+            # A planner that ignores its last validation error must not consume
+            # the remaining turn repeatedly executing an unchanged invalid call.
+            return {'status': 'failed', 'message': '这一步未能继续，已保留本次资料和创作方向。',
+                    'artifact': generated, 'questions': [],
+                    'error': {'code': 'tool_repeat_blocked', 'tool': decision.tool}}
         try:
             if decision.delivery_scope is None:
                 if decision.tool == 'revise_content':
@@ -276,6 +340,7 @@ async def run_turn(identifier, *, planner=None, tools_factory=None, max_steps=No
                 generation_attempted = True
             async with asyncio.timeout(max(1,deadline-time.monotonic())):
                 result = await tools.execute(decision.tool, decision.arguments)
+            failed_invocations.clear()
             if decision.tool == 'prepare_opportunity' and isinstance(result, dict) and isinstance(result.get('opportunity'), dict):
                 delivery_plan = result['opportunity']
                 delivery_scope = list(delivery_plan.get('deliverables', ['content']))
@@ -313,6 +378,13 @@ async def run_turn(identifier, *, planner=None, tools_factory=None, max_steps=No
                 return {'status':'failed','message':'图片制作尚未完成，创作记录已保存。',
                     'artifact':None,'questions':[], 'error':{'code':'image_attempt_stopped'}}
             if isinstance(result, dict) and result.get('terminal') is True:
+                transport_code = _generation_transport_code(result)
+                if transport_code:
+                    if images_pending(generated):
+                        return _partial_delivery(generated, reason='model_transport_error')
+                    return {'status': 'failed', 'message': '模型服务响应超时或中断，本次研究已保留，可以继续这段对话。',
+                        'artifact': None, 'questions': [],
+                        'error': {'code': 'model_transport_error', 'provider_code': transport_code}}
                 if images_pending(generated):
                     return _partial_delivery(generated, reason='creation_review_unresolved')
                 return {'status': 'failed', 'message': '这次创作还没有完成，已保留研究和修改记录。',
@@ -327,6 +399,16 @@ async def run_turn(identifier, *, planner=None, tools_factory=None, max_steps=No
                 return {'status':'completed','message':'《'+generated['title']+'》已经准备好，可以接着调整。',
                     'artifact':generated,'questions':[]}
         except HTTPException as exc:
+            if decision.tool in {'generate_content', 'revise_content'} and exc.status_code >= 500:
+                observations.append({'tool': decision.tool, 'error': str(exc.detail)[:500],
+                                     'http_status': exc.status_code, 'invocation_key': invocation_key,
+                                     'retry_policy': 'no_automatic_transport_retry'})
+                update_turn(identifier, lambda body: {**body, 'observations': observations[-12:]})
+                if images_pending(generated):
+                    return _partial_delivery(generated, reason='model_transport_error')
+                return {'status': 'failed', 'message': '生成服务暂未完成响应，本次资料与创作方向已保留。',
+                        'artifact': generated, 'questions': [],
+                        'error': {'code': 'model_transport_error', 'http_status': exc.status_code}}
             if exc.status_code == 429:
                 # A quota/rate limit cannot be fixed by rewriting the prompt.
                 # Do not consume further planner steps retrying the same tool.
@@ -353,17 +435,24 @@ async def run_turn(identifier, *, planner=None, tools_factory=None, max_steps=No
                         'error': {'code': 'image_attempt_stopped', 'http_status': exc.status_code}}
             if exc.status_code in {401,403,404,409}:
                 raise
-            observations.append({'tool':decision.tool,'error':str(exc.detail)[:500]})
+            failed_invocations.add(invocation_key)
+            recovery = exc.detail if isinstance(exc.detail, dict) else {}
+            observations.append({'tool':decision.tool,'error':str(exc.detail)[:500],
+                'invocation_key': invocation_key, 'required_tool': recovery.get('required_tool')})
             update_turn(identifier,lambda body:{**body,'observations':observations[-12:]})
         except ValidationError as exc:
+            failed_invocations.add(invocation_key)
             observations.append({'tool':decision.tool,'error':[
                 {'field':'.'.join(map(str,item['loc'])),'type':item['type']} for item in exc.errors()][:12],
+                'invocation_key': invocation_key,
                 'instruction':'只提交当前工具要求的参数，其余字段全部省略'})
             update_turn(identifier,lambda body:{**body,'observations':observations[-12:]})
             if generated and decision.tool in {'create_design_bundle','revise_design','create_poster'}:
                 return _partial_delivery(generated, reason='image_response_invalid')
         except ValueError:
-            observations.append({'tool':decision.tool,'error':'工具参数不正确，请按字段说明修正'})
+            failed_invocations.add(invocation_key)
+            observations.append({'tool':decision.tool,'error':'工具参数不正确，请按字段说明修正',
+                'invocation_key': invocation_key})
             update_turn(identifier,lambda body:{**body,'observations':observations[-12:]})
             if generated and decision.tool in {'create_design_bundle','revise_design','create_poster'}:
                 return _partial_delivery(generated, reason='image_response_invalid')

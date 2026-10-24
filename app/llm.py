@@ -1,6 +1,7 @@
 """Small OpenAI-compatible JSON client; no secrets are logged or persisted."""
 from __future__ import annotations
 import json
+import asyncio
 from copy import deepcopy
 import re
 import time
@@ -147,6 +148,21 @@ class OpenAICompatibleLLM:
             body['thinking'] = {'type':'disabled'}
         usage={}
         outcome='success'
+        # Trusted wire shapes label elapsed time without saving request content.
+        stage = 'model'
+        if isinstance(payload, dict):
+            if 'public_surfaces' in payload and 'schema' in payload:
+                context = payload.get('context') or {}
+                stage = ('concept_preflight' if isinstance(context, dict) and
+                    str(context.get('review_scope', '')).startswith('尚未发生的选题提案') else 'marketing_review')
+            elif 'assessment_scope' in payload:
+                stage = 'fact_review'
+            elif 'approved_facts' in payload and 'output_schema' in payload:
+                stage = 'concept'
+            elif 'creative_brief' in payload and 'output_contract' in payload:
+                strategy = payload.get('strategy') or {}
+                stage = ('repair' if strategy.get('repair') else
+                         'reselection' if strategy.get('reselect') else 'draft')
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
                 response = await client.post(self.base_url + '/chat/completions', json=body,
@@ -176,6 +192,9 @@ class OpenAICompatibleLLM:
                 if not isinstance(parsed,dict):
                     raise ModelCallError('invalid_model_json')
                 return parsed
+        except asyncio.CancelledError:
+            outcome='cancelled'
+            raise
         except httpx.TimeoutException as exc:
             outcome=type(exc).__name__
             raise ModelCallError(outcome) from None
@@ -189,7 +208,7 @@ class OpenAICompatibleLLM:
             outcome='invalid_model_json'
             raise ModelCallError(outcome) from None
         finally:
-            self.metrics.append({'call':self._calls,'duration_ms':int((time.monotonic()-started)*1000),
+            self.metrics.append({'call':self._calls,'stage':stage,'duration_ms':int((time.monotonic()-started)*1000),
                 'prompt_tokens':int(usage.get('prompt_tokens',0)),
                 'completion_tokens':int(usage.get('completion_tokens',0)),
                 'total_tokens':int(usage.get('total_tokens',0)),'outcome':outcome})
@@ -260,9 +279,15 @@ class OpenAICompatibleLLM:
             brief['cultural_context'] = deepcopy(execution['cultural_context'])
         else:
             from .creative_exploration import explore_creative_directions
-            exploration = await explore_creative_directions(self, task, bundle, strategy, brief, evidence=evidence)
+            prepared = getattr(self, 'prepared_creative_direction', None)
+            if isinstance(prepared, dict) and not strategy.get('reselect'):
+                exploration = deepcopy(prepared)
+            else:
+                exploration = await explore_creative_directions(self, task, bundle, strategy, brief, evidence=evidence)
             selected_concept = exploration.get('selected_concept')
-            if selected_concept and not strategy.get('reselect') and self.max_calls - self._calls >= 8:
+            if (selected_concept and exploration.get('status') != 'prepared_direction_reused'
+                    and getattr(self, 'concept_preflight_enabled', True)
+                    and not strategy.get('reselect') and self.max_calls - self._calls >= 8):
                 from .marketing_review import review_marketing
                 proposal = {'title': selected_concept['opening'],
                     'blocks': [{'text': selected_concept['payoff']}],

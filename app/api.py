@@ -234,7 +234,11 @@ async def _execute_run_task(task: TaskInput, request: Request):
     # retry, reserving four for writing, review, one repair and final review.
     # All format retries share this same bounded budget.
     from .content_models import build_content_model
-    content_timeout = 90 if all((settings.content_base_url, settings.content_api_key, settings.content_model)) else 60
+    # Reasoning content models can spend longer on a single structured draft.
+    # Keep the enclosing 300-second workflow deadline and call budget unchanged.
+    from .content_models import REASONING_CONTENT_MODELS
+    explicit_content = all((settings.content_base_url, settings.content_api_key, settings.content_model))
+    content_timeout = (150 if settings.content_model in REASONING_CONTENT_MODELS else 90) if explicit_content else 60
     try:
         llm = build_content_model(calls=12, tokens=5000, timeout=content_timeout, configuration=settings)
     except ModelCallError:
@@ -246,7 +250,12 @@ async def _execute_run_task(task: TaskInput, request: Request):
     except HTTPException:
         raise
     except asyncio.TimeoutError:
-        raise HTTPException(504,'生成超时；未放行未经核验的内容') from None
+        from .content_models import content_timing_snapshot
+        timing = content_timing_snapshot(llm)
+        import logging
+        logging.getLogger(__name__).warning('Content workflow timeout: %s', json.dumps(timing))
+        raise HTTPException(504, {'code': 'content_workflow_timeout',
+            'message': '这次生成等待超时，需求已保留。', 'timing': timing}) from None
     except ImaError as exc:
         raise HTTPException(400,str(exc)) from None
     except Exception:

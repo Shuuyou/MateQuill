@@ -383,10 +383,12 @@ class AgentWorkflow:
         def trace(stage,detail):
             result.trace.append(TraceItem(stage=stage,detail=detail,duration_ms=int((time.monotonic()-started)*1000)))
         def model_metrics():
+            from .content_models import content_timing_snapshot
+            result.strategy['generation_timing'] = content_timing_snapshot(self.llm)
             existing=sum(t.stage=='model_usage' for t in result.trace)
             for metric in getattr(self.llm,'metrics',[])[existing:]:
                 result.trace.append(TraceItem(stage='model_usage',duration_ms=metric['duration_ms'],
-                    detail=f"模型调用 {metric['call']}/{getattr(self.llm,'max_calls',4)}；{metric.get('outcome','success')}；输入 {metric['prompt_tokens']} tokens，输出 {metric['completion_tokens']} tokens，总计 {metric['total_tokens']} tokens"))
+                    detail=f"模型调用 {metric['call']}/{getattr(self.llm,'max_calls',4)}；{metric.get('stage','model')}；{metric.get('outcome','success')}；输入 {metric['prompt_tokens']} tokens，输出 {metric['completion_tokens']} tokens，总计 {metric['total_tokens']} tokens"))
         def semantic_verdict(items):
             supported=any(a.severity=='info' and a.category=='semantic' and
                 re.search('直接支持|核验通过|事实.*支持|supported',a.message,re.I) for a in items)
@@ -454,6 +456,9 @@ class AgentWorkflow:
             result.audit.append(AuditItem(severity='error',category='evidence',message='存在资料冲突、缺少产品事实或尚未完成所选来源验证；停止生成'))
             return result
         enabled=bool(self.llm and getattr(self.llm,'enabled',True))
+        if getattr(self.llm, 'supports_creative_plan', False):
+            from .content_direction import resolve_prepared_direction
+            self.llm.prepared_creative_direction = resolve_prepared_direction(task, bundle)
         if task.mode in ('local','live') and not enabled:
             result.status='blocked'
             result.audit.append(AuditItem(severity='error',category='model',message='未配置可调用模型，正式模式不能用模板代替真实生成和审计'))

@@ -2,9 +2,11 @@
 import hashlib
 import inspect
 import json
+import re
 import time
 import unicodedata
 from datetime import datetime, timezone
+from contextlib import nullcontext
 from typing import Annotated, Literal
 
 from fastapi import HTTPException
@@ -291,9 +293,75 @@ class AgentTools:
         selected = next((item.get('result', {}).get('creative_brief')
             for item in reversed(turn.get('observations', [])) if item.get('tool') == 'ground_store'), None)
         self.place_selection = validate_place_selection(selected, self.store_research) if selected else None
+        self._continuing = bool(re.search(r'继续|接着|重试|再试|刚才|上次', turn.get('text', '')))
+        if (self.place_selection is None and self._continuing and not self.needs_place_refresh
+                and self.store_research and cached.get('store_id') == current_store
+                and 0 <= time.time() - cached.get('saved_at', 0) < 86400):
+            # Only an explicit continuation can reuse a chosen editorial angle.
+            # New locations and fresh investigations still require grounding.
+            profile = self.store_profile()
+            prior_profile = cached.get('profile') or (self.store_research[-1].get('profile') or {})
+            if all(profile.get(key) == prior_profile.get(key) for key in ('name', 'location')):
+                saved_selection = cached.get('creative_brief')
+                if not saved_selection:
+                    # Compatibility with conversations created before grounding
+                    # was persisted: use only this conversation's own turns.
+                    for message in reversed(conversation.get('messages', [])[-12:]):
+                        if message.get('role') != 'assistant' or not str(message.get('id', '')).endswith(':assistant'):
+                            continue
+                        prior_id = message['id'][:-10]
+                        try:
+                            prior = authorize_resource(TURN, prior_id)
+                        except HTTPException:
+                            continue
+                        if not self.visible(prior) or prior['body'].get('conversation_id') != conversation['id']:
+                            continue
+                        saved_selection = next((item.get('result', {}).get('creative_brief')
+                            for item in reversed(prior['body'].get('observations', []))
+                            if item.get('tool') == 'ground_store' and isinstance(item.get('result'), dict)), None)
+                        if saved_selection:
+                            break
+                if saved_selection:
+                    try:
+                        self.place_selection = validate_place_selection(saved_selection, self.store_research)
+                    except ValueError:
+                        pass
         self.opportunity = conversation.get('current_opportunity')
         if self.opportunity:
             self.opportunity = get_opportunity(self.opportunity['id'], audience=self.audience)
+
+    async def restore_context(self):
+        """Revalidate saved product names through the current scoped provider.
+
+        Projections in chat history never become product facts. Fetching the
+        current bundle is cheap and does not require another planner decision.
+        """
+        names = [item.get('result', {}).get('product') for item in self.turn.get('observations', [])
+                 if item.get('tool') == 'read_product' and isinstance(item.get('result'), dict)]
+        if self._continuing and not self.needs_place_refresh and self.opportunity:
+            names.append(self.opportunity.get('product'))
+        names = list(dict.fromkeys(name for name in names if isinstance(name, str) and name))[-3:]
+        if not names:
+            return []
+        self.catalog = await _invoke((await self.base()).catalog)
+        allowed = {item.get('name') for item in self.catalog}
+        restored = []
+        for name in names:
+            if name not in allowed:
+                continue
+            bundle = await _invoke((await self.base()).retrieve, name, self.turn['text'])
+            if bundle.product != name or bundle.conflicts or not bundle.facts:
+                continue
+            self.product_evidence[name] = bundle
+            restored.append({'tool': 'read_product', 'result': project_product_evidence(bundle),
+                             'context_restore': 'revalidated_current_provider'})
+        return restored
+
+    def context_summary(self):
+        return {'ready_products': list(self.product_evidence),
+                'place_grounded': self.place_selection is not None,
+                'requires_fresh_research': self.needs_place_refresh and not self._researched_this_turn,
+                'instruction': 'ready_products为本轮已重新读取的准确资料；不要重复读取已就绪的产品。'}
 
     async def base(self):
         if self.provider is None:
@@ -457,6 +525,7 @@ class AgentTools:
                 self.place_selection = validate_place_selection(args.grounding, self.store_research)
             except ValueError as exc:
                 raise HTTPException(422, str(exc)) from None
+            self.save_place_research()
             return self.place_context()
         if name in {'search_signals', 'research_store'}:
             if name == 'research_store' and self.search is None:
@@ -523,7 +592,9 @@ class AgentTools:
     def save_place_research(self):
         row = conversation_row(self.conversation['id'], editing=True)
         snapshot = {'store_id': require_context().store_id, 'saved_at': time.time(),
-            'researches': self.store_research, 'turn_id': self.turn['id']}
+            'researches': self.store_research, 'turn_id': self.turn['id'],
+            'profile': self.store_profile(),
+            'creative_brief': self.place_selection.model_dump() if self.place_selection else None}
         service_update_body(CONVERSATION, row['id'], {**row['body'], 'store_research': snapshot}, expected_version=row['version'])
 
     def store_profile(self):
@@ -736,7 +807,12 @@ class AgentTools:
                     from ..api import run_task
                     self.generator = lambda value: run_task(value, _request())
                 from ..daily_delivery import daily_content_delivery
-                with daily_content_delivery(self.turn.get('execution_policy')):
+                from ..content_direction import prepared_content_direction
+                reuse_direction = (self.opportunity and (self._continuing
+                    or self.opportunity.get('turn_id') == self.turn['id']))
+                direction = prepared_content_direction(self.opportunity['id'],
+                    conversation_id=self.conversation['id'], task=task, audience=self.audience) if reuse_direction else nullcontext()
+                with daily_content_delivery(self.turn.get('execution_policy')), direction:
                     result = _value(await _invoke(self.generator, task))
                 if result.get('status') != 'ready':
                     return {'status':result.get('status','incomplete'),'questions':result.get('questions',[]),
