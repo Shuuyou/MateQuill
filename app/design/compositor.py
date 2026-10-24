@@ -20,7 +20,7 @@ def _region_box(region,w,h):
     return x,y,bw,bh
 
 
-def _safe_text_expansion(region,content,size,family,weight,w,h,obstacles):
+def _safe_text_expansion(region,content,size,family,weight,w,h,obstacles,preferred_breaks=None):
     """Solve only missing text space; never move a source subject or rewrite copy."""
     original=(region.x*w,region.y*h,region.width*w,region.height*h)
     if region.rotation:return None
@@ -41,7 +41,7 @@ def _safe_text_expansion(region,content,size,family,weight,w,h,obstacles):
     valid=[]
     for width in widths:
         if width<bw-.01 or width>limit+.01:continue
-        lines=semantic_wrap(content,width,size,region.letter_spacing,family,weight)
+        lines=semantic_wrap(content,width,size,region.letter_spacing,family,weight,preferred_breaks=preferred_breaks)
         measured=max((measure(line,size,region.letter_spacing,family,weight) for line in lines),default=0)
         height=max(bh,len(lines)*size*region.line_height+.05)
         left=right-width if region.align=='right' else center-width/2 if region.align=='center' else x
@@ -94,6 +94,20 @@ def compose_design(task,record,plan,assets:dict)->list[DesignArtboard]:
     platform=plan.brief.platform;w,h=platform.width,platform.height
     selected=next(c for c in plan.concepts if c.id==plan.selected_concept_id)
     texts=plan.brief.texts;boards=[]
+    record_copy=(record.get('_design_copy') or {}) if isinstance(record,dict) else {}
+    craft=plan.provenance.get('copy_craft') or record_copy.get('copy_craft') or []
+    preferred_by_text={}
+    for key,source in texts.items():
+        content=source.get('text','')
+        for row in craft if isinstance(craft,list) else []:
+            if not isinstance(row,dict) or row.get('selected_headline')!=content:continue
+            units=row.get('headline_units')
+            if (not isinstance(units,list) or len(units)<2 or any(not isinstance(unit,str) or not unit for unit in units)
+                    or ''.join(units)!=content or '\n' in content):continue
+            offsets=[];offset=0
+            for unit in units[:-1]:offset+=len(unit);offsets.append(offset)
+            preferred_by_text[key]=offsets
+            break
     if selected.pages:
         pages=selected.pages[:platform.suggested_pages]
     else:
@@ -125,9 +139,10 @@ def compose_design(task,record,plan,assets:dict)->list[DesignArtboard]:
         if aid and aid not in assets: raise ValueError('planned_design_asset_unavailable')
         referenced_ids=set(source_ids)|set(ids)
         execution={
-            'version':'native-execution-v3-safe-text-fit','concept_id':concept.id,'page_id':page.id,'page_index':index,
+            'version':'native-execution-v4-semantic-units','concept_id':concept.id,'page_id':page.id,'page_index':index,
             'page':page.model_dump(mode='json'),'resolved_primary_asset_id':aid,
             'copy':{key:texts[key] for key in sorted(referenced_ids) if key in texts},
+            'preferred_breaks':{key:preferred_by_text[key] for key in sorted(referenced_ids) if key in preferred_by_text},
             'palette':{key:getattr(concept,key) for key in ('background','foreground','accent')},
             'font_role':concept.font_role,'visual_thesis':concept.visual_thesis,
             'art_direction':concept.art_direction.model_dump(mode='json'),
@@ -141,6 +156,7 @@ def compose_design(task,record,plan,assets:dict)->list[DesignArtboard]:
             x,y,bw,bh=region.x*w,region.y*h,region.width*w,region.height*h
             family=region.font_role or (concept.font_role if semantic_role=='headline' else 'sans')
             weight=region.font_weight or (700 if semantic_role=='headline' else 400)
+            preferred=preferred_by_text.get(key) if semantic_role=='headline' else None
             maximum=region.font_scale*w if region.font_scale is not None else default_size
             minimum=math.ceil(w*(.05 if semantic_role=='headline' else .024 if semantic_role in ('brand','kicker') else .033))
             # Adaptive copy keeps the platform's readable role floor. Precise
@@ -148,20 +164,20 @@ def compose_design(task,record,plan,assets:dict)->list[DesignArtboard]:
             # enlarge it or shrink it to fit; expand safe space or report overflow.
             minimum=(min(1600,max(20,maximum)) if region.font_fit=='authored'
                      and region.font_scale is not None else max(20,minimum))
-            text,fontsize,fit=fit_text(content,bw,bh,min(max(maximum,minimum),1600),minimum=minimum,line_height=region.line_height,font_family=family,font_weight=weight,tracking=region.letter_spacing)
+            text,fontsize,fit=fit_text(content,bw,bh,min(max(maximum,minimum),1600),minimum=minimum,line_height=region.line_height,font_family=family,font_weight=weight,tracking=region.letter_spacing,
+                                      preferred_breaks=preferred)
             if region.letter_spacing:
-                while True:
-                    lines=semantic_wrap(content,bw,fontsize,region.letter_spacing,family,weight)
-                    fit=max((measure(line,fontsize,region.letter_spacing,family,weight) for line in lines),default=0)<=bw and len(lines)*fontsize*region.line_height<=bh
-                    text='\n'.join(lines)
-                    if fit or fontsize<=minimum:break
-                    fontsize-=1
+                # fit_text measures real tracking and carries the same semantic
+                # preferences, including its bounded-height fallback.
+                text,fontsize,fit=fit_text(content,bw,bh,fontsize,minimum=minimum,
+                    line_height=region.line_height,font_family=family,font_weight=weight,
+                    tracking=region.letter_spacing,preferred_breaks=preferred)
             adjustment=None
             if not fit:
                 obstacles=[_region_box(other,w,h) for other in page.composition
                     if other is not region and other.role not in ('shape','rule')]
                 obstacles+=expanded_text_boxes
-                expansion=_safe_text_expansion(region,content,fontsize,family,weight,w,h,obstacles)
+                expansion=_safe_text_expansion(region,content,fontsize,family,weight,w,h,obstacles,preferred_breaks=preferred)
                 if expansion:
                     previous_box=[x,y,bw,bh]
                     (x,y,bw,bh),text=expansion;fit=True
@@ -175,7 +191,7 @@ def compose_design(task,record,plan,assets:dict)->list[DesignArtboard]:
                     # the maximum headline size fits vertically. Reflow using
                     # the same exact approved copy and actual glyph metrics.
                     for candidate in range(int(fontsize)-1,minimum-1,-1):
-                        candidate_lines=semantic_wrap(content,bw,candidate,region.letter_spacing,family,weight)
+                        candidate_lines=semantic_wrap(content,bw,candidate,region.letter_spacing,family,weight,preferred_breaks=preferred)
                         candidate_widths=[measure(line,candidate,region.letter_spacing,family,weight) for line in candidate_lines]
                         candidate_fit=max(candidate_widths,default=0)<=bw and len(candidate_lines)*candidate*region.line_height<=bh
                         if candidate_fit and (len(candidate_lines)<len(lines) or candidate_widths[-1]>=max(candidate_widths)*.35):
@@ -190,6 +206,7 @@ def compose_design(task,record,plan,assets:dict)->list[DesignArtboard]:
                 **_region_effects(region)))
             if region.id: region_bindings[region.id]=layer_id
             metrics[layer_id]={**font_provenance(content,family,weight),'measured':True,'fits':fit,'source_text_id':key}
+            if preferred:metrics[layer_id]['preferred_breaks']=preferred
             if adjustment:metrics[layer_id]['layout_adjustment']=adjustment
             expanded_text_boxes.append((x,y,bw,bh))
             if key:source_ids.append(key)

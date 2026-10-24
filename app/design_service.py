@@ -58,17 +58,21 @@ def _design_model(fallback, *, calls, tokens):
 
 def _delivered_title(source, artboards):
     """Name the design after the reviewed cover, not an older text draft."""
+    def label(text):
+        # Display titles are single-line labels, not the canvas' soft wrapping.
+        text = re.sub(r'(?<=[A-Za-z0-9])\r?\n(?=[A-Za-z0-9])', ' ', str(text))
+        return text.replace('\r', '').replace('\n', '').strip()
     if artboards:
         document = artboards[0].get('document') or {}
         for layer in document.get('layers', []):
             if layer.get('type') == 'text' and layer.get('role') == 'headline' and layer.get('visible', True) and layer.get('text'):
-                return layer['text']
+                return label(layer['text'])
         for asset in (document.get('assets') or {}).values():
             provenance = asset.get('provenance')
             for row in (provenance.get('display_copy', []) if isinstance(provenance, dict) else []):
                 if row.get('role') == 'headline' and row.get('text'):
-                    return row['text']
-    return source.get('title') or '本店图片'
+                    return label(row['text'])
+    return label(source.get('title') or '本店图片')
 
 
 def _visual_marketing_context(source, task_data, store_context, identity):
