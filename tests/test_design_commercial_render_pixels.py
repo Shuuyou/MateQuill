@@ -129,3 +129,26 @@ def test_actual_hidden_caption_is_a_hard_occlusion_error_while_artistic_headline
     assert functional_text_occlusion_checks(doc)[0]['severity']=='error'
     caption.role='caption';caption.z=20
     assert functional_text_occlusion_checks(doc)==[]
+
+
+def test_contact_and_outline_shadows_keep_independent_references_and_real_pixels():
+    image=PosterLayer(id='both-shadows',type='image',asset_id='real',role='product',locked=True,
+        x=100,y=100,width=80,height=80,z=10,shadow_opacity=.6,shadow_blur=2,shadow_dx=20,shadow_dy=20,
+        contact_shadow={'center_x':.5,'center_y':1.0125,'width':.8,'height':.06,'blur':2,'opacity':.6,'color':'#303030'})
+    svg,both=raster(document([image],{'real':solid_asset()}))
+    ns={'s':'http://www.w3.org/2000/svg'};root=ET.fromstring(svg)
+    group=next(g for g in root if g.get('id')=='both-shadows')
+    assert group.get('filter') is None
+    product=group.find('s:image',ns);ground=group.find('s:ellipse',ns)
+    assert product is not None and ground is not None
+    filters={f.get('id'):f for f in root.findall('.//s:filter',ns)}
+    for element,operation in ((product,'feDropShadow'),(ground,'feGaussianBlur')):
+        reference=element.get('filter')
+        assert reference.startswith('url(#')
+        assert filters[reference[5:-1]].find('s:'+operation,ns) is not None
+    assert product.get('filter')!=ground.get('filter')
+    assert both.getpixel((140,140))==(221,34,34)
+    assert max(both.getpixel((190,190)))<240
+    image.contact_shadow=None
+    _,outline_only=raster(document([image],{'real':solid_asset()}))
+    assert sum(both.getpixel((112,181)))<sum(outline_only.getpixel((112,181)))

@@ -55,9 +55,9 @@ def semantic_wrap(text: str, width: float, size: float, tracking: float = 0, fon
             j=max(i+1,nxt[i]);result.append(''.join(tokens[i:j]));i=j
     return result
 
-def fit_text(text: str, width: float, height: float, maximum: float, minimum: float=22, line_height: float=1.22, font_family: str='sans', font_weight: int=400):
+def fit_text(text: str, width: float, height: float, maximum: float, minimum: float=22, line_height: float=1.22, font_family: str='sans', font_weight: int=400, tracking: float=0):
     for size in range(round(maximum),round(minimum)-1,-1):
-        lines=semantic_wrap(text,width,size,font_family=font_family,font_weight=font_weight)
-        if max((measure(line,size,font_family=font_family,font_weight=font_weight) for line in lines),default=0)<=width and len(lines)*size*line_height<=height:
+        lines=semantic_wrap(text,width,size,tracking=tracking,font_family=font_family,font_weight=font_weight)
+        if max((measure(line,size,tracking=tracking,font_family=font_family,font_weight=font_weight) for line in lines),default=0)<=width and len(lines)*size*line_height<=height:
             return '\n'.join(lines),size,True
-    return '\n'.join(semantic_wrap(text,width,minimum,font_family=font_family,font_weight=font_weight)),minimum,False
+    return '\n'.join(semantic_wrap(text,width,minimum,tracking=tracking,font_family=font_family,font_weight=font_weight)),minimum,False

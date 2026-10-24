@@ -160,7 +160,7 @@ def project_design(record):
                                 for fmt in ('png', 'svg', 'json')}} for board in record['artboards']]}
 
 
-def enqueue_design(source_run_id, *, platform='', surface='', instruction='', idempotency_key=None, parent_id=None):
+def enqueue_design(source_run_id, *, platform='', surface='', instruction='', idempotency_key=None, parent_id=None, craft_edit=None):
     source, task = source_record(source_run_id)
     parent = load_design(parent_id, edit=True) if parent_id else None
     if parent and parent['source_run_id'] != source_run_id:
@@ -176,6 +176,11 @@ def enqueue_design(source_run_id, *, platform='', surface='', instruction='', id
         raise HTTPException(422, '请选择支持的图片发布入口') from None
     parameters = {'source_run_id': source_run_id, 'platform': target, 'surface': surface,
                   'instruction': instruction, 'parent_id': parent_id}
+    if craft_edit is not None:
+        from .design.craft_controls import CraftEditInput
+        if not parent:
+            raise HTTPException(422,'请选择要精修的图片')
+        parameters['craft_edit'] = CraftEditInput.model_validate(craft_edit).model_dump(mode='json')
     # A stable work ID also checkpoints paid tool stages across worker recovery.
     key = idempotency_key or uuid4().hex
     digest = hashlib.sha256((require_context().tenant_id + ':' + require_context().user_id + ':' + key).encode()).hexdigest()
@@ -198,7 +203,7 @@ async def collect_assets(source_run_id, source):
     products = {task.get('product'), *task.get('ecosystem_products', [])}
     additional = [key for key, item in declared.items() if key not in selected
                   and not key.startswith('upload-') and item.get('product') in products
-                  and item.get('verified') and item.get('provenance') in {'huawei_official', 'local_archive', 'ima_direct'}]
+                  and item.get('verified') and item.get('provenance') in {'huawei_official', 'vmall_storefront', 'local_archive', 'ima_direct'}]
     for identifier in list(dict.fromkeys([*sorted(selected - {None}), *additional]))[:8]:
         if identifier not in declared:
             continue
@@ -587,6 +592,24 @@ async def execute_design(parameters):
     identifier = parameters['design_id']
     source, task = source_record(parameters['source_run_id'])
     parent = load_design(parameters['parent_id'], edit=True) if parameters.get('parent_id') else None
+    craft_edit = parameters.get('craft_edit')
+    if craft_edit is not None:
+        from .design.craft_controls import CraftEditInput
+        if not parent or parent['source_run_id'] != parameters['source_run_id']:
+            raise HTTPException(422,{'code':'craft_edit_requires_parent','message':'请选择当前内容的图片再微调'})
+        craft_edit = CraftEditInput.model_validate(craft_edit)
+        if parameters['platform'] != parent['platform'] or parameters.get('surface','') != parent.get('surface',''):
+            raise HTTPException(422,{'code':'craft_edit_cannot_change_surface','message':'局部微调保留原来的画幅'})
+        try:
+            parent_work = load_body('design_work', parent['id'])
+        except HTTPException as exc:
+            if exc.status_code != 404:
+                raise
+            parent_work = {}
+        previous_copy = parent_work.get('design_copy') or {}
+        if previous_copy.get('status') != 'approved' or not previous_copy.get('audit', {}).get('completed'):
+            raise HTTPException(409, {'code':'craft_edit_parent_copy_unavailable',
+                                     'message':'请先完成这张图片的文案，再微调排版'})
     try:
         state = load_body('design_work', identifier, action='write')
     except HTTPException as exc:
@@ -603,16 +626,34 @@ async def execute_design(parameters):
     from .design_reference import design_references
     record['design_references'] = design_references(parameters['platform'])
     with generation_budget():
-        assets = await collect_assets(parameters['source_run_id'], source)
-        from .design.product_subjects import collect_product_subjects
-        product_subjects, subject_sources = await collect_product_subjects(task.product, assets)
-        assets.update(product_subjects)
-        from .design_brand_materials import collect_brand_materials
-        brand_assets, brand_sources = await collect_brand_materials(task.product, assets)
-        assets.update(brand_assets)
+        if craft_edit is not None:
+            from .design.craft_assets import collect_parent_assets
+            try:
+                assets = collect_parent_assets(parent)
+            except ValueError as exc:
+                raise HTTPException(409, {'code': str(exc), 'message':'请选择可编辑的原生图层版本继续微调'}) from None
+            material_sources, subject_sources, brand_sources = [], [], []
+            state.setdefault('asset_observations', deepcopy(parent_work.get('asset_observations', {})))
+            state.setdefault('design_task', deepcopy(parent_work.get('design_task') or task.model_dump()))
+            state.setdefault('design_copy', deepcopy(previous_copy))
+            state['place_research_status'] = 'parent_revision_reused'
+            # Reuse only plate reviews bound to their original byte hashes.
+            # The revised composition still receives actual-render review.
+            state.setdefault('element_pixel_reviews', deepcopy(parent_work.get('element_pixel_reviews', {})))
+        else:
+            assets = await collect_assets(parameters['source_run_id'], source)
+            from .design.vmall_materials import collect_vmall_design_materials
+            material_assets, material_sources = await collect_vmall_design_materials(source,task.product,assets)
+            assets.update(material_assets)
+            from .design.product_subjects import collect_product_subjects
+            product_subjects, subject_sources = await collect_product_subjects(task.product, assets, max_subjects=8)
+            assets.update(product_subjects)
+            from .design_brand_materials import collect_brand_materials
+            brand_assets, brand_sources = await collect_brand_materials(task.product, assets)
+            assets.update(brand_assets)
         record['sources'] = list(record.get('sources') or [])
         known_sources = {item['id'] for item in record['sources']}
-        for item in [*subject_sources, *brand_sources]:
+        for item in [*material_sources, *subject_sources, *brand_sources]:
             if item['id'] not in known_sources:
                 record['sources'].append(item)
                 known_sources.add(item['id'])
@@ -649,12 +690,22 @@ async def execute_design(parameters):
         task_data.update(state['design_task'])
         from .design_store_context import collect_design_store_context
         from .design_identity import resolve_design_identity
-        context = collect_design_store_context(task_data, record, assets=assets)
-        identity = resolve_design_identity(task_data, record, assets,
-            publisher_context={'publisher_identity': 'store',
-                'store_name': context.get('store', {}).get('name', '')})
+        if craft_edit is not None:
+            context = deepcopy(parent['plan']['brief'].get('store_context', {}))
+            identity = deepcopy(parent['plan']['brief'].get('brand_identity', {}))
+        else:
+            context = collect_design_store_context(task_data, record, assets=assets)
+            identity = resolve_design_identity(task_data, record, assets,
+                publisher_context={'publisher_identity': 'store',
+                    'store_name': context.get('store', {}).get('name', '')})
         record['_store_context'] = context
         record['_brand_identity'] = identity
+        from .design.craft import build_craft_contract
+        from .design import get_platform_connector
+        copy_craft_contract = build_craft_contract({**task_data,
+            'platform':get_platform_connector(parameters['platform'], parameters.get('surface','')).model_dump(),
+            'publisher_kind':identity.get('publisher_kind','store'), 'asset_ids':list(assets)}, record, assets)
+        record['_craft_contract'] = copy_craft_contract
         context_signature = hashlib.sha256(json.dumps({'task': task_data, 'identity': identity,
             'store': context, 'facts': source.get('facts', [])}, ensure_ascii=False, sort_keys=True).encode()).hexdigest()
         if state.get('context_signature') not in (None, context_signature):
@@ -673,6 +724,8 @@ async def execute_design(parameters):
             if re.search(r'创意概念|重做创意|换个创意|更换选题|换个选题|重做海报|重新设计', copy_instruction):
                 changes_copy = True
             if re.search(r'(?:保留|不改|不要改|保持).{0,6}(?:原文|标题|文案|口号)', copy_instruction):
+                changes_copy = False
+            if craft_edit is not None:
                 changes_copy = False
             # A different publication package needs its own information design;
             # a previous title-only cover cannot stand in for a complete poster.
@@ -706,6 +759,7 @@ async def execute_design(parameters):
                 from .design import get_platform_connector
                 state['design_copy'] = await prepare_design_copy(task_data, record,
                     brand_identity=identity, store_context=context, instruction=parameters.get('instruction', ''),
+                    copy_craft_contract=copy_craft_contract,
                     max_pages=get_platform_connector(parameters['platform'], parameters.get('surface', '')).suggested_pages,
                     repair_rejections=True, auditor=_copy_auditor() if not no_type else None,
                     llm=_design_model(model, calls=6, tokens=3500) if design_llm_enabled and not no_type else None)
@@ -734,6 +788,22 @@ async def execute_design(parameters):
                 _checkpoint(identifier, {**state, 'status': 'composition_needs_revision'})
                 raise HTTPException(422, {'code': 'cached_composition_needs_revision',
                     'design_id': identifier, 'message': '这版构图需要重新创作，原需求与素材已保留'}) from None
+        elif craft_edit is not None:
+            from .design.craft_controls import apply_craft_controls
+            parent_plan = DesignPlan.model_validate(parent['plan'])
+            from .design.craft import build_craft_contract
+            parent_contract = build_craft_contract(parent_plan.brief,record,assets)
+            try:
+                plan, order = apply_craft_controls(parent_plan,parent_contract,
+                    page_id=craft_edit.page_id,region_id=craft_edit.region_id,
+                    values=craft_edit.values,goal=craft_edit.goal)
+            except ValueError:
+                raise HTTPException(422,{'code':'craft_edit_out_of_scope','message':'这处调整需要保留原文案、素材和其他区域'}) from None
+            state['plan'] = plan.model_dump(mode='json')
+            state['craft_revision_order'] = order
+            state['concept_selection'] = {'selected_id':plan.selected_concept_id,
+                'reason':'只执行当前区域的制作参数微调','ranking':[]}
+            _checkpoint(identifier,state)
         else:
             llm = _design_model(model, calls=2, tokens=4800) if design_llm_enabled else None
             from .design.planner import DesignInputNeeded
@@ -752,7 +822,7 @@ async def execute_design(parameters):
         # A missing visual model gives geometry checks, never a made-up taste score.
         constraints = plan.provenance.get('revision_constraints', {})
         page_changes = plan.provenance.get('explicit_page_assignments', {})
-        reuse_cover = bool(parent and 'composition' in constraints.get('locked_fields', [])
+        reuse_cover = bool(parent and craft_edit is None and 'composition' in constraints.get('locked_fields', [])
                           and '1' not in page_changes and parent.get('artboards')
                           and parent.get('render_policy') == RENDER_POLICY)
         if reuse_cover and not state.get('concept_selection'):
@@ -864,6 +934,18 @@ async def execute_design(parameters):
             state['plan'] = plan.model_dump(mode='json')
             _checkpoint(identifier, state)
         boards = compose_design(task_data, record, plan, assets)
+        if craft_edit is not None:
+            from .design.craft_assets import preserve_parent_document
+            baseline_boards = compose_design(task_data, record, parent['plan'], assets)
+            for board in boards:
+                baseline = next((item for item in baseline_boards if item.page_id == board.page_id
+                                 and item.concept_id == board.concept_id), None)
+                if baseline is None:
+                    raise HTTPException(409, {'code':'craft_edit_parent_page_unavailable'})
+                try:
+                    board.document = preserve_parent_document(parent,board,baseline,craft_edit)
+                except ValueError as exc:
+                    raise HTTPException(409, {'code':str(exc), 'message':'这份旧稿需要先恢复区域对应关系'}) from None
         # Completed boards contain generated design plates as well as source
         # subjects. Restore only checkpointed plates before validating resume.
         for entry in state.get('design_elements', {}).values():
@@ -904,7 +986,12 @@ async def execute_design(parameters):
                 board.document = PosterDocument.model_validate(existing['document'])
             board.render_mode = 'native'
             _validate_delivered_copy(board.document, state.get('design_copy', {}), instruction=instruction)
-            board.document = await _design_elements_treatment(identifier, state, plan, board, assets)
+            if craft_edit is not None:
+                from .design.craft_assets import restore_parent_elements
+                board.document = restore_parent_elements(parent, board)
+                await _audit_embedded_elements(identifier, state, board.document)
+            else:
+                board.document = await _design_elements_treatment(identifier, state, plan, board, assets)
             native_source_proof(board.document, assets)
             reviewer = None
             if settings.image_api_key and _design_review_model():
@@ -925,7 +1012,8 @@ async def execute_design(parameters):
                                     {'id': key, 'purpose': 'abstract_design_only_not_scene_or_product_evidence'}
                                     for key, value in doc.assets.items()
                                     if value.get('provenance') == 'ai_generated_design_elements']})
-            refined = await refine_design(board.document, render_document, reviewer=reviewer, max_rounds=2)
+            refined = await refine_design(board.document, render_document, reviewer=reviewer,
+                                          max_rounds=0 if craft_edit is not None else 2)
             board.document = refined['document']
             _validate_delivered_copy(board.document, state.get('design_copy', {}), instruction=instruction)
             item = board.model_dump(mode='json')
@@ -960,7 +1048,7 @@ async def execute_design(parameters):
                 raise HTTPException(503, {'code': 'review_incomplete', 'design_id': identifier,
                     'message': '图片已保存，成品审阅尚未完成'})
             if action in ('reselect', 'revise'):
-                if action == 'revise' and not state.get('marketing_revision_count') and design_llm_enabled:
+                if action == 'revise' and craft_edit is None and not state.get('marketing_revision_count') and design_llm_enabled:
                     # Complete the editorial loop for the salesperson. New copy
                     # is independently checked, then the existing artwork is
                     # edited once; the original source and work remain intact.
@@ -1010,6 +1098,8 @@ async def execute_design(parameters):
             'source_run_id': parameters['source_run_id'],
             'parent_id': parameters.get('parent_id'), 'created_at': time.time(),
             'plan': plan.model_dump(mode='json'), 'selection': state.get('concept_selection'), 'artboards': output}
+        if state.get('craft_revision_order'):
+            artifact['craft_revision'] = state['craft_revision_order'].get('summary',{})
         if status != 'ready':
             # Preserve the actual failed work for an explicit retry, not a success projection.
             _checkpoint(identifier, {**state, 'status': status})

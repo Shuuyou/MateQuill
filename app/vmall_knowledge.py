@@ -257,7 +257,14 @@ def restore_asset(asset_id, *, root=None):
 
 async def prepare_assets(row, product, *, max_assets=6, fetcher=None, root=None):
     if not _identity(row):return [],[],{}
-    candidates=_candidates(row)[:min(max(max_assets,0),12)]
+    from .design.material_renditions import resolve_verified_rendition
+    candidates=[]
+    for original in _candidates(row)[:min(max(max_assets,0),12)]:
+        resolved=resolve_verified_rendition(row,original,root=root)
+        # Only the revalidated registry may grant a local HD path; a caller's
+        # rendition_source marker or raw filesystem path has no authority.
+        local_hd=resolved['image_url']!=original['image_url'] and resolved.get('rendition_source')
+        candidates.append({**resolved,'_verified_local_hd':bool(local_hd)})
     base=(Path(root or ROOT)/'runtime/official-assets').resolve()
     directory=(base/'vmall'/row['spu_id']).resolve()
     if not directory.is_relative_to(base):return [],[],{}
@@ -281,6 +288,16 @@ async def prepare_assets(row, product, *, max_assets=6, fetcher=None, root=None)
                 if expected:
                     path=restore_asset('vmall-'+row['spu_id']+'-'+expected,root=root)
                     if path:raw=await asyncio.to_thread(path.read_bytes)
+                if raw is None and item.get('_verified_local_hd'):
+                    registered=(Path(root or ROOT)/item['path']).resolve()
+                    if registered.is_relative_to((Path(root or ROOT)/'runtime').resolve()) and registered.is_file():
+                        proposed=await asyncio.to_thread(registered.read_bytes)
+                        digest,suffix=_validated_image(proposed)
+                        if digest!=expected:return None
+                        directory.mkdir(parents=True,exist_ok=True)
+                        path=directory/(digest+suffix)
+                        await asyncio.to_thread(path.write_bytes,proposed)
+                        raw=proposed
                 if raw is None:
                     raw,mime=await (fetcher or download_asset)(item['image_url'])
                     digest,suffix=_validated_image(raw,mime)

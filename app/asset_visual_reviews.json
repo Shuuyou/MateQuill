@@ -1516,5 +1516,108 @@
     ],
     "usable": true,
     "reason": "已实际查看对应SHA原图与透明边缘检查图；仅观察当前产品图可见内容，不认证型号、性能或实拍结果。"
+  },
+  "fa287a9efa8e35d50712afaa36903f6cd9728e87c55188b65a7fe674d2e762d7": {
+    "observed_title": "透明背景的白色手机正背面组合，显示屏带深色环形壁纸，背面有圆形摄像模组及下方环形纹样。",
+    "semantic_tags": [
+      "front",
+      "rear",
+      "product_array"
+    ],
+    "visual_role": "product_packshot",
+    "usable": true,
+    "visual_group": "white-phone-multiple-views",
+    "reason": "Codex root实际查看源图contact sheet；03/04另查看1920px单图，原生alpha，无额外排版标题。",
+    "reviewer": "codex_root_visual_observation",
+    "reviewed_at": "2026-10-24",
+    "identity_scope": "Visual content only; product/SKU identity comes from the separately captured VMALL source."
+  },
+  "40b82242b15f10ece7b1e3dbd1d33da3df5c26c88dfd4ecfd7839a453e71aca3": {
+    "observed_title": "透明背景的手机正面全机视角，屏幕内为深色环形壁纸。",
+    "semantic_tags": [
+      "front",
+      "single_subject"
+    ],
+    "visual_role": "product_packshot",
+    "usable": true,
+    "visual_group": "white-phone-multiple-views",
+    "reason": "Codex root实际查看源图contact sheet；03/04另查看1920px单图，原生alpha，无额外排版标题。",
+    "reviewer": "codex_root_visual_observation",
+    "reviewed_at": "2026-10-24",
+    "identity_scope": "Visual content only; product/SKU identity comes from the separately captured VMALL source."
+  },
+  "2e3cbffad1374da94679fb1045a85b365a65edf7a705ab357277d5bef8222084": {
+    "observed_title": "透明背景的白色手机背面全机视角，圆形摄像模组、下方环形纹样和机身字样可见。",
+    "semantic_tags": [
+      "rear",
+      "single_subject"
+    ],
+    "visual_role": "product_packshot",
+    "usable": true,
+    "visual_group": "white-phone-multiple-views",
+    "reason": "Codex root实际查看源图contact sheet；03/04另查看1920px单图，原生alpha，无额外排版标题。",
+    "reviewer": "codex_root_visual_observation",
+    "reviewed_at": "2026-10-24",
+    "identity_scope": "Visual content only; product/SKU identity comes from the separately captured VMALL source."
+  },
+  "c0ac9fd8766b038fdc707a25c227bfcfa97ec48cc4f945e7552e8b9ea23ebcba": {
+    "observed_title": "透明背景的白色手机正面三分之四视角，右侧边框按键与天线可见，屏内深色环形壁纸。",
+    "semantic_tags": [
+      "front",
+      "side",
+      "single_subject"
+    ],
+    "visual_role": "product_packshot",
+    "usable": true,
+    "visual_group": "white-phone-multiple-views",
+    "reason": "Codex root实际查看源图contact sheet；03/04另查看1920px单图，原生alpha，无额外排版标题。",
+    "reviewer": "codex_root_visual_observation",
+    "reviewed_at": "2026-10-24",
+    "identity_scope": "Visual content only; product/SKU identity comes from the separately captured VMALL source."
+  },
+  "b6d0c31d22019fd5f90dd2b0db57c0f993ed927b2b34e1430a58f5b45563b497": {
+    "observed_title": "透明背景的白色手机背面三分之四视角，圆形摄像模组与下方环形纹样、右侧边框按键和机身字样可见。",
+    "semantic_tags": [
+      "rear",
+      "side",
+      "single_subject"
+    ],
+    "visual_role": "product_packshot",
+    "usable": true,
+    "visual_group": "white-phone-multiple-views",
+    "reason": "Codex root实际查看源图contact sheet；03/04另查看1920px单图，原生alpha，无额外排版标题。",
+    "reviewer": "codex_root_visual_observation",
+    "reviewed_at": "2026-10-24",
+    "identity_scope": "Visual content only; product/SKU identity comes from the separately captured VMALL source."
+  },
+  "830a86e9f1673d15ee9649f62579b80f411d9ef43efffcd6fa69394eb08c0929": {
+    "observed_title": "透明背景的白色手机正面另一侧三分之四视角，深色环形壁纸与左侧银色边框可见。",
+    "semantic_tags": [
+      "front",
+      "side",
+      "single_subject"
+    ],
+    "visual_role": "product_packshot",
+    "usable": true,
+    "visual_group": "white-phone-multiple-views",
+    "reason": "Codex root实际查看源图contact sheet；03/04另查看1920px单图，原生alpha，无额外排版标题。",
+    "reviewer": "codex_root_visual_observation",
+    "reviewed_at": "2026-10-24",
+    "identity_scope": "Visual content only; product/SKU identity comes from the separately captured VMALL source."
+  },
+  "2d533f5939258ea3621c2271ff1317f90c724dd933eebe60334eeb253a0f8fed": {
+    "observed_title": "透明背景的白色手机背面另一侧三分之四视角，圆形摄像模组与下方环形纹样可见。",
+    "semantic_tags": [
+      "rear",
+      "side",
+      "single_subject"
+    ],
+    "visual_role": "product_packshot",
+    "usable": true,
+    "visual_group": "white-phone-multiple-views",
+    "reason": "Codex root实际查看源图contact sheet；03/04另查看1920px单图，原生alpha，无额外排版标题。",
+    "reviewer": "codex_root_visual_observation",
+    "reviewed_at": "2026-10-24",
+    "identity_scope": "Visual content only; product/SKU identity comes from the separately captured VMALL source."
   }
 }

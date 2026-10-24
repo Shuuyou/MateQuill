@@ -1,7 +1,7 @@
 """Serializable native design intentions and editable deliveries."""
 from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
-from ..poster import PosterDocument, PosterLayer
+from ..poster import PosterDocument, PosterLayer, ContactShadow
 from .connectors import PlatformDesignConnector
 from .publication import PublicationStrategy
 
@@ -17,6 +17,7 @@ class LayoutRegion(BaseModel):
     shadow_blur: float=Field(default=0,ge=0,le=80)
     shadow_dx: float=Field(default=0,ge=-200,le=200)
     shadow_dy: float=Field(default=0,ge=-200,le=200)
+    contact_shadow: ContactShadow|None=None
     x: float=Field(ge=0,le=1)
     y: float=Field(ge=0,le=1)
     width: float=Field(gt=0,le=1)
@@ -26,6 +27,7 @@ class LayoutRegion(BaseModel):
     text_id: str=Field(default='',max_length=100)
     asset_id: str=Field(default='',max_length=100)
     font_scale: float|None=Field(default=None,ge=.012,le=1)
+    font_fit: Literal['adaptive','authored']='adaptive'
     font_weight: Literal[400,500,600,700,800]|None=None
     font_role: Literal['sans','serif','display']|None=None
     line_height: float=Field(default=1.15,ge=.95,le=1.8)
@@ -41,6 +43,10 @@ class LayoutRegion(BaseModel):
     stroke_width: float=Field(default=0,ge=0,le=100)
     @model_validator(mode='after')
     def inside(self):
+        if self.contact_shadow is not None and self.role != 'image':
+            raise ValueError('contact_shadow_requires_image_region')
+        if self.font_fit == 'authored' and (self.role in ('image','shape','rule') or self.font_scale is None):
+            raise ValueError('authored_font_requires_text_region_and_scale')
         if self.x+self.width>1.001 or self.y+self.height>1.001: raise ValueError('region_out_of_canvas')
         import re
         if self.color and not re.fullmatch(r'#[0-9A-Fa-f]{6}', self.color):

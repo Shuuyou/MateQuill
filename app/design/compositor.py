@@ -107,7 +107,7 @@ def compose_design(task,record,plan,assets:dict)->list[DesignArtboard]:
     for index,page in enumerate(pages):
         concept=selected
         source_ids=list(page.text_ids)+[region.text_id for region in page.composition if region.text_id]
-        layers=[];metrics={};issues=[]
+        layers=[];metrics={};issues=[];region_bindings={}
         ids=[key for key in (page.text_ids or concept.text_ids) if key in texts]
         is_legacy=page.id.startswith('legacy-')
         headline_id=('title' if 'title' in ids else next(iter(ids),'')) if index==0 else ''
@@ -143,8 +143,12 @@ def compose_design(task,record,plan,assets:dict)->list[DesignArtboard]:
             weight=region.font_weight or (700 if semantic_role=='headline' else 400)
             maximum=region.font_scale*w if region.font_scale is not None else default_size
             minimum=math.ceil(w*(.05 if semantic_role=='headline' else .024 if semantic_role in ('brand','kicker') else .033))
-            minimum=max(20,minimum)
-            text,fontsize,fit=fit_text(content,bw,bh,min(max(maximum,minimum),1600),minimum=minimum,line_height=region.line_height,font_family=family,font_weight=weight)
+            # Adaptive copy keeps the platform's readable role floor. Precise
+            # art-directed labels opt into an authored size: don't silently
+            # enlarge it or shrink it to fit; expand safe space or report overflow.
+            minimum=(min(1600,max(20,maximum)) if region.font_fit=='authored'
+                     and region.font_scale is not None else max(20,minimum))
+            text,fontsize,fit=fit_text(content,bw,bh,min(max(maximum,minimum),1600),minimum=minimum,line_height=region.line_height,font_family=family,font_weight=weight,tracking=region.letter_spacing)
             if region.letter_spacing:
                 while True:
                     lines=semantic_wrap(content,bw,fontsize,region.letter_spacing,family,weight)
@@ -184,6 +188,7 @@ def compose_design(task,record,plan,assets:dict)->list[DesignArtboard]:
                 font_family=family,role=semantic_role,align=region.align,line_height=region.line_height,
                 letter_spacing=region.letter_spacing,fact_ids=source.get('fact_ids',[]),source_ids=source.get('source_ids',[]),
                 **_region_effects(region)))
+            if region.id: region_bindings[region.id]=layer_id
             metrics[layer_id]={**font_provenance(content,family,weight),'measured':True,'fits':fit,'source_text_id':key}
             if adjustment:metrics[layer_id]['layout_adjustment']=adjustment
             expanded_text_boxes.append((x,y,bw,bh))
@@ -199,6 +204,7 @@ def compose_design(task,record,plan,assets:dict)->list[DesignArtboard]:
                     stroke_width=region.stroke_width or (2 if region.role=='rule' else 0),
                     path_d=region.path_d,fill_style=region.fill_style,gradient_end=region.gradient_end,
                     opacity=region.opacity,role='design_shape',**_region_effects(region)))
+                if region.id: region_bindings[region.id]=layers[-1].id
                 continue
             if region.role=='image':
                 image_id=region.asset_id or aid
@@ -208,8 +214,9 @@ def compose_design(task,record,plan,assets:dict)->list[DesignArtboard]:
                     is_photo=visual in ('store_photo','photo','scene','lifestyle','real_scene','user_photo')
                     layers.append(PosterLayer(id=stable(f'image-{len(layers)}'),type='image',name='授权素材',x=region.x*w,y=region.y*h,
                         width=region.width*w,height=region.height*h,z=region_z(region),asset_id=image_id,locked=True,
-                        role='photograph' if is_photo else 'product',source_ids=[str(meta['source_id'])] if meta.get('source_id') else [],
+                        role='photograph' if is_photo else 'product',opacity=region.opacity,contact_shadow=region.contact_shadow,source_ids=[str(meta['source_id'])] if meta.get('source_id') else [],
                         **_region_effects(region)))
+                    if region.id: region_bindings[region.id]=layers[-1].id
                 else:issues.append({'severity':'warning','category':'asset','message':'No supplied image; native text design retained'})
                 continue
             key=region.text_id
@@ -234,7 +241,7 @@ def compose_design(task,record,plan,assets:dict)->list[DesignArtboard]:
         issues.extend(functional_text_occlusion_checks(layers))
         doc=PosterDocument(id=stable('document'),width=w,height=h,canvas=PosterCanvas(width=w,height=h,background=concept.background),
             brief=brief,layers=layers,assets={key:dict(value) for key,value in assets.items() if key in {layer.asset_id for layer in layers if layer.asset_id}},
-            source_run_id=plan.brief.source_run_id,audit=issues,status='blocked' if any(item['severity']=='error' for item in issues) else 'draft')
+            source_run_id=plan.brief.source_run_id,region_bindings=region_bindings,audit=issues,status='blocked' if any(item['severity']=='error' for item in issues) else 'draft')
         boards.append(DesignArtboard(id=stable('board'),role=page.role,title=page.title or concept.name,concept_id=concept.id,
             document=doc,typography=metrics,source_text_ids=list(dict.fromkeys(source_ids)),visual_brief=page.visual_brief or concept.visual_thesis,
             render_mode=page.render_mode,page_id=page.id))

@@ -31,7 +31,7 @@ def try_full_frame_png(document, asset_data=None) -> bytes | None:
         if (not layer.visible or layer.type != 'image' or layer.role != 'generated_design' or not layer.locked
                 or layer.x != 0 or layer.y != 0 or layer.width != doc.width or layer.height != doc.height
                 or layer.opacity != 1 or layer.radius != 0 or layer.stroke_width != 0 or layer.path_d or layer.text
-                or layer.shadow_opacity != 0 or not layer.asset_id):
+                or layer.shadow_opacity != 0 or layer.contact_shadow is not None or not layer.asset_id):
             return None
         # Transformed or shadowed layers require the actual compositor.
         transforms = ('transform', 'rotation', 'rotate', 'crop', 'crop_box', 'flip_x', 'flip_y')

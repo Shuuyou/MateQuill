@@ -8,7 +8,7 @@ from PIL import Image
 
 from app.design.compositor import apply_full_frame_visual
 from app.design.renderer import try_full_frame_png
-from app.poster import PosterBrief, PosterCanvas, PosterDocument, PosterLayer
+from app.poster import ContactShadow, PosterBrief, PosterCanvas, PosterDocument, PosterLayer
 
 
 def image_bytes(*, size=(320, 480), transparent=False, format='PNG'):
@@ -106,3 +106,30 @@ def test_future_crop_or_rotation_and_unknown_dict_fields_are_conservatively_reje
     value = doc.model_dump()
     value['layers'][0]['rotation'] = 90
     assert try_full_frame_png(value) is None
+
+
+@pytest.mark.parametrize('opacity', [0, .3])
+def test_explicit_contact_shadow_never_bypasses_actual_composition(opacity):
+    doc, raw = document()
+    assert try_full_frame_png(doc) == raw
+    doc.layers[0].contact_shadow = ContactShadow(opacity=opacity)
+    before = doc.model_dump()
+    assert try_full_frame_png(doc) is None
+    assert try_full_frame_png(before) is None
+    assert doc.model_dump() == before
+
+
+def test_service_contact_shadow_takes_svg_render_route(monkeypatch):
+    import asyncio
+    from app.design_service import render_document
+    doc, original = document()
+    doc.layers[0].contact_shadow = ContactShadow(center_y=.9, opacity=.25)
+    calls = []
+    rendered = image_bytes(size=(320, 480), transparent=True)
+    def render(svg, width, height):
+        calls.append((svg, width, height))
+        return rendered
+    monkeypatch.setattr('app.poster_render.render_png', render)
+    assert asyncio.run(render_document(doc)) == rendered != original
+    assert len(calls) == 1 and '<ellipse' in calls[0][0]
+    assert calls[0][1:] == (320, 480)

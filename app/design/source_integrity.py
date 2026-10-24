@@ -64,6 +64,7 @@ def native_source_proof(document, authorized_assets: dict) -> dict:
             'fit': 'slice' if layer.role == 'photograph' else 'contain',
             'opacity': layer.opacity, 'corner_radius': layer.radius,
             'rotation': layer.rotation,
+            'contact_shadow': layer.contact_shadow.model_dump() if layer.contact_shadow is not None else None,
             'shadow': {key: getattr(layer, 'shadow_' + key) for key in ('color', 'opacity', 'blur', 'dx', 'dy')}})
     return {'render_policy': RENDER_POLICY,
         'source_bytes_unchanged': all(p['source_sha256'] == p['render_asset_sha256'] for p in placements),

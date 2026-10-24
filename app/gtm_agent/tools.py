@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 from starlette.requests import Request
 
 from ..models import TaskInput
+from ..design.craft_controls import CraftEditInput
 from ..tenancy import authorize_resource, list_resources, require_context, service_update_body
 from . import memory
 from .effects import bind_effect, checkpoint_generated_artifact, assert_agent_lease
@@ -37,12 +38,12 @@ TOOLS = {
     'search_signals': 'query:公开选题检索；只作为策略线索，不作为产品事实或客群证明。',
     'research_store': 'query:本轮提到的具体广场/门店/街区名称，用引号标记地点，附城市与周边关键词。读取本店资料并检索周边；先定位再推断适合触达的人群，不要求店员填画像。可再次调用交叉验证地点或周边学校/园区。',
     'ground_store': 'grounding:基于已查门店来源的创作决策。给出location_status、location_summary、audience、scene、visual_direction、evidence_ids、alternatives。证据ID必须来自research_store返回的sources。决定后再生成；同名地点不清时用ambiguous并澄清。',
-    'read_artifact': '读取当前绑定稿件或本次reply_to_artifact，不可读取任意稿件。',
+    'read_artifact': '读取当前绑定稿件或本次reply_to_artifact，不可读取任意稿件。图片作品返回当前selected concept的plan页和region真实ID；key可指定已返回索引中的page_id或region_id精读。',
     'generate_content': 'product:准确型号, audience:编辑受众假设, scene:具体任务,platform:xiaohongshu/wechat/moments, requirements:写作方向,fact_ids:从刚读到资料选本次核心事实ID数组（默认1项），ecosystem_products:目录中准确设备数组。无需让人填写画像。',
     'revise_content': 'instruction:根据当前稿件进行本轮自然语言修订；先read_artifact。revision_intent明确绑定source_run_id：仅措辞调整用kind=wording_only，保留原地点/受众/场景，不重新查询；改变地点、人群或场景用kind=context_change，并给出location/audience/scene至少一项实际变更，再research_store及ground_store。',
     'create_poster': 'instruction:为当前绑定稿件制作可编辑海报；先read_artifact。',
     'create_design_bundle': 'instruction:为当前文稿一键制作适合平台的精美图片组；platform可为xiaohongshu/moments/wechat/bilibili/douyin。先read_artifact。',
-    'revise_design': 'instruction:用自然语句调整当前图片作品，保留原版；先read_artifact。',
+    'revise_design': 'instruction:用自然语句调整当前图片作品，保留原版；先read_artifact。单区域微调可给craft_edit{page_id,region_id,values,goal}，只用实际返回的当前plan页/region ID。values可用x/y/width/height、z/rotation、letter_spacing/line_height/font_weight/font_role/align/color、font_scale/font_fit、opacity、shadow_*或contact_shadow。精确字号用font_fit=authored和font_scale=目标像素除画布宽，保留20px下限；默认adaptive保留平台角色可读下限。不得改文案、素材或提供另一基线。常规instruction仍走原调整路径。',
 }
 
 
@@ -55,6 +56,64 @@ def project_catalog(rows, query=''):
     keys = ('id','name','system','category','aliases','catalog_source','spu_id','parameter_sku_id')
     return {'source_id':'catalog', 'products':[{k:row[k] for k in keys if k in row} for row in selected[:50]],
             'query':query, 'total_count':len(rows), 'match_count':len(selected), 'truncated':len(selected)>50}
+
+
+def project_design_plan(body, *, focus='', limit=18000):
+    """Whole region/text projections from the authorized selected plan only."""
+    from ..design.models import LayoutRegion
+    from ..poster import ContactShadow
+    plan = body.get('plan') or {}
+    selected_id = plan.get('selected_concept_id')
+    selected = next((item for item in plan.get('concepts', [])
+                     if isinstance(item, dict) and item.get('id') == selected_id), None)
+    if not selected:
+        return {'selected_concept_id': selected_id, 'pages': [], 'page_index': [], 'has_more': False}
+    pages = selected.get('pages') or []
+    # Legacy concepts have a composition but no actual page_id; expose that
+    # fact rather than minting a target that the execution service cannot bind.
+    if not pages:
+        return {'selected_concept_id': selected_id, 'pages': [], 'page_index': [],
+                'has_more': False, 'requires_page_plan': True}
+    pages = [row for row in pages if isinstance(row, dict)]
+    index = [{'page_id': row.get('id'), 'region_ids': [region.get('id')
+              for region in row.get('composition', []) if isinstance(region, dict)]} for row in pages]
+    brief = plan.get('brief') or {}
+    result = {'selected_concept_id': selected_id, 'page_index': index,
+              'pages': [], 'brief': {'texts': {}, 'asset_ids': list(brief.get('asset_ids') or [])},
+              'has_more': False}
+    if focus:
+        pages = sorted(pages, key=lambda page: not (page.get('id') == focus or
+            any(row.get('id') == focus for row in page.get('composition', []) if isinstance(row, dict))))
+    allowed = set(LayoutRegion.model_fields)
+    for page in pages:
+        projected = {key: page[key] for key in ('id', 'role', 'title', 'render_mode', 'text_ids', 'asset_id') if key in page}
+        projected['composition'] = []
+        result['pages'].append(projected)
+        regions = [row for row in page.get('composition', []) if isinstance(row, dict)]
+        if focus:
+            regions = sorted(regions, key=lambda row: row.get('id') != focus)
+        for region in regions:
+            item = {key: value for key, value in region.items() if key in allowed}
+            if isinstance(item.get('contact_shadow'), dict):
+                item['contact_shadow'] = {key: value for key, value in item['contact_shadow'].items()
+                                          if key in ContactShadow.model_fields}
+            text_id = item.get('text_id')
+            raw_text = (brief.get('texts') or {}).get(text_id)
+            text = ({key: value for key, value in raw_text.items()
+                     if key in {'text', 'fact_ids', 'source_ids', 'required_text_ids', 'role'}}
+                    if isinstance(raw_text, dict) else None)
+            projected['composition'].append(item)
+            previous = result['brief']['texts'].get(text_id)
+            if text is not None:
+                result['brief']['texts'][text_id] = text
+            if len(json.dumps(result, ensure_ascii=False)) > limit:
+                projected['composition'].pop()
+                if previous is None:
+                    result['brief']['texts'].pop(text_id, None)
+                else:
+                    result['brief']['texts'][text_id] = previous
+                result['has_more'] = True
+    return result
 
 
 class WordingRevisionIntent(BaseModel):
@@ -100,6 +159,7 @@ class Arguments(BaseModel):
     grounding: PlaceSelection | None = None
     opportunity: OpportunityPlan | None = None
     revision_intent: RevisionIntent | None = None
+    craft_edit: CraftEditInput | None = None
     brief_fields: list[work_signals.SignalField] = Field(default_factory=list, max_length=8)
 
 
@@ -306,6 +366,8 @@ class AgentTools:
         if (policy.get('source') == 'daily_store' and policy.get('allow_new_images') is False
                 and name == 'prepare_opportunity' and args.opportunity is not None):
             args.opportunity = args.opportunity.model_copy(update={'deliverables': ['content']})
+        if args.craft_edit is not None and name != 'revise_design':
+            raise HTTPException(422, 'craft_edit只能用于当前图片的单区域参数微调')
         if args.revision_intent is not None and name != 'revise_content':
             raise HTTPException(422, 'revision_intent只能用于当前文稿的修改')
         if name == 'read_catalog':
@@ -441,6 +503,7 @@ class AgentTools:
             row = self.reference()
             body = row['body']
             return {'source_id':'artifact:'+row['id'], 'artifact':artifact_reference(row['kind'],row['id'],audience=self.audience),
+                **({'plan': project_design_plan(body, focus=args.key)} if row['kind'] == 'design' else {}),
                 'title':body.get('title'), 'intro':body.get('intro'), 'blocks':body.get('blocks',[])[:8],
                 'task':body.get('_poster_task'), 'layers':body.get('layers',[])[:15]}
         if name in {'generate_content', 'revise_content', 'create_poster'}:
@@ -473,6 +536,8 @@ class AgentTools:
 
     async def generate_design(self, name, args):
         from ..design_service import execute_design, load_design
+        if args.craft_edit is not None and name != 'revise_design':
+            raise HTTPException(422, 'craft_edit只能用于当前图片的单区域参数微调')
         source = self.reference()
         parent = load_design(source['id'], edit=True) if source['kind'] == 'design' else None
         if name == 'revise_design' and parent is None:
@@ -500,6 +565,8 @@ class AgentTools:
         platform = parent['platform'] if parent else args.platform
         parameters = {'source_run_id': source_id, 'platform': platform,
             'instruction': args.instruction, 'parent_id': parent['id'] if parent else None}
+        if args.craft_edit is not None:
+            parameters['craft_edit'] = args.craft_edit.model_dump()
         effect_key = hashlib.sha256(json.dumps({'operation': name, **parameters}, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
         persisted = authorize_resource(TURN, self.turn['id'])['body']
         completed = persisted.get('effects', {})
@@ -512,6 +579,10 @@ class AgentTools:
             with bind_effect(self.turn['id'], effect_key, self.audience):
                 result = _value(await execute_design(parameters))
         except HTTPException as exc:
+            # A local control edit cannot authorize a newly selected run or
+            # a full paid redesign against a different baseline.
+            if args.craft_edit is not None:
+                raise
             detail = exc.detail if isinstance(exc.detail, dict) else {}
             if exc.status_code != 422 or detail.get('code') not in {'marketing_reselect', 'marketing_revise'}:
                 raise

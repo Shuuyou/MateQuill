@@ -56,6 +56,18 @@ class PosterCanvas(BaseModel):
     background: str = '#F3F0E8'
 
 
+class ContactShadow(BaseModel):
+    """Authored ground-plane ellipse relative to an image region, not a relit product."""
+    model_config = ConfigDict(extra='forbid', allow_inf_nan=False)
+    center_x: float = Field(default=.5, ge=-.5, le=1.5)
+    center_y: float = Field(default=1, ge=-.5, le=1.5)
+    width: float = Field(default=.8, gt=0, le=2)
+    height: float = Field(default=.025, gt=0, le=.5)
+    blur: float = Field(default=6, ge=0, le=80)
+    opacity: float = Field(default=.18, ge=0, le=.6)
+    color: str = Field(default='#303030', pattern=r'^#[0-9A-Fa-f]{6}$')
+
+
 class PosterLayer(BaseModel):
     model_config = ConfigDict(extra='forbid', allow_inf_nan=False)
     id: str
@@ -72,6 +84,7 @@ class PosterLayer(BaseModel):
     shadow_blur: float = Field(default=0, ge=0, le=80)
     shadow_dx: float = Field(default=0, ge=-200, le=200)
     shadow_dy: float = Field(default=0, ge=-200, le=200)
+    contact_shadow: ContactShadow | None = None
     locked: bool = False
     visible: bool = True
     text: str = Field(default='', max_length=12000)
@@ -98,6 +111,8 @@ class PosterLayer(BaseModel):
 
     @model_validator(mode='after')
     def validate_colors(self):
+        if self.contact_shadow is not None and self.type != 'image':
+            raise ValueError('contact_shadow_requires_image')
         if not all(COLOR.fullmatch(c) for c in (self.color,self.stroke,self.gradient_end,self.shadow_color)):
             raise ValueError('图层颜色须使用六位 HEX 格式')
         if self.fill == 'none':
@@ -121,6 +136,7 @@ class PosterDocument(BaseModel):
     layers: list[PosterLayer]
     assets: dict[str, dict] = Field(default_factory=dict)
     audit: list[dict] = Field(default_factory=list)
+    region_bindings: dict[str, str] = Field(default_factory=dict, max_length=20)
     status: Literal['draft', 'ready', 'blocked'] = 'draft'
     source_run_id: str = ''
 
@@ -389,12 +405,19 @@ def render_svg(document: PosterDocument | dict, asset_data: Mapping | Callable |
             continue
         x,y,w,h = layer.x,layer.y,layer.width,layer.height
         effects = ''
+        image_filter = ''
         if layer.rotation:
             effects += f' transform="rotate({layer.rotation} {x+w/2} {y+h/2})"'
         if layer.shadow_opacity:
             shadow_id = f'shadow-{index}'
             svg.append(f'<defs><filter id="{shadow_id}" x="-100%" y="-100%" width="300%" height="300%"><feDropShadow dx="{layer.shadow_dx}" dy="{layer.shadow_dy}" stdDeviation="{layer.shadow_blur}" flood-color="{layer.shadow_color}" flood-opacity="{layer.shadow_opacity}"/></filter></defs>')
-            effects += f' filter="url(#{shadow_id})"'
+            # Keep legacy group-level shadows when no separate ground plane
+            # exists. With a contact ellipse, filter only the product image so
+            # the ground shadow is not drop-shadowed a second time.
+            if layer.type == 'image' and layer.contact_shadow is not None and layer.contact_shadow.opacity:
+                image_filter = f' filter="url(#{shadow_id})"'
+            else:
+                effects += f' filter="url(#{shadow_id})"'
         svg.append(f'<g id="{_xml(layer.id)}"{effects}><title>{_xml(layer.name)}</title>')
         if layer.type == 'shape':
             fill=layer.fill
@@ -413,11 +436,16 @@ def render_svg(document: PosterDocument | dict, asset_data: Mapping | Callable |
             else:
                 svg.append(f'<rect x="{x}" y="{y}" width="{w}" height="{h}" rx="{layer.radius}" {attrs}/>')
         elif layer.type == 'image':
+            if layer.contact_shadow is not None and layer.contact_shadow.opacity:
+                ground = layer.contact_shadow
+                ground_id = f'contact-shadow-{index}'
+                svg.append(f'<defs><filter id="{ground_id}" x="-100%" y="-300%" width="300%" height="700%"><feGaussianBlur stdDeviation="{ground.blur}"/></filter></defs>')
+                svg.append(f'<ellipse data-role="contact-shadow" cx="{x+w*ground.center_x}" cy="{y+h*ground.center_y}" rx="{w*ground.width/2}" ry="{h*ground.height/2}" fill="{ground.color}" opacity="{ground.opacity*layer.opacity}" filter="url(#{ground_id})"/>')
             supplied = asset_data(layer.asset_id) if callable(asset_data) else (asset_data or {}).get(layer.asset_id)
             embedded = _raster_data(supplied or doc.assets.get(layer.asset_id, {}).get('data_url'))
             if embedded:
                 fit = 'xMidYMid slice' if layer.role == 'generated_background' else 'xMidYMid meet'
-                svg.append(f'<image x="{x}" y="{y}" width="{w}" height="{h}" href="{embedded}" preserveAspectRatio="{fit}"/>')
+                svg.append(f'<image x="{x}" y="{y}" width="{w}" height="{h}" href="{embedded}" preserveAspectRatio="{fit}" opacity="{layer.opacity}"{image_filter}/>')
             else:
                 svg.append(f'<rect x="{x}" y="{y}" width="{w}" height="{h}" fill="#DCE4DF"/>')
                 svg.append(f'<text x="{x+w/2}" y="{y+h/2}" text-anchor="middle" font-size="20" fill="#172E27">真实素材尚未载入</text>')
