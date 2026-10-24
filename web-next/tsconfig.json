@@ -33,7 +33,15 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts",
-    ".next/dev/types/**/*.ts"
+    ".next/dev/types/**/*.ts",
+    ".next/agent-preview/types/**/*.ts",
+    ".next/agent-preview/dev/types/**/*.ts",
+    ".next/design-check/types/**/*.ts",
+    ".next/design-check/dev/types/**/*.ts",
+    ".next/ui-refinement-build/types/**/*.ts",
+    ".next/ui-refinement-build/dev/types/**/*.ts",
+    ".next/final-upgrade-preview/types/**/*.ts",
+    ".next/final-upgrade-preview/dev/types/**/*.ts"
   ],
   "exclude": [
     "node_modules"

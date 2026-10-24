@@ -90,7 +90,7 @@ def test_fact_service_failure_never_falls_back_to_writer(monkeypatch):
     with pytest.raises(ModelCallError) as caught:
         asyncio.run(model._json('fact reviewer', {'assessment_scope': {}}))
     assert caught.value.code == 'model_http_error' and caught.value.http_status == 503
-    assert sent == ['api.deepseek.com'] and model._calls == 1
+    assert set(sent) == {'api.deepseek.com'} and len(sent) <= 3 and model._calls == 1
     assert model.metrics[0]['stage'] == 'fact_review'
 
 

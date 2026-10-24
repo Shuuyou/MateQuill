@@ -193,6 +193,7 @@ async def execute_claimed(row, *, planner=None, tools_factory=None):
     claim_token = _claim.set((row['id'],row['claim_token']))
     operation = None
     heartbeat = None
+    progress_token = None
     stopped = {}
     try:
         from .runtime import run_turn
@@ -201,6 +202,9 @@ async def execute_claimed(row, *, planner=None, tools_factory=None):
         if row['attempts'] > 3:
             finish_turn(row,{'status':'failed','message':'这次任务已暂停，可以重新发一条消息继续。','artifact':None,'questions':[]})
             return
+        from ..job_progress import bind as bind_progress, unbind as unbind_progress
+        progress_token = bind_progress(row['id'], 'agent', resource='agent_turn',
+            terminal={'completed', 'needs_input', 'failed', 'cancelled'})
         operation = asyncio.create_task(run_turn(row['id'],planner=planner,tools_factory=tools_factory))
 
         async def keep_alive():
@@ -252,6 +256,8 @@ async def execute_claimed(row, *, planner=None, tools_factory=None):
         except Exception:
             _release_owned(row, 'cancelled')
     finally:
+        if progress_token is not None:
+            unbind_progress(progress_token)
         if heartbeat:
             heartbeat.cancel()
             await asyncio.gather(heartbeat, return_exceptions=True)

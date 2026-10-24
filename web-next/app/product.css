@@ -198,6 +198,7 @@ img {
 }
 .mq-sidebar nav button,
 .mq-settings-link {
+  position: relative;
   border: 0;
   background: none;
   width: 56px;
@@ -618,6 +619,81 @@ img {
 .mq-generating > span {
   font-size: 15px;
   color: var(--accent);
+}
+.mq-steps {
+  list-style: none;
+  margin: 0 auto 24px;
+  padding: 0;
+  max-width: 430px;
+  display: grid;
+  gap: 12px;
+  text-align: left;
+}
+.mq-steps li {
+  display: flex;
+  align-items: baseline;
+  gap: 11px;
+  font-size: 16px;
+  color: #a4a896;
+}
+.mq-steps li i {
+  font-style: normal;
+  width: 22px;
+  flex: none;
+  text-align: center;
+  font-size: 14px;
+}
+.mq-steps li em {
+  font-style: normal;
+  font-size: 13px;
+  color: #a4a896;
+}
+.mq-steps li.is-done {
+  color: var(--secondary);
+}
+.mq-steps li.is-active {
+  color: var(--ink);
+  font-weight: 550;
+}
+.mq-generating > .mq-generating-elapsed {
+  display: block;
+  font-size: 14px;
+  color: var(--secondary);
+}
+.mq-generating-bar {
+  height: 6px;
+  max-width: 430px;
+  margin: 0 auto 18px;
+  background: #e6e8da;
+  border-radius: 999px;
+  overflow: hidden;
+}
+.mq-generating-bar i {
+  display: block;
+  height: 100%;
+  background: var(--accent);
+  border-radius: inherit;
+  transition: width 700ms ease;
+}
+.mq-generating-stop {
+  margin-top: 16px;
+}
+.mq-nav-dot {
+  position: absolute;
+  top: 9px;
+  left: 33px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--accent);
+  box-shadow: 0 0 0 3px #f2f3e9;
+  animation: mq-nav-dot-pulse 1.6s ease-in-out infinite;
+}
+@keyframes mq-nav-dot-pulse {
+  50% {
+    transform: scale(1.4);
+    opacity: 0.6;
+  }
 }
 .mq-clarification {
   max-width: 850px;

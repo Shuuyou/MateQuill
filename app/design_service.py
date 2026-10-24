@@ -15,6 +15,7 @@ from fastapi import HTTPException
 from fastapi.responses import JSONResponse
 
 from .config import settings
+from .job_progress import report
 from .models import TaskInput
 from .tenancy import authorize_resource, require_context, load_body, save_body
 from .resource_access import ensure_live_context, validate_task_resources
@@ -667,6 +668,7 @@ async def execute_design(parameters):
             if asset_id in assets and isinstance(observation, dict):
                 assets[asset_id].update({key: value for key, value in observation.items() if key in ('view', 'framing', 'photo')})
         record['assets'] = [{'id': key, **value} for key, value in assets.items()]
+        report('materials', f'素材 {len(assets)} 项 · 参考 {len(record["sources"])} 条')
         # Reuse existing source-bound research. Older generic runs may not have
         # it, so the agent researches the already selected store automatically.
         if 'design_task' not in state:
@@ -765,6 +767,8 @@ async def execute_design(parameters):
                     llm=_design_model(model, calls=6, tokens=3500) if design_llm_enabled and not no_type else None)
             _checkpoint(identifier, state)
         record['_design_copy'] = state['design_copy']
+        report('copy', f'画面文案 {len(state["design_copy"].get("cards") or [])} 条'
+               f' · {state["design_copy"].get("status", "已审定")}')
         record['assets'] = [{'id': key, **value} for key, value in assets.items()]
         # When a genuine prepared subject exists, whole historic campaign
         # artwork remains an art reference rather than another product cutout.
@@ -814,6 +818,7 @@ async def execute_design(parameters):
                 raise HTTPException(422, str(exc)) from None
             state['plan'] = plan.model_dump(mode='json')
             _checkpoint(identifier, state)
+        report('concepts', f'{len(plan.concepts)} 个视觉方向')
         if design_llm_enabled and plan.provenance.get('fallback_used'):
             _checkpoint(identifier, {**state, 'status': 'art_direction_incomplete'})
             raise HTTPException(503, {'code': 'art_direction_incomplete', 'design_id': identifier,
@@ -956,6 +961,7 @@ async def execute_design(parameters):
         output = []
         marketing_context = _visual_marketing_context(source, task_data, context, identity)
         for index, board in enumerate(boards):
+            report('rendering', f'第 {index + 1} 张，共 {len(boards)} 张')
             if index == 0:
                 selected_candidate = state.get('candidate_boards', {}).get(plan.selected_concept_id)
                 if selected_candidate and selected_candidate.get('id') == board.id:
@@ -1040,6 +1046,7 @@ async def execute_design(parameters):
             _checkpoint(identifier, state)
         ensure_live_context()
         source_record(parameters['source_run_id'])
+        report('reviewing', f'成品口径与营销复核 {len(output)} 张')
         for item in output:
             review = item.get('review', {})
             action = review.get('publication_gate', {}).get('action') or review.get('marketing_action', 'incomplete')

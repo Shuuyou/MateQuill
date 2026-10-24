@@ -452,3 +452,13 @@ def test_new_visual_first_proposal_cannot_claim_native_art_direction():
     p=plan(llm=LLM())
     assert p.provenance['planner']=='local_composition'
     assert p.provenance['model_attempts'][0]['validation_errors'][0]['message']=='new_proposal_requires_native_composition'
+
+
+def test_oversized_daily_topic_goal_does_not_crash_the_poster_brief():
+    # A daily-topic goal concatenates instructions with a JSON store profile
+    # and can run well past PosterBrief.purpose's 200-char limit; compositing
+    # must clip it instead of letting pydantic's ValidationError escape.
+    long_goal='为福雷德广场店准备一条朋友圈：'+json.dumps({'store':'福雷德广场','audience':'大学生','notes':'靠近下沙高教园区'*20},ensure_ascii=False)
+    assert len(long_goal)>200
+    boards=compose_design({'goal':long_goal},RECORD,plan(),{'photo-1':{'visual_role':'product'}})
+    assert len(boards[0].document.brief.purpose)<=200

@@ -217,6 +217,101 @@
   width: 64px;
   height: 64px;
 }
+.mq-conversation-process {
+  flex: 1;
+  min-width: 0;
+}
+.mq-conversation-process > summary {
+  cursor: pointer;
+  color: var(--ink);
+  font-size: 17px;
+  list-style: none;
+  user-select: none;
+}
+.mq-conversation-process > summary::-webkit-details-marker {
+  display: none;
+}
+.mq-conversation-process > summary::after {
+  content: "⌄";
+  margin-left: 8px;
+  color: var(--secondary);
+  font-size: 14px;
+  transition: transform 0.18s;
+  display: inline-block;
+}
+.mq-conversation-process[open] > summary::after {
+  transform: rotate(180deg);
+}
+.mq-process-steps {
+  margin: 14px 0 4px;
+  padding: 0 0 0 2px;
+  list-style: none;
+  display: grid;
+  gap: 10px;
+}
+.mq-process-steps > li {
+  position: relative;
+  padding-left: 26px;
+  font-size: 15px;
+  color: var(--secondary);
+}
+.mq-process-steps em {
+  font-style: normal;
+  font-size: 12px;
+  color: var(--secondary);
+}
+.mq-process-steps em.is-live {
+  color: var(--accent);
+}
+.mq-process-steps > li::before {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 7px;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  border: 1.5px solid var(--line);
+  background: transparent;
+}
+.mq-process-steps > li.is-done {
+  color: var(--ink);
+}
+.mq-process-steps > li.is-done::before {
+  border-color: var(--accent);
+  background: var(--accent);
+}
+.mq-process-steps > li.is-active {
+  color: var(--ink);
+}
+.mq-process-steps > li.is-active::before {
+  border-color: var(--accent);
+  background: var(--lime);
+  animation: mq-process-pulse 1.1s ease-in-out infinite;
+}
+.mq-process-steps > li.is-failed::before {
+  border-color: #b4452f;
+  background: #b4452f;
+}
+.mq-process-steps > li.is-failed .mq-process-step-title::after {
+  content: " · 未完成";
+  color: #b4452f;
+}
+.mq-process-steps ul {
+  margin: 6px 0 0;
+  padding: 0 0 0 2px;
+  list-style: none;
+  display: grid;
+  gap: 4px;
+}
+.mq-process-steps ul li {
+  font-size: 13px;
+  color: var(--secondary);
+}
+@keyframes mq-process-pulse {
+  0%, 100% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.35); opacity: 0.65; }
+}
 .mq-conversation-composer {
   border: 1px solid var(--line);
   border-radius: 24px 8px 24px 8px;

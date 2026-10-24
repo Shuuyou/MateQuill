@@ -21,6 +21,15 @@ DESIGN_ELEMENT_REVIEW_PROTOCOL_VERSION = 1
 DESIGN_ELEMENT_REVIEW_SCOPE = 'standalone_design_element'
 
 
+def _retry_wait(headers, n: int) -> float:
+    """Bounded wait before an upstream retry; an explicit Retry-After wins."""
+    import random
+    try:
+        return min(30.0, max(1.0, float((headers or {}).get('retry-after'))))
+    except (TypeError, ValueError):
+        return random.random() * min(15, 2 ** n)
+
+
 def accepted_design_element_review(review, sha256: str) -> bool:
     """Reuse a plate verdict only at its exact artifact/protocol/scope boundary.
 
@@ -450,21 +459,35 @@ art_direction、visual_devices和设计意图只是待验证的创作主张；�
             'response_format': visual_response_format(model, marketing_required=marketing_required)}
     body=_vision_model_compatibility(body)
     try:
+        import asyncio
         async with httpx.AsyncClient(timeout=httpx.Timeout(150 if model in REASONING_VISUAL_MODELS else 75 if marketing_required else 45, connect=10), trust_env=False, follow_redirects=False) as client:
-            for attempt in range(2):
-                async with client.stream('POST', base_url.rstrip('/') + '/chat/completions',
-                    headers={'Authorization': 'Bearer ' + api_key}, json=body) as response:
-                    raw = bytearray()
-                    async for part in response.aiter_bytes():
-                        raw.extend(part)
-                        if len(raw) > 128_000:
-                            raise ValueError('response too large')
-                    if (attempt == 0 and body['response_format']['type'] == 'json_schema'
-                            and explicitly_unsupported_schema(response.status_code, raw)):
-                        body['response_format'] = {'type': 'json_object'}
-                        continue
-                    response.raise_for_status()
+            for upstream_attempt in range(3):
+                completed = retriable = False
+                for attempt in range(2):
+                    async with client.stream('POST', base_url.rstrip('/') + '/chat/completions',
+                        headers={'Authorization': 'Bearer ' + api_key}, json=body) as response:
+                        raw = bytearray()
+                        async for part in response.aiter_bytes():
+                            raw.extend(part)
+                            if len(raw) > 128_000:
+                                raise ValueError('response too large')
+                        if (attempt == 0 and body['response_format']['type'] == 'json_schema'
+                                and explicitly_unsupported_schema(response.status_code, raw)):
+                            body['response_format'] = {'type': 'json_object'}
+                            continue
+                        # A 429/5xx rejection arrives before any verdict exists,
+                        # so a bounded Retry-After retry is safe. Timeouts and a
+                        # malformed response stay unretried, never made a pass.
+                        if response.status_code in (429, 500, 502, 503, 504) and upstream_attempt < 2:
+                            wait = _retry_wait(response.headers, upstream_attempt + 1)
+                            retriable = True
+                            break
+                        response.raise_for_status()
+                        completed = True
+                        break
+                if completed or not retriable:
                     break
+                await asyncio.sleep(wait)
         envelope = json.loads(raw)
         content = envelope['choices'][0]['message']['content']
         if not isinstance(content, str):
@@ -493,7 +516,11 @@ art_direction、visual_devices和设计意图只是待验证的创作主张；�
                 public_text=public_text, public_surfaces=public_surfaces)
             result['marketing_review'] = marketing
         return result
-    except (httpx.HTTPError, ValueError, KeyError, TypeError, IndexError):
+    except (httpx.HTTPError, ValueError, KeyError, TypeError, IndexError) as exc:
+        # Failure stays an incomplete review, never a pass — but a silent
+        # swallow left jobs undiagnosable, so record the exception class only.
+        import logging
+        logging.getLogger(__name__).warning('design render review incomplete: %s', type(exc).__name__)
         return {'review_completed': False, 'checks': [], 'edits': []}
 
 

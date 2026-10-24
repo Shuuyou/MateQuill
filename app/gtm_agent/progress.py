@@ -65,12 +65,20 @@ def project_process(body, status):
     inside the running pipeline. Nothing here is model-generated prose.
     """
     steps = []
+    previous_ts = body.get('created_at')
     for item in body.get('observations') or []:
         tool = item.get('tool')
-        if tool not in STEP_TITLES:
-            continue
-        steps.append({'key': tool, 'title': STEP_TITLES[tool],
-                      'status': 'failed' if item.get('error') else 'done'})
+        ts = item.get('ts')
+        if tool in STEP_TITLES:
+            step = {'key': tool, 'title': STEP_TITLES[tool],
+                    'status': 'failed' if item.get('error') else 'done'}
+            started = item.get('started_at')
+            anchor = started if isinstance(started, (int, float)) else previous_ts
+            if isinstance(ts, (int, float)) and isinstance(anchor, (int, float)) and ts >= anchor:
+                step['duration_ms'] = int((ts - anchor) * 1000)
+            steps.append(step)
+        if isinstance(ts, (int, float)):
+            previous_ts = ts
     current = body.get('current_tool')
     if status in {'queued', 'running'}:
         if current in STEP_TITLES:
@@ -84,8 +92,12 @@ def project_process(body, status):
                     'text': event.get('detail'), 'seq': event.get('seq')}
                    for event in (body.get('events') or []) if event.get('detail')][-6:]
     active = next((step for step in reversed(steps) if step['status'] == 'active'), None)
-    if active and detail_tail:
-        active['details'] = detail_tail
+    if active:
+        tool_started = body.get('tool_started_at')
+        if isinstance(tool_started, (int, float)):
+            active['elapsed_ms'] = max(0, int((time.time() - tool_started) * 1000))
+        if detail_tail:
+            active['details'] = detail_tail
     if not steps and status in {'queued', 'running'}:
         steps = [{'key': 'planning', 'title': '整理资料，确定创作方向', 'status': 'active'}]
     if not steps:

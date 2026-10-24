@@ -198,6 +198,45 @@ def test_model_review_failure_is_not_converted_into_success(monkeypatch):
     assert 'CANARY' not in str(result)
 
 
+def test_model_review_retries_bounded_upstream_rejection(monkeypatch):
+    # A 429/5xx arrives before any verdict exists; the same review must be
+    # attempted again within bounds instead of failing the whole art pass.
+    import json
+    import httpx
+    from app.design_review import review_with_model
+    document = doc()
+    actual_client = httpx.AsyncClient
+    calls = []
+    def handler(request):
+        calls.append(request)
+        if len(calls) == 1:
+            return httpx.Response(503, json={'error': 'busy'})
+        checks = [{'category': name, 'severity': 'info', 'message': 'ok ' + name}
+                  for name in ('composition', 'typography', 'imagery', 'platform', 'specificity')]
+        return httpx.Response(200, json={'choices': [{'message': {'content': json.dumps({
+            'review_completed': True, 'checks': checks, 'score': 70, 'edits': []})}}]})
+    monkeypatch.setattr(httpx, 'AsyncClient', lambda **kw: actual_client(transport=httpx.MockTransport(handler), **kw))
+    monkeypatch.setattr('app.design_review._retry_wait', lambda headers, n: 0)
+    result = asyncio.run(review_with_model(render(document), document, 'https://vision.example/v1', 'CANARY', 'vl'))
+    assert result['review_completed'] and len(calls) == 2
+
+
+def test_model_review_gives_up_after_bounded_retries(monkeypatch):
+    import json
+    import httpx
+    from app.design_review import review_with_model
+    document = doc()
+    actual_client = httpx.AsyncClient
+    calls = []
+    def handler(request):
+        calls.append(request)
+        return httpx.Response(429, json={'error': 'rate limited'})
+    monkeypatch.setattr(httpx, 'AsyncClient', lambda **kw: actual_client(transport=httpx.MockTransport(handler), **kw))
+    monkeypatch.setattr('app.design_review._retry_wait', lambda headers, n: 0)
+    result = asyncio.run(review_with_model(render(document), document, 'https://vision.example/v1', 'CANARY', 'vl'))
+    assert not result['review_completed'] and len(calls) == 3
+
+
 def test_natural_photo_document_is_valid_without_product_layer():
     from app.design_review import audit_design_document
     document = doc()

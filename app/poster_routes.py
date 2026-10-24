@@ -37,6 +37,14 @@ class PosterUpdate(BaseModel):
     edits: list[dict] = Field(default_factory=list,max_length=100)
 
 
+class PosterJobInput(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    task: TaskInput
+    brief: PosterBrief = Field(default_factory=PosterBrief)
+    source_run_id: str | None = Field(default=None,max_length=100)
+    idempotency_key: str = Field(min_length=8,max_length=100)
+
+
 def _image_client(model=None):
     from .image_service import ImageService
     return ImageService(settings.image_base_url,settings.image_api_key,model or settings.image_model)
@@ -160,7 +168,10 @@ async def poster_source(task,request,brief=None):
     from .resource_access import validate_task_resources
     validate_task_resources(task)
     from .resource_access import request_budget_key
-    key='poster:'+request_budget_key(request)
+    from .generation_jobs import _active_job
+    # Queued jobs already passed the tenant queue budget; scope this sliding
+    # window to the job id so worker traffic never trips the live caller limit.
+    key='poster:'+('job:'+_active_job.get() if _active_job.get() else request_budget_key(request))
     history=api.requests_by_client[key]
     now=time.monotonic()
     while history and now-history[0]>60:
@@ -199,21 +210,28 @@ async def create_poster(payload: PosterRequest, request: Request):
 
 
 async def _create_poster(payload: PosterRequest, request: Request):
-    from . import api
-    task=payload.task.model_copy(update={'platform':'poster'})
+    return await _run_poster_pipeline(payload.task, payload.brief, payload.source_run_id, request)
+
+
+async def _run_poster_pipeline(task, brief, source_run_id, request):
+    """Shared poster pipeline for the sync route and durable poster jobs."""
+    from . import api, job_progress
+    task=task.model_copy(update={'platform':'poster'})
     from .resource_access import validate_task_resources
     validate_task_resources(task)
-    brief=payload.brief.model_copy(deep=True)
+    brief=brief.model_copy(deep=True)
     brief.background_asset_id=''
     if task.mode=='live' and brief.background_mode=='generate':
         raise HTTPException(422,'ima 严格图源模式请使用纯色设计背景；AI 背景可在独立商业设计模式使用')
     async with poster_gate:
         from .run_records import get_run
-        source=get_run(payload.source_run_id) if payload.source_run_id else None
+        source=get_run(source_run_id) if source_run_id else None
         if source is not None:
             if source.get('_poster_task') != task.model_dump():
                 raise HTTPException(409,'原任务已变化，请重新生成文案')
+            job_progress.report('copy','复用已生成的海报文案')
         else:
+            job_progress.report('copy','正在生成海报文案')
             response=await poster_source(task,request,brief)
             source=json.loads(response.body)
             if source.get('run_id') in api.runs:
@@ -227,6 +245,7 @@ async def _create_poster(payload: PosterRequest, request: Request):
         source={**source,'assets':[dict(a) for a in source.get('assets',[])]}
         doc=(compose_vector_poster(task,source,brief) if brief.background_mode=='solid'
              else build_poster(task,source,brief))
+        job_progress.report('layout','版式已生成')
         # Fetch exactly the already selected local/ima source, never client URLs.
         for layer in doc.layers:
             if layer.role!='product':
@@ -246,6 +265,7 @@ async def _create_poster(payload: PosterRequest, request: Request):
             _save(doc)
             return _response(doc)
         if brief.background_mode=='generate':
+            job_progress.report('background_image','正在生成 AI 背景')
             if not settings.image_api_key:
                 raise HTTPException(422,'请先在连接设置中配置生图服务，或选择纯色背景')
             model=brief.image_model or settings.image_model
@@ -274,12 +294,25 @@ async def _create_poster(payload: PosterRequest, request: Request):
                 'model':image.model,'width':image.width,'height':image.height}
             doc.audit.append({'severity':'warning','category':'generated_background',
                               'message':'背景由图像模型生成，产品主体沿用原始素材；最终成品尚需视觉与事实复核。'})
+            job_progress.report('background_image','AI 背景已合成')
+        job_progress.report('visual_review','正在进行视觉审核')
         await _visual_review(doc)
         doc.audit.append({'severity':'warning','category':'ocr',
                           'message':'程序已检查图层边界；独立 OCR 逐字核验尚未完成，发布前请核对价格、型号与必要声明。'})
         validate_task_resources(task)
         _save(doc)
         return _response(doc)
+
+
+@router.post('/api/posters/jobs', status_code=202)
+def create_poster_job(payload: PosterJobInput):
+    """Queue a durable poster creation through the shared fenced queue."""
+    from .generation_jobs import JobInput, enqueue_operation
+    return enqueue_operation(JobInput(task=payload.task,idempotency_key=payload.idempotency_key),
+        operation='poster',
+        parameters={'task':payload.task.model_dump(mode='json'),
+                    'brief':payload.brief.model_dump(mode='json'),
+                    'source_run_id':payload.source_run_id})
 
 
 @router.get('/api/posters/{pid}')

@@ -43,12 +43,15 @@ transport = async (url, options) => {
     return response({ id: "job-1" });
   }
   assert.equal(url, "/api/jobs/job-1");
-  if (++reads === 1) throw new Error("Disconnected while polling");
+  // Polling tolerates transient transport failures; only a streak of four
+  // consecutive failures rejects the wait.
+  if (++reads <= 4) throw new Error("Disconnected while polling");
   return response({ status: "succeeded", result: { run_id: "result-1" } });
 };
 let queued = "";
 await assert.rejects(exported.runTask(task, (id) => { queued = id; }), /Disconnected/);
 assert.equal(queued, "job-1");
+assert.equal(reads, 4, "polling gives up only after four consecutive failures");
 assert.equal((await exported.runTask(task)).run_id, "result-1");
 assert.equal(posts.length, 1, "polling recovery must reuse the queued job");
 

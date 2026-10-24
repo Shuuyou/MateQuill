@@ -6,6 +6,8 @@ import hashlib
 import asyncio
 import inspect
 import io
+import os
+import traceback
 from pathlib import Path
 from .models import (TaskInput, EvidenceBundle, RunResult, ContentBlock, ImagePlacement,
                      AuditItem, TraceItem, creative_review_blocks)
@@ -381,8 +383,16 @@ class AgentWorkflow:
     async def run(self, task: TaskInput) -> RunResult:
         result = RunResult(mode=task.mode)
         started = time.monotonic()
+        bundle = None
+        progress_stage={'clarify':'understanding','strategy':'understanding','retrieval':'retrieval',
+            'generation':'drafting','editorial_edit':'drafting','cover_assembly':'drafting',
+            'semantic_verification':'reviewing','repair':'repairing','automatic_reselection':'repairing',
+            'complete':'finalizing'}
         def trace(stage,detail):
             result.trace.append(TraceItem(stage=stage,detail=detail,duration_ms=int((time.monotonic()-started)*1000)))
+            from . import job_progress
+            counts={'facts':len(bundle.facts),'assets':len(bundle.assets),'sources':len(bundle.sources)} if bundle is not None else None
+            job_progress.report(progress_stage.get(stage,stage),detail=counts)
         def model_metrics():
             from .content_models import content_timing_snapshot
             result.strategy['generation_timing'] = content_timing_snapshot(self.llm)
@@ -627,6 +637,14 @@ class AgentWorkflow:
                 result.strategy['generation_error'] = {'code': code}
                 if type(exc.http_status) is int and 100 <= exc.http_status <= 599:
                     result.strategy['generation_error']['http_status'] = exc.http_status
+            elif not isinstance(exc, (ValueError, TypeError)):
+                # An exception type outside the two expected "bad model
+                # output" shapes is implementation metadata (type name and
+                # the frame where it surfaced), never the triggering content;
+                # safe to keep so this stops being a blind-debugging loop.
+                frame = traceback.extract_tb(exc.__traceback__)[-1]
+                result.strategy['generation_error'] = {'code': type(exc).__name__,
+                    'at': f'{os.path.basename(frame.filename)}:{frame.lineno}:{frame.name}'}
             if getattr(self.llm, 'marketing_review_failure', None):
                 result.strategy['marketing_review_failure'] = deepcopy(self.llm.marketing_review_failure)
             if getattr(self.llm, 'marketing_review_schema_errors', None):

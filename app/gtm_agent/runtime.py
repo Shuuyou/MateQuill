@@ -325,6 +325,7 @@ async def run_turn(identifier, *, planner=None, tools_factory=None, max_steps=No
             return {'status': 'failed', 'message': '这一步未能继续，已保留本次资料和创作方向。',
                     'artifact': generated, 'questions': [],
                     'error': {'code': 'tool_repeat_blocked', 'tool': decision.tool}}
+        tool_started = None
         try:
             if decision.delivery_scope is None:
                 if decision.tool == 'revise_content':
@@ -342,9 +343,10 @@ async def run_turn(identifier, *, planner=None, tools_factory=None, max_steps=No
                 deadline = min(hard_deadline, max(deadline, time.monotonic() + 420))
             if decision.tool in {'generate_content','revise_content','create_poster','create_design_bundle','revise_design'}:
                 generation_attempted = True
+            tool_started = time.time()
             async with asyncio.timeout(max(1,deadline-time.monotonic())):
                 update_turn(identifier, lambda body: {**body, 'current_tool': decision.tool,
-                    'tool_started_at': time.time()})
+                    'tool_started_at': tool_started})
                 result = await tools.execute(decision.tool, decision.arguments)
             failed_invocations.clear()
             if decision.tool == 'prepare_opportunity' and isinstance(result, dict) and isinstance(result.get('opportunity'), dict):
@@ -359,7 +361,8 @@ async def run_turn(identifier, *, planner=None, tools_factory=None, max_steps=No
             source_ids = list(dict.fromkeys(turn.get('source_ids',[])+_sources(result)))[:150]
             turn['source_ids'] = source_ids
             turn['media_transcripts'] = getattr(tools,'transcripts',[])
-            observation = {'tool':decision.tool,'result':_bounded(result)}
+            observation = {'tool':decision.tool,'result':_bounded(result),
+                           'started_at':tool_started,'ts':time.time()}
             if decision.tool in {'create_design_bundle','revise_design','create_poster'} and not (
                     isinstance(result, dict) and result.get('artifact')):
                 observation['retry_policy'] = 'no_new_image_attempt'
@@ -412,7 +415,8 @@ async def run_turn(identifier, *, planner=None, tools_factory=None, max_steps=No
             if decision.tool in {'generate_content', 'revise_content'} and exc.status_code >= 500:
                 observations.append({'tool': decision.tool, 'error': str(exc.detail)[:500],
                                      'http_status': exc.status_code, 'invocation_key': invocation_key,
-                                     'retry_policy': 'no_automatic_transport_retry'})
+                                     'retry_policy': 'no_automatic_transport_retry',
+                                     'started_at': tool_started, 'ts': time.time()})
                 update_turn(identifier, lambda body: {**body, 'observations': observations[-12:]})
                 if images_pending(generated):
                     return _partial_delivery(generated, reason='model_transport_error')

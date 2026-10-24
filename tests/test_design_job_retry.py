@@ -162,3 +162,51 @@ def test_only_failed_design_is_retryable(saved_design, dispatch_status, operatio
         connection.execute(update(jobs.dispatch).where(jobs.dispatch.c.id == case['id']).values(status=dispatch_status))
     assert post_retry(case).status_code == 409
     assert state(case['id'])['status'] == dispatch_status
+
+
+@pytest.mark.parametrize('detail', [
+    {'code': 'design_elements_rejected', 'design_id': 'x'},
+    {'code': 'approved_design_hook_missing'},
+])
+def test_structured_exception_detail_never_reaches_the_poll_contract_as_an_object(identities, monkeypatch, detail):
+    # design_service.py raises HTTPException(status, {'code': ..., ...}) at
+    # many call sites with no 'message' key; the polled error.message must
+    # stay a string so the client never renders "[object Object]".
+    from fastapi import HTTPException
+    owner = identities[0]
+    task = TaskInput(product='HUAWEI Mate 90', mode='demo', store_id=owner['store']['id'])
+    with acting(owner):
+        identifier = jobs.enqueue_operation(jobs.JobInput(task=task), operation='design',
+            parameters={'design_id': 'design-x', 'source_run_id': 'run-x'})['id']
+    async def failing(*args, **kwargs):
+        raise HTTPException(422, detail)
+    monkeypatch.setattr('app.design_service.execute_design', failing)
+    asyncio.run(jobs.execute_claimed(jobs._claim()))
+    assert state(identifier)['status'] == 'failed'
+    with acting(owner):
+        error = load_body('generation_job', identifier)['error']
+    assert isinstance(error['message'], str) and error['message']
+    assert error['diagnostic'] == {'type': 'HTTPException', 'code': detail['code']}
+
+
+def test_unexpected_exception_type_name_is_recorded_for_triage(identities, monkeypatch):
+    # Nothing in design_service.py's call chain is fully enumerable; any
+    # exception type that is neither ValidationError nor a structured
+    # HTTPException must still leave a type name behind for debugging,
+    # instead of silently collapsing into the generic retry message only.
+    owner = identities[0]
+    task = TaskInput(product='HUAWEI Mate 90', mode='demo', store_id=owner['store']['id'])
+    with acting(owner):
+        identifier = jobs.enqueue_operation(jobs.JobInput(task=task), operation='design',
+            parameters={'design_id': 'design-y', 'source_run_id': 'run-y'})['id']
+    async def failing(*args, **kwargs):
+        raise KeyError('selected_concept_id')
+    monkeypatch.setattr('app.design_service.execute_design', failing)
+    asyncio.run(jobs.execute_claimed(jobs._claim()))
+    assert state(identifier)['status'] == 'failed'
+    with acting(owner):
+        error = load_body('generation_job', identifier)['error']
+    assert error['message'] == '这次创作未完成，请重试'
+    assert error['diagnostic']['type'] == 'KeyError'
+    if 'at' in error['diagnostic']:
+        assert error['diagnostic']['at'].startswith('generation_jobs.py:')

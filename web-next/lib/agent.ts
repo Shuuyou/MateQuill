@@ -54,12 +54,25 @@ export interface MarketingOpportunity {
   evidence_ids: string[];
   fact_ids: string[];
 }
+export interface AgentProcessStep {
+  key: string;
+  title: string;
+  status: "done" | "active" | "failed";
+  duration_ms?: number;
+  elapsed_ms?: number;
+  details?: { stage: string; text?: string; seq?: number }[];
+}
+export interface AgentProcess {
+  steps: AgentProcessStep[];
+  elapsed_ms?: number;
+}
 export interface AgentTurn {
   id: string;
   conversation_id: string;
   status: "queued" | "running" | "completed" | "needs_input" | "failed";
   message?: string;
   progress?: { stage: string; message: string } | null;
+  process?: AgentProcess | null;
   artifact?: AgentArtifact | null;
   quotation?: { id: string } | null;
   questions?: AgentQuestion[];

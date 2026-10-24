@@ -1,9 +1,17 @@
 "use client";
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { createDesign, getDesign, getDesignJob, reviseDesign, type DesignBundle } from '@/lib/design';
+import { createDesign, getDesign, getDesignJob, reviseDesign, type DesignBundle, type DesignJob } from '@/lib/design';
 import { sessionScopeKey, workspaceFetch } from '@/lib/workspace';
 import styles from './DesignWorkspace.module.css';
+
+const DESIGN_STAGE_PHASES: Record<string, string> = {
+  materials: '整理设计素材',
+  copy: '撰写画面文案',
+  concepts: '构思设计方向',
+  rendering: '渲染这一组图片',
+  reviewing: '复核画面细节',
+};
 
 export default function DesignWorkspace({ initial, sourceRunId, platform, onBack, onChange }: { initial?: DesignBundle; sourceRunId?: string; platform?: string; onBack: () => void; onChange?: (value: DesignBundle) => void }) {
   const [bundle, setBundle] = useState(initial);
@@ -60,18 +68,30 @@ export default function DesignWorkspace({ initial, sourceRunId, platform, onBack
   useEffect(() => {
     if (!job) return;
     let stopped = false;
+    let failures = 0;
     let timer: ReturnType<typeof setTimeout>;
     async function poll() {
+      let value: DesignJob;
       try {
-        const value = await getDesignJob(job);
+        value = await getDesignJob(job);
+        failures = 0;
+      } catch (reason) {
+        failures += 1;
         if (stopped || !current()) return;
+        if (failures >= 4) { setError(reason instanceof Error ? reason.message : '暂时连接不上，请继续查看进度。'); setPhase(''); setJob(''); }
+        else timer = setTimeout(poll, 1800);
+        return;
+      }
+      if (stopped || !current()) return;
+      try {
         if (value.status === 'succeeded') {
           if (!value.result?.artboards?.length) throw new Error('图片结果没有完整返回，请重新打开作品。');
           setBundle(value.result); onChange?.(value.result); setSelected(0); setPhase(''); setJob(''); setInstruction('');
           try { sessionStorage.removeItem(storage); sessionStorage.setItem(`${storage}:completed`, value.result.id); } catch {} return;
         }
         if (value.status === 'failed' || value.status === 'cancelled') { sessionStorage.removeItem(storage); throw new Error(value.error?.message || '这次图片没有完成，请再试一次。'); }
-        setPhase(value.status === 'queued' ? '图片创作已排队' : bundle ? '正在调整画面' : '正在制作这一组图片');
+        const stagePhase = value.progress?.stage ? DESIGN_STAGE_PHASES[value.progress.stage] : '';
+        setPhase(stagePhase || (value.status === 'queued' ? '图片创作已排队' : bundle ? '正在调整画面' : '正在制作这一组图片'));
         timer = setTimeout(poll, 1800);
       } catch (reason) {
         if (!stopped && current()) { setError(reason instanceof Error ? reason.message : '暂时连接不上，请继续查看进度。'); setPhase(''); setJob(''); }

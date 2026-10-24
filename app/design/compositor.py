@@ -235,7 +235,7 @@ def compose_design(task,record,plan,assets:dict)->list[DesignArtboard]:
             region=LayoutRegion(role='headline',x=.08,y=.20,width=.84,height=.55)
             text_layer(region,texts[key]['text'],key,'headline',w*.10)
         brief=PosterBrief(size_preset='custom',width=w,height=h,headline=texts.get('title',{}).get('text',''),
-            brand_name=plan.brief.product,purpose=task.get('goal') or '门店内容',background_color=concept.background,accent_color=concept.accent)
+            brand_name=plan.brief.product,purpose=(task.get('goal') or '门店内容')[:200],background_color=concept.background,accent_color=concept.accent)
         # Old plans or mutated model instances can bypass region validation.
         # Judge actual compiled roles and paint order, not an overlap label.
         issues.extend(functional_text_occlusion_checks(layers))

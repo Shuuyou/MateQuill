@@ -17,6 +17,7 @@ import WorkspaceMenu from "@/components/WorkspaceMenu";
 import CreationSubmission from "@/components/CreationSubmission";
 import ChooseCreationStore from "@/components/ChooseCreationStore";
 import ConversationWorkspace from "@/components/ConversationWorkspace";
+import GenerationProgress from "@/components/GenerationProgress";
 
 const ResultWorkbench = dynamic(() => import("@/components/ResultWorkbench"));
 const PosterWorkbench = dynamic(() => import("@/components/PosterWorkbench"));
@@ -313,11 +314,18 @@ export default function Page() {
                 key={item.view}
                 className={view === item.view || (view === "create" && item.view === "agent") ? "is-selected" : ""}
                 aria-current={view === item.view || (view === "create" && item.view === "agent") ? "page" : undefined}
-                aria-label={item.label}
+                aria-label={
+                  busy && item.view === "agent"
+                    ? `${item.label}，创作中`
+                    : item.label
+                }
                 title={item.label}
-                disabled={busy}
                 onClick={() => {
-                  if (item.view === "create") {
+                  if (item.view === "agent" && busy) {
+                    startNavigation(() => setView("create"));
+                    return;
+                  }
+                  if (item.view === "create" && !busy) {
                     creation.reset();
                     setProduct("");
                   }
@@ -326,6 +334,9 @@ export default function Page() {
               >
                 <Icon name={item.icon} />
                 <span>{item.label}</span>
+                {item.view === "agent" && busy && (
+                  <i className="mq-nav-dot" aria-hidden="true" />
+                )}
               </button>
             ),
           )}
@@ -336,7 +347,6 @@ export default function Page() {
             className="mq-settings-link"
             aria-label="团队成员"
             title="团队成员"
-            disabled={busy}
             onClick={() => setView("team")}
           >
             <Icon name="settings" />
@@ -348,7 +358,7 @@ export default function Page() {
         <span>
           {view === "agent" ? "创作" : view === "create" ? "作品" : NAV.find((item) => item.view === view)?.label || "工作空间"}
         </span>
-        <WorkspaceMenu disabled={busy} onTeam={canTeam ? () => startNavigation(() => setView("team")) : undefined} />
+        <WorkspaceMenu onTeam={canTeam ? () => startNavigation(() => setView("team")) : undefined} />
       </div>
       <main
         aria-busy={navigating}
@@ -380,24 +390,34 @@ export default function Page() {
                 onManage={() => setView("planning")}
               />
             ) : busy && !creation.result && !creation.poster ? (
-              <section
-                className="mq-generating"
-                role="status"
-                aria-live="polite"
-              >
-                <Character state="thinking" />
-                <h1>
-                  {creation.phase === "understanding"
-                    ? "让我想想，这次怎么讲。"
-                    : "正在把这个故事，好好写出来。"}
-                </h1>
-                <p>{creation.query}</p>
-                <span>
-                  {creation.phase === "understanding"
-                    ? "理解顾客的需要"
-                    : "整理产品资料，准备正文与配图"}
-                </span>
-              </section>
+              <GenerationProgress
+                phase={
+                  creation.phase === "understanding"
+                    ? "understanding"
+                    : "generating"
+                }
+                query={creation.query}
+                stage={creation.jobStage}
+                percent={creation.jobPercent}
+                detail={creation.jobDetail}
+                startedAt={creation.jobStartedAt}
+                variant={
+                  creation.task?.platform === "poster" ? "poster" : "content"
+                }
+                onCancel={
+                  creation.pendingJob
+                    ? () => {
+                        if (
+                          window.confirm(
+                            "确定停止这次创作吗？需求会保留，可以稍后再试。",
+                          )
+                        )
+                          void creation.cancel();
+                      }
+                    : undefined
+                }
+                cancelling={creation.cancelling}
+              />
             ) : creation.poster ? (
               <PosterWorkbench
                 poster={creation.poster}

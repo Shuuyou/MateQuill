@@ -32,31 +32,32 @@ export async function reviseCreation(runId: string, instruction: string): Promis
 export async function adoptCreation(runId: string): Promise<void> {
   await read(await fetch(`/api/agent/runs/${encodeURIComponent(runId)}/adopt`, {method: "POST"}));
 }
+const posterBrief = {
+  size_preset: "portrait",
+  direction: "editorial",
+  background_mode: "solid",
+};
+function ensurePosterResult(response: PosterResponse): PosterResponse {
+  if (!response.document || response.status === "blocked")
+    throw new GenerationJobError(
+      (response as { questions?: string[] }).questions?.join("；") ||
+        (response as { audit?: { severity?: string; message: string }[] })
+          .audit?.filter((item) => item.severity === "error")
+          .map((item) => item.message)
+          .join("；") ||
+        "这次海报没有完成，可以调整需求后重新生成。",
+    );
+  return compactPoster(response);
+}
 export async function createPoster(task: RunTask): Promise<PosterResponse> {
   const response = await read(
     await fetch("/api/posters", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        task,
-        brief: {
-          size_preset: "portrait",
-          direction: "editorial",
-          background_mode: "solid",
-        },
-      }),
+      body: JSON.stringify({ task, brief: posterBrief }),
     }),
   );
-  if (!response.document || response.status === "blocked")
-    throw new Error(
-      response.questions?.join("；") ||
-        response.audit
-          ?.filter((item: { severity: string }) => item.severity === "error")
-          .map((item: { message: string }) => item.message)
-          .join("；") ||
-        "这次海报没有完成，可以调整需求后重新生成。",
-    );
-  return compactPoster(response);
+  return ensurePosterResult(response);
 }
 function compactPoster(value: PosterResponse): PosterResponse {
   const doc = value.document;
@@ -127,6 +128,24 @@ export async function intake(
 }
 
 export class GenerationJobError extends Error {}
+export interface JobProgress {
+  seq: number;
+  ts: number;
+  stage: string;
+  percent: number;
+}
+export interface JobEvent extends JobProgress {
+  detail?: string;
+  artifact?: string;
+}
+export interface JobStatus {
+  status: "queued" | "running" | "succeeded" | "failed" | "cancelled";
+  progress?: JobProgress;
+  events?: JobEvent[];
+  result?: unknown;
+  error?: { message?: string };
+}
+export type JobProgressHandler = (status: JobStatus) => void;
 interface PendingGeneration {
   task: string;
   idempotency_key: string;
@@ -135,6 +154,9 @@ interface PendingGeneration {
 const pendingGenerations = new Map<string, PendingGeneration>();
 function generationKey() {
   return `matequill-job-v1:${sessionScopeKey()}`;
+}
+function posterJobKey() {
+  return `matequill-poster-job-v1:${sessionScopeKey()}`;
 }
 function savedGeneration(key: string): PendingGeneration | null {
   try {
@@ -162,29 +184,89 @@ function clearGeneration(key: string, id: string) {
     /* The completed result remains available. */
   }
 }
-export async function runTask(
-  task: RunTask,
-  onQueued?: (id: string) => void,
-): Promise<RunResult> {
-  const key = generationKey();
-  const fingerprint = JSON.stringify(
+function taskFingerprint(task: RunTask) {
+  return JSON.stringify(
     Object.fromEntries(
       Object.entries(task).sort(([a], [b]) => a.localeCompare(b)),
     ),
   );
+}
+function newIdempotencyKey() {
+  return (
+    crypto.randomUUID?.() ||
+    Array.from(crypto.getRandomValues(new Uint8Array(16)), (value) =>
+      value.toString(16).padStart(2, "0"),
+    ).join("")
+  );
+}
+const POLL_ATTEMPTS = 300;
+const POLL_FAILURE_LIMIT = 4;
+function pollWait(interval: number) {
+  const jittered = interval * (0.8 + Math.random() * 0.4);
+  return new Promise((resolve) => setTimeout(resolve, jittered));
+}
+async function pollJob(
+  id: string,
+  key: string,
+  interval: number,
+  onProgress?: JobProgressHandler,
+): Promise<unknown> {
+  let failures = 0;
+  for (let attempt = 0; attempt < POLL_ATTEMPTS; attempt++) {
+    let status: JobStatus;
+    try {
+      status = (await read(
+        await fetch(`/api/jobs/${encodeURIComponent(id)}`, {
+          cache: "no-store",
+        }),
+      )) as JobStatus;
+    } catch (reason) {
+      failures += 1;
+      if (failures >= POLL_FAILURE_LIMIT) throw reason;
+      await pollWait(interval);
+      continue;
+    }
+    failures = 0;
+    onProgress?.(status);
+    if (status.status === "succeeded" && status.result) {
+      clearGeneration(key, id);
+      return status.result;
+    }
+    if (status.status === "failed" || status.status === "cancelled") {
+      clearGeneration(key, id);
+      throw new GenerationJobError(
+        status.error?.message ||
+          (status.status === "cancelled"
+            ? "这次创作已停止，需求已保留，可以重新开始。"
+            : "这次创作没有完成，需求已保留，可以重新尝试。"),
+      );
+    }
+    await pollWait(interval);
+  }
+  throw new Error("这次创作仍在后台处理，请稍后到创作记录中查看。");
+}
+export async function cancelJob(id: string): Promise<void> {
+  await read(
+    await fetch(`/api/jobs/${encodeURIComponent(id)}/cancel`, {
+      method: "POST",
+    }),
+  );
+}
+export async function runTask(
+  task: RunTask,
+  onQueued?: (id: string) => void,
+  onProgress?: JobProgressHandler,
+): Promise<RunResult> {
+  const key = generationKey();
+  const fingerprint = taskFingerprint(task);
   let pending = savedGeneration(key);
   if (pending?.task !== fingerprint) {
-    const random =
-      crypto.randomUUID?.() ||
-      Array.from(crypto.getRandomValues(new Uint8Array(16)), (value) =>
-        value.toString(16).padStart(2, "0"),
-      ).join("");
-    pending = { task: fingerprint, idempotency_key: random };
+    pending = { task: fingerprint, idempotency_key: newIdempotencyKey() };
     saveGeneration(key, pending);
   }
   if (pending.job_id) {
     onQueued?.(pending.job_id);
-    return waitForRunJob(pending.job_id, key);
+    return waitForRunJob(pending.job_id, onProgress, key);
   }
   const job: { id: string } = await read(
     await fetch("/api/jobs", {
@@ -195,31 +277,59 @@ export async function runTask(
   );
   saveGeneration(key, { ...pending, job_id: job.id });
   onQueued?.(job.id);
-  return waitForRunJob(job.id, key);
+  return waitForRunJob(job.id, onProgress, key);
 }
 export async function waitForRunJob(
   id: string,
+  onProgress?: JobProgressHandler,
   key = generationKey(),
 ): Promise<RunResult> {
-  for (let attempt = 0; attempt < 300; attempt++) {
-    const status = await read(
-      await fetch(`/api/jobs/${encodeURIComponent(id)}`, {
-        cache: "no-store",
-      }),
-    );
-    if (status.status === "succeeded" && status.result) {
-      clearGeneration(key, id);
-      return status.result as RunResult;
-    }
-    if (["failed", "cancelled"].includes(status.status)) {
-      clearGeneration(key, id);
-      throw new GenerationJobError(
-        status.error?.message || "这次创作没有完成，需求已保留，可以重新尝试。",
-      );
-    }
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+  return (await pollJob(id, key, 1500, onProgress)) as RunResult;
+}
+export async function createPosterJob(
+  task: RunTask,
+  onQueued?: (id: string) => void,
+  onProgress?: JobProgressHandler,
+): Promise<PosterResponse> {
+  const key = posterJobKey();
+  const fingerprint = taskFingerprint(task);
+  let pending = savedGeneration(key);
+  if (pending?.task !== fingerprint) {
+    pending = { task: fingerprint, idempotency_key: newIdempotencyKey() };
+    saveGeneration(key, pending);
   }
-  throw new Error("这次创作仍在处理，请稍后到创作记录中查看。");
+  if (pending.job_id) {
+    onQueued?.(pending.job_id);
+    return waitForPosterJob(pending.job_id, onProgress, key);
+  }
+  const job: { id: string } = await read(
+    await fetch("/api/posters/jobs", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        task,
+        brief: posterBrief,
+        ...(typeof (task as { source_run_id?: unknown }).source_run_id ===
+        "string"
+          ? {
+              source_run_id: (task as { source_run_id?: string }).source_run_id,
+            }
+          : {}),
+        idempotency_key: pending.idempotency_key,
+      }),
+    }),
+  );
+  saveGeneration(key, { ...pending, job_id: job.id });
+  onQueued?.(job.id);
+  return waitForPosterJob(job.id, onProgress, key);
+}
+export async function waitForPosterJob(
+  id: string,
+  onProgress?: JobProgressHandler,
+  key = posterJobKey(),
+): Promise<PosterResponse> {
+  const result = (await pollJob(id, key, 2000, onProgress)) as PosterResponse;
+  return ensurePosterResult(result);
 }
 
 export async function catalog(

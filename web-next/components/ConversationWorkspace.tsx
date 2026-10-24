@@ -11,6 +11,7 @@ import {
   sendAgentTurn,
   type AgentArtifact,
   type AgentConversation,
+  type AgentProcess,
   type AgentQuestion,
   type AgentTurnInput,
 } from "@/lib/agent";
@@ -132,6 +133,10 @@ export default function ConversationWorkspace({
   const [busy, setBusy] = useState(false);
   const [reconnecting, setReconnecting] = useState(false);
   const [workingMessage, setWorkingMessage] = useState("正在准备这次创作。");
+  const [process, setProcess] = useState<AgentProcess | null>(null);
+  // null = automatic (open while running, collapsed afterwards); a manual
+  // summary click pins the user's choice for the rest of this turn.
+  const [processOpen, setProcessOpen] = useState<boolean | null>(null);
   const [pending, setPending] = useState<PendingTurn | null>(null);
   const [questions, setQuestions] = useState<AgentQuestion[]>([]);
   const [error, setError] = useState("");
@@ -179,9 +184,11 @@ export default function ConversationWorkspace({
   function rememberPending(value: PendingTurn | null) {
     setPending(value);
     setWorkingMessage("正在准备这次创作。");
-    if (value)
+    if (value) {
+      setProcess(null);
+      setProcessOpen(null);
       sessionStorage.setItem(`${storage}:pending`, JSON.stringify(value));
-    else sessionStorage.removeItem(`${storage}:pending`);
+    } else sessionStorage.removeItem(`${storage}:pending`);
   }
   async function poll(value: PendingTurn) {
     const token = ++epoch.current;
@@ -230,6 +237,7 @@ export default function ConversationWorkspace({
         const turn = await readProgress(() => getAgentTurn(value.conversation_id, turnId!));
         if (!live.current || token !== epoch.current) return;
         setWorkingMessage(turn.progress?.message || "正在准备这次创作。");
+        if (turn.process) setProcess(turn.process);
         if (terminal.has(turn.status)) {
           const current = await readProgress(() => getConversation(value.conversation_id));
           if (!live.current || token !== epoch.current) return;
@@ -668,10 +676,55 @@ export default function ConversationWorkspace({
               {message.quotation && <QuotationCard quoteId={message.quotation.id} />}
             </li>
           ))}
-          {busy && (
-            <li className="mq-conversation-working" role="status">
-              <Character state="thinking" />
-              <p>{reconnecting ? "正在接回最新进展。" : workingMessage}</p>
+          {(busy || process) && (
+            <li className="mq-conversation-working" role={busy ? "status" : undefined}>
+              <Character state={busy ? "thinking" : "done"} />
+              <details
+                className="mq-conversation-process"
+                open={processOpen ?? busy}
+              >
+                <summary
+                  onClick={(event) => {
+                    event.preventDefault();
+                    setProcessOpen(!(processOpen ?? busy));
+                  }}
+                >
+                  {busy
+                    ? reconnecting
+                      ? "正在接回最新进展。"
+                      : workingMessage
+                    : `创作过程${
+                        process?.elapsed_ms
+                          ? ` · ${Math.max(1, Math.round(process.elapsed_ms / 1000))} 秒`
+                          : ""
+                      }`}
+                </summary>
+                {!!process?.steps.length && (
+                  <ol className="mq-process-steps">
+                    {process.steps.map((step, index) => (
+                      <li key={`${step.key}-${index}`} className={`is-${step.status}`}>
+                        <span className="mq-process-step-title">{step.title}</span>
+                        {typeof step.duration_ms === "number" && (
+                          <em>{` ${Math.max(1, Math.round(step.duration_ms / 1000))}s`}</em>
+                        )}
+                        {step.status === "active" && typeof step.elapsed_ms === "number" && (
+                          <em className="is-live">{` ${Math.max(1, Math.round(step.elapsed_ms / 1000))}s`}</em>
+                        )}
+                        {!!step.details?.length && (
+                          <ul>
+                            {step.details.map((detail, detailIndex) => (
+                              <li key={detailIndex}>
+                                {detail.stage}
+                                {detail.text ? ` · ${detail.text}` : ""}
+                              </li>
+                            ))}
+                          </ul>
+                        )}
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </details>
             </li>
           )}
         </ol>

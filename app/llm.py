@@ -40,6 +40,15 @@ def official_source_record(source):
     return row
 
 
+def _retry_wait(headers, n):
+    """Bounded wait before an upstream retry; an explicit Retry-After wins."""
+    import random
+    try:
+        return min(30.0, max(1.0, float((headers or {}).get('retry-after'))))
+    except (TypeError, ValueError):
+        return random.random() * min(15, 2 ** n)
+
+
 class OpenAICompatibleLLM:
     supports_creative_plan = True
     supports_marketing_review = True
@@ -176,8 +185,26 @@ class OpenAICompatibleLLM:
                          'reselection' if strategy.get('reselect') else 'draft')
         try:
             async with httpx.AsyncClient(timeout=self.timeout) as client:
-                response = await client.post(self.base_url + '/chat/completions', json=body,
-                    headers={'Authorization': 'Bearer ' + self.api_key})
+                # Bounded extra attempts only for explicit upstream congestion
+                # (HTTP 429/5xx, connect/read timeouts); anything else stays fatal.
+                for upstream_attempt in range(3):
+                    try:
+                        response = await client.post(self.base_url + '/chat/completions', json=body,
+                            headers={'Authorization': 'Bearer ' + self.api_key})
+                    except (httpx.ConnectTimeout, httpx.ReadTimeout):
+                        if upstream_attempt >= 2:
+                            raise
+                        wait = _retry_wait(None, upstream_attempt + 1)
+                        if wait > self.timeout / 3:
+                            raise
+                        await asyncio.sleep(wait)
+                        continue
+                    if response.status_code in (429, 500, 502, 503, 504) and upstream_attempt < 2:
+                        wait = _retry_wait(response.headers, upstream_attempt + 1)
+                        if wait <= self.timeout / 3:
+                            await asyncio.sleep(wait)
+                            continue
+                    break
                 if response.status_code >= 400:
                     raise ModelCallError('model_http_error',response.status_code)
                 try:

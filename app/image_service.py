@@ -15,6 +15,15 @@ import httpx
 from PIL import Image, UnidentifiedImageError
 
 
+def _retry_wait(headers, n: int) -> float:
+    """Bounded wait before an upstream retry; an explicit Retry-After wins."""
+    import random
+    try:
+        return min(30.0, max(1.0, float((headers or {}).get('retry-after'))))
+    except (TypeError, ValueError):
+        return random.random() * min(15, 2 ** n)
+
+
 class ImageServiceError(RuntimeError):
     def __init__(self, message: str, code: int | None = None, reason: str = 'upstream'):
         super().__init__(message)
@@ -59,31 +68,41 @@ class ImageService:
     async def _request(self, method: str, path: str, body=None, *, files=None, form=None):
         # Read bounded JSON: a malicious gateway cannot cause unbounded body retention.
         limit = (self.max_image_bytes * 4 // 3 + 65536) if path in ('/images/generations', '/images/edits') else 2 * 1024 * 1024
-        try:
-            async with httpx.AsyncClient(timeout=self.timeout, follow_redirects=False,
-                                         trust_env=False) as client:
-                request_args = {'files': files, 'data': form} if files else {'json': body}
-                async with client.stream(method, self.base_url + path, headers=self._headers,
-                                         **request_args) as response:
-                    raw = bytearray()
-                    async for part in response.aiter_bytes():
-                        raw.extend(part)
-                        if len(raw) > limit:
-                            raise ImageServiceError('图像服务响应超过大小限制', reason='size_limit')
-                    try:
-                        import json
-                        payload = json.loads(raw)
-                    except (ValueError, UnicodeError):
-                        if response.is_success:
-                            raise ImageServiceError('图像服务未返回有效 JSON', reason='invalid_response') from None
-                        payload = {}
-                    return response.status_code, payload, response.headers
-        except ImageServiceError:
-            raise
-        except httpx.TimeoutException:
-            raise ImageServiceError('图像服务请求超时；未自动重复付费生成', reason='timeout') from None
-        except (httpx.HTTPError, ValueError):
-            raise ImageServiceError('图像服务网络请求失败', reason='network') from None
+        for attempt in range(3):
+            try:
+                async with httpx.AsyncClient(timeout=self.timeout, follow_redirects=False,
+                                             trust_env=False) as client:
+                    request_args = {'files': files, 'data': form} if files else {'json': body}
+                    async with client.stream(method, self.base_url + path, headers=self._headers,
+                                             **request_args) as response:
+                        raw = bytearray()
+                        async for part in response.aiter_bytes():
+                            raw.extend(part)
+                            if len(raw) > limit:
+                                raise ImageServiceError('图像服务响应超过大小限制', reason='size_limit')
+                        try:
+                            import json
+                            payload = json.loads(raw)
+                        except (ValueError, UnicodeError):
+                            if response.is_success:
+                                raise ImageServiceError('图像服务未返回有效 JSON', reason='invalid_response') from None
+                            payload = {}
+                        # A 429/5xx is an explicit rejection before any image is
+                        # produced or billed, so a bounded Retry-After retry is
+                        # safe; timeouts stay unretried because upstream may
+                        # already have generated the image.
+                        if response.status_code in (429, 500, 502, 503, 504) and attempt < 2:
+                            wait = _retry_wait(response.headers, attempt + 1)
+                            if wait <= self.timeout / 3:
+                                await asyncio.sleep(wait)
+                                continue
+                        return response.status_code, payload, response.headers
+            except ImageServiceError:
+                raise
+            except httpx.TimeoutException:
+                raise ImageServiceError('图像服务请求超时；未自动重复付费生成', reason='timeout') from None
+            except (httpx.HTTPError, ValueError):
+                raise ImageServiceError('图像服务网络请求失败', reason='network') from None
 
     @staticmethod
     def _check_status(status):
@@ -125,7 +144,8 @@ class ImageService:
         body = {'model': self.model, 'prompt': instruction + prompt, 'size': f'{width}x{height}',
                 'n': 1, 'response_format': 'b64_json'}
         status, payload, headers = await self._request('POST', '/images/generations', body)
-        # One narrowly justified compatibility retry; never retry timeouts or arbitrary 5xx.
+        # One narrowly justified compatibility retry; _request already owns
+        # bounded 429/5xx retries, and timeouts remain unretried.
         if status in (400, 422) and isinstance(payload, dict):
             error = payload.get('error', {})
             if isinstance(error, dict):

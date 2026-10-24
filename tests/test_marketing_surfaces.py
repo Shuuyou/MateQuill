@@ -79,3 +79,23 @@ def test_duplicate_card_ids_cannot_silently_retarget_a_finding():
     value['creative_plan']['cards'].append({'id': 'c1', 'body': '其他内容'})
     with pytest.raises(ValueError, match='Duplicate public card identity'):
         marketing_public_surfaces(value)
+
+
+def test_omitted_quote_key_is_filled_not_left_missing():
+    # The review schema allows a model response to omit 'quote' entirely
+    # (it defaults to ''); callers then do found['quote'], so a dict key
+    # must always come back, never a silent pass-through of the input.
+    value = {'region': 'body:0', 'reason': '具体问题', 'action': '局部改写'}
+    assert 'quote' not in value
+    result = resolve_surface_finding(value, marketing_public_surfaces(draft()))
+    assert result['quote'] == draft()['blocks'][0]['text']
+
+
+def test_omitted_quote_on_unknown_region_still_raises_cleanly():
+    with pytest.raises(ValueError, match='unknown public surface'):
+        resolve_surface_finding({'region': 'body:O'}, marketing_public_surfaces(draft()))
+
+
+def test_missing_region_raises_instead_of_becoming_an_unkeyed_dict():
+    with pytest.raises(ValueError, match='missing its region'):
+        resolve_surface_finding({'quote': ''}, marketing_public_surfaces(draft()))

@@ -15,7 +15,7 @@ from uuid import uuid4
 from zoneinfo import ZoneInfo
 
 from fastapi import APIRouter, HTTPException
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 from sqlalchemy import Column, Float, String, Table, Text, select, update, func
 from sqlalchemy.exc import IntegrityError
 from starlette.requests import Request
@@ -138,7 +138,7 @@ def enqueue(payload: JobInput):
 
 def enqueue_operation(payload: JobInput, *, operation='content', parameters=None):
     """Share the existing fenced queue with registered creation operations."""
-    if operation not in {'content', 'design'}:
+    if operation not in {'content', 'design', 'poster'}:
         raise ValueError('Unknown generation operation')
     from .resource_access import validate_task_resources
     context = require_context()
@@ -199,6 +199,40 @@ def job_result(identifier: str):
         body['error'] = {'message': '任务权限已更新，请重新开始创作' if state == 'cancelled' else '这次创作未完成，请重试'}
     # Never return the source prompt/task through the polling contract.
     return {key: value for key, value in body.items() if key not in {'task', 'committed_result', 'parameters'}}
+
+
+@router.post('/jobs/{identifier}/cancel', status_code=202)
+def cancel_job(identifier: str):
+    """Cooperative cancel: queued jobs stop immediately, running jobs are
+    flagged and the worker's heartbeat cancels the in-flight operation."""
+    from .tenancy import authorize_resource
+    from .tenancy.database import transaction_context
+    context = require_context()
+    resource = authorize_resource('generation_job', identifier, 'edit')
+    if resource['owner_id'] != context.user_id:
+        raise HTTPException(403, '只有发起这次创作的账号可以停止')
+    with transaction_context() as connection:
+        row = connection.execute(select(dispatch).where(dispatch.c.id == identifier,
+            dispatch.c.tenant_id == context.tenant_id).with_for_update()).mappings().first()
+        if not row:
+            raise HTTPException(404, '这次创作不存在')
+        if row['status'] in {'succeeded', 'failed', 'cancelled'}:
+            raise HTTPException(409, '这次创作已经结束，无需停止')
+        if row['status'] == 'queued':
+            changed = connection.execute(update(dispatch).where(dispatch.c.id == identifier,
+                dispatch.c.status == 'queued').values(status='cancelled', lease_until=0))
+            if changed.rowcount != 1:
+                raise HTTPException(409, '任务状态刚刚更新，请刷新查看')
+        body = load_body('generation_job', identifier, action='write')
+        if row['status'] == 'queued':
+            body.update(status='cancelled', error={'message': '已按你的要求停止这次创作'},
+                        finished_at=time.time())
+        else:
+            body['cancel_requested'] = True
+        save_body('generation_job', identifier, body)
+        audit('job.cancel_requested' if row['status'] == 'running' else 'job.cancelled',
+              'generation_job', identifier)
+    return {'id': identifier, 'status': 'cancel_requested' if row['status'] == 'running' else 'cancelled'}
 
 
 @router.post('/jobs/{identifier}/retry', status_code=202)
@@ -416,6 +450,7 @@ async def execute_claimed(row):
     operation = None
     heartbeat = None
     stopped = {}
+    progress_token = None
     try:
         assert_job_lease()
         if row['status'] == 'running':
@@ -444,11 +479,17 @@ async def execute_claimed(row):
         if not _renew(row):
             return
         from .api import run_task
+        from . import job_progress
         request = Request({'type': 'http', 'method': 'POST', 'path': '/api/run',
             'headers': [], 'client': ('127.0.0.1', 0), 'server': ('127.0.0.1', 8000), 'scheme': 'http'})
-        if body.get('operation') == 'design':
+        operation_name = body.get('operation', 'content')
+        progress_token = job_progress.bind(row['id'], operation_name)
+        if operation_name == 'design':
             from .design_service import execute_design
             operation = asyncio.create_task(execute_design(body.get('parameters') or {}))
+        elif operation_name == 'poster':
+            from .poster_jobs import execute_poster_job
+            operation = asyncio.create_task(execute_poster_job(body.get('parameters') or {}, request))
         else:
             operation = asyncio.create_task(run_task(TaskInput.model_validate(body['task']), request))
         async def keep_alive():
@@ -462,6 +503,13 @@ async def execute_claimed(row):
                     stopped['reason'] = 'lease_lost'
                     operation.cancel()
                     return
+                try:
+                    if load_body('generation_job', row['id']).get('cancel_requested'):
+                        stopped['reason'] = 'cancel_requested'
+                        operation.cancel()
+                        return
+                except Exception:
+                    pass
         heartbeat = asyncio.create_task(keep_alive())
         response = await operation
         if refresh_context(context) is None:
@@ -477,14 +525,49 @@ async def execute_claimed(row):
             body.update(status=final)
             body.pop('result', None)
             if final == 'cancelled':
-                body['error'] = {'message': '任务权限已更新，请重新开始创作'}
+                message = ('已按你的要求停止这次创作' if stopped.get('reason') == 'cancel_requested'
+                           else '任务权限已更新，请重新开始创作')
+                body['error'] = {'message': message}
     except Exception as exc:
         if refresh_context(context) is None:
             final = 'cancelled'
             if body is not None:
                 body.update(status=final, error={'message': '任务权限已更新，请重新开始创作'})
         elif body is not None:
-            body.update(status='failed', error={'message': exc.detail if isinstance(exc, HTTPException) else '这次创作未完成，请重试'}, finished_at=time.time())
+            # HTTPException.detail is not guaranteed to be a string (many
+            # call sites raise a structured {'code': ..., ...} payload with
+            # no human-readable 'message'); the polled error.message must
+            # always render as text, never a raw object.
+            detail = getattr(exc, 'detail', None) if isinstance(exc, HTTPException) else None
+            if isinstance(detail, str) and detail:
+                message = detail
+            elif isinstance(detail, dict) and isinstance(detail.get('message'), str):
+                message = detail['message']
+            else:
+                message = '这次创作未完成，请重试'
+            error = {'message': message}
+            # Diagnose by structure only (error type, field path, declared
+            # limit, or the HTTPException's own machine code); never the
+            # offending text, so this stays safe to log.
+            if isinstance(exc, ValidationError):
+                error['diagnostic'] = {'type': 'ValidationError',
+                    'fields': [{'path': list(item['loc']), 'type': item['type']}
+                               for item in exc.errors(include_input=False)[:12]]}
+            elif isinstance(detail, dict) and isinstance(detail.get('code'), str):
+                error['diagnostic'] = {'type': 'HTTPException', 'code': detail['code'][:80]}
+            elif isinstance(exc, HTTPException):
+                error['diagnostic'] = {'type': 'HTTPException', 'status_code': exc.status_code}
+            else:
+                # Any other exception type/class name is implementation
+                # metadata, not customer content; safe to keep for triage.
+                error['diagnostic'] = {'type': type(exc).__name__}
+                import traceback
+                frames = [frame for frame in traceback.extract_tb(exc.__traceback__)
+                          if os.sep + 'app' + os.sep in frame.filename]
+                if frames:
+                    error['diagnostic']['at'] = (
+                        f"{os.path.basename(frames[-1].filename)}:{frames[-1].lineno}")
+            body.update(status='failed', error=error, finished_at=time.time())
     finally:
         if heartbeat:
             heartbeat.cancel()
@@ -495,6 +578,9 @@ async def execute_claimed(row):
         try:
             _finish(row, body, final)
         finally:
+            if progress_token is not None:
+                from . import job_progress
+                job_progress.unbind(progress_token)
             reset_context(token)
             _active_job.reset(job_token)
             _active_claim.reset(claim_context)

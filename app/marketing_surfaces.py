@@ -89,8 +89,12 @@ def resolve_surface_finding(finding: dict, public_surfaces: dict[str, str], *, a
     """
     value = deepcopy(finding)
     quote, region = value.get('quote'), value.get('region')
-    if not isinstance(quote, str) or not isinstance(region, str):
-        return value  # Strict schema reports shape/type failures separately.
+    if not isinstance(region, str):
+        raise ValueError('Marketing review finding is missing its region')
+    if not isinstance(quote, str):
+        # The schema allows an omitted quote (it defaults to ''); normalize
+        # it here so every caller can safely index value['quote'] afterward.
+        value['quote'] = quote = ''
     if region in public_surfaces:
         actual = public_surfaces[region]
         if not isinstance(actual, str):

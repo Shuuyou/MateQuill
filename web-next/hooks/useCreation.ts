@@ -1,14 +1,17 @@
 "use client";
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
-  createPoster,
+  cancelJob,
+  createPosterJob,
   GenerationJobError,
   getPoster,
   getRun,
   intake,
   runTask,
+  waitForPosterJob,
   waitForRunJob,
   reviseCreation,
+  type JobStatus,
 } from "@/lib/api";
 import type {
   MediaIntake,
@@ -20,6 +23,10 @@ import type {
 interface SavedCreation {
   assignmentId: string;
   pendingJob: string;
+  jobStartedAt: number;
+  jobStage: string;
+  jobPercent: number;
+  jobDetail: string;
   query: string;
   answers: Record<string, string>;
   media: MediaIntake[];
@@ -31,6 +38,10 @@ interface SavedCreation {
 const initial: SavedCreation = {
   assignmentId: "",
   pendingJob: "",
+  jobStartedAt: 0,
+  jobStage: "",
+  jobPercent: 0,
+  jobDetail: "",
   query: "",
   answers: {},
   media: [],
@@ -39,6 +50,28 @@ const initial: SavedCreation = {
   poster: null,
   history: [],
 };
+const clearJob: Partial<SavedCreation> = {
+  pendingJob: "",
+  jobStartedAt: 0,
+  jobStage: "",
+  jobPercent: 0,
+  jobDetail: "",
+};
+let completionNoticeArmed = false;
+function notifyCompletion() {
+  if (typeof document === "undefined" || !document.hidden || completionNoticeArmed)
+    return;
+  completionNoticeArmed = true;
+  const previous = document.title;
+  document.title = "✅ 创作完成 · MateQuill";
+  const restore = () => {
+    if (document.hidden) return;
+    document.title = previous;
+    document.removeEventListener("visibilitychange", restore);
+    completionNoticeArmed = false;
+  };
+  document.addEventListener("visibilitychange", restore);
+}
 export function useCreation(scopeKey: string) {
   const KEY = `matequill-creation-v3:${scopeKey}`;
   const [data, setData] = useState<SavedCreation>(initial);
@@ -47,6 +80,7 @@ export function useCreation(scopeKey: string) {
     "idle",
   );
   const [error, setError] = useState("");
+  const [cancelling, setCancelling] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   const active = useRef(false);
   useEffect(() => {
@@ -87,8 +121,8 @@ export function useCreation(scopeKey: string) {
   const remember = (result: RunResult, task: RunTask) =>
     setData((previous) => ({
       ...previous,
+      ...clearJob,
       result,
-      pendingJob: "",
       task,
       history: [
         {
@@ -100,46 +134,86 @@ export function useCreation(scopeKey: string) {
         ...previous.history.filter((item) => item.id !== result.run_id),
       ].slice(0, 12),
     }));
+  const rememberPoster = (poster: PosterResponse, task: RunTask) =>
+    setData((previous) => ({
+      ...previous,
+      ...clearJob,
+      result: null,
+      poster,
+      task,
+      history: [
+        {
+          id: `poster:${poster.id}`,
+          title: task.product + " · 海报",
+          at: new Date().toISOString(),
+          task,
+        },
+        ...previous.history,
+      ].slice(0, 12),
+    }));
+  const queueJob = (pendingJob: string) =>
+    update((previous) => ({
+      pendingJob,
+      jobStartedAt:
+        previous.pendingJob === pendingJob && previous.jobStartedAt
+          ? previous.jobStartedAt
+          : Date.now(),
+      ...(previous.pendingJob === pendingJob
+        ? {}
+        : { jobStage: "", jobPercent: 0, jobDetail: "" }),
+    }));
+  const onJobProgress = (status: JobStatus) => {
+    if (!status.progress) return;
+    const detail = status.events
+      ?.filter((event) => event.stage === status.progress!.stage)
+      .pop()?.detail;
+    update({
+      jobStage: status.progress.stage,
+      jobPercent: Math.min(98, Math.max(0, status.progress.percent)),
+      // Older jobs may still carry structured details; only strings render.
+      jobDetail: typeof detail === "string" ? detail : "",
+    });
+  };
   async function generate(task: RunTask) {
     setPhase("generating");
     if (task.platform === "poster") {
-      const poster = await createPoster(task);
-      setData((previous) => ({
-        ...previous,
-        result: null,
-        poster,
-        task,
-        history: [
-          {
-            id: `poster:${poster.id}`,
-            title: task.product + " · 海报",
-            at: new Date().toISOString(),
-            task,
-          },
-          ...previous.history,
-        ].slice(0, 12),
-      }));
+      try {
+        rememberPoster(
+          await createPosterJob(task, queueJob, onJobProgress),
+          task,
+        );
+        notifyCompletion();
+      } catch (reason) {
+        if (reason instanceof GenerationJobError) update(clearJob);
+        throw reason;
+      }
       return;
     }
     update({ poster: null });
     let result: RunResult;
     try {
-      result = await runTask(task, (pendingJob) => update({ pendingJob }));
+      result = await runTask(task, queueJob, onJobProgress);
     } catch (reason) {
-      if (reason instanceof GenerationJobError) update({ pendingJob: "" });
+      if (reason instanceof GenerationJobError) update(clearJob);
       throw reason;
     }
     remember(result, task);
+    notifyCompletion();
   }
   async function resume() {
     if (active.current || !data.pendingJob || !data.task) return;
     active.current = true;
     setError("");
     setPhase("generating");
+    const task = data.task;
     try {
-      remember(await waitForRunJob(data.pendingJob), data.task);
+      if (task.platform === "poster")
+        rememberPoster(await waitForPosterJob(data.pendingJob, onJobProgress), task);
+      else
+        remember(await waitForRunJob(data.pendingJob, onJobProgress), task);
+      notifyCompletion();
     } catch (reason) {
-      if (reason instanceof GenerationJobError) update({ pendingJob: "" });
+      if (reason instanceof GenerationJobError) update(clearJob);
       setError(
         reason instanceof Error
           ? reason.message
@@ -148,6 +222,22 @@ export function useCreation(scopeKey: string) {
     } finally {
       active.current = false;
       setPhase("idle");
+    }
+  }
+  async function cancel() {
+    if (!data.pendingJob || cancelling) return;
+    setCancelling(true);
+    setError("");
+    try {
+      await cancelJob(data.pendingJob);
+    } catch (reason) {
+      setError(
+        reason instanceof Error
+          ? reason.message
+          : "暂时没有停止成功，可以再试一次。",
+      );
+    } finally {
+      setCancelling(false);
     }
   }
   useEffect(() => {
@@ -219,6 +309,7 @@ export function useCreation(scopeKey: string) {
     setError("");
     setQuestions([]);
     update({
+      ...clearJob,
       task,
       assignmentId,
       query: task.scene,
@@ -297,6 +388,7 @@ export function useCreation(scopeKey: string) {
     setQuestions([]);
     setError("");
     update({
+      ...clearJob,
       query: "",
       media: [],
       answers: {},
@@ -304,7 +396,6 @@ export function useCreation(scopeKey: string) {
       poster: null,
       task: null,
       assignmentId: "",
-      pendingJob: "",
     });
   }
   return {
@@ -312,6 +403,7 @@ export function useCreation(scopeKey: string) {
     questions,
     phase,
     error,
+    cancelling,
     hydrated,
     update,
     resolve,
@@ -320,6 +412,7 @@ export function useCreation(scopeKey: string) {
     reopen,
     reset,
     resume,
+    cancel,
     openDraft: (result: RunResult, task: RunTask, assignmentId: string) => {
       setQuestions([]);
       setError("");
@@ -331,6 +424,7 @@ export function useCreation(scopeKey: string) {
       setQuestions([]);
       setError("");
       update({
+        ...clearJob,
         task,
         assignmentId,
         query: task.scene || "",

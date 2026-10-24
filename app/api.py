@@ -193,6 +193,8 @@ async def run_task(task: TaskInput, request: Request):
     validate_task_resources(task)
     with generation_budget():
         from .store_task_research import prepare_store_task
+        from .job_progress import report
+        report('retrieval', {'phase': 'store_research'})
         try:
             task = await prepare_store_task(task)
         except TimeoutError:
