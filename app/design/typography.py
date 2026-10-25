@@ -10,7 +10,7 @@ from .font_resolver import resolve_glyph
 FONT_PATH = Path(__file__).parent / 'fonts' / 'NotoSansCJKsc-Regular.otf'
 OPEN = '（【《「『〔〈“‘'
 CLOSE = '，。！？；：、）》】」』〕〉”’%％'
-PHRASES = ('多屏协同','下一页','写成','想法','华为','鸿蒙','到店','体验','耳机','平板','手机','电脑','无线','新品','随身','通勤','创作','学习','设计','日常','门店','带上','打开')
+PHRASES = ('多屏协同','下一页','写成','想法','华为','鸿蒙','到店','体验','耳机','平板','手机','电脑','无线','新品','随身','通勤','创作','学习','设计','日常','门店','带上','打开','关心','心率','睡眠')
 TOKEN_PATTERN = r'[A-Za-z0-9]+(?:[ .+×\-/][A-Za-z0-9]+)*|'+'|'.join(map(re.escape,sorted(PHRASES,key=len,reverse=True)))+r'|[^A-Za-z0-9]'
 
 @lru_cache(maxsize=8)

@@ -9,6 +9,17 @@ UNITS = ['下课后，', '看看心率，', '也问问感受']
 TEXT = ''.join(UNITS)
 
 
+def test_health_headline_fallback_keeps_common_words_atomic():
+    text='合上书，也关心昨晚的睡眠'
+    for preferred in (None, [4]):
+        wrapped,size,fits=fit_text(text,399.6,295.2,65,minimum=40,
+            font_weight=700,preferred_breaks=preferred)
+        assert fits and wrapped.replace('\n','')==text
+        assert '关\n心' not in wrapped and '睡\n眠' not in wrapped
+    wrapped=semantic_wrap('看看心率，再关心睡眠',240,65,font_weight=700)
+    assert '心\n率' not in '\n'.join(wrapped)
+
+
 def board(*, units=UNITS, selected=TEXT, tracking=0, height=.31, width=.37):
     region={'id':'headline-region','role':'headline','text_id':'headline',
         'x':.565,'y':.245,'width':width,'height':height,'font_scale':.05,
