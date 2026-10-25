@@ -38,7 +38,7 @@ def seed(owner, *, audience='private'):
         '_poster_task': TaskInput(product='HUAWEI 合成机型', mode='demo',
                                  store_id=owner['store']['id']).model_dump()})
     save_body('design', design_id, {'id': design_id, 'source_run_id': run_id,
-        'title': '原图', 'status': 'ready', 'version': 1, 'platform': 'moments',
+        'title': '原图', 'status': 'ready', 'version': 1, 'platform': 'moments', 'surface': 'photo',
         'artboards': [], 'plan': plan()})
     save_body(module.TURN, turn_id, {'effects': {}})
     tool = object.__new__(module.AgentTools)
@@ -79,6 +79,7 @@ def test_execute_passes_micro_controls_bound_to_current_authorized_design(identi
         assert result['artifact']['kind'] == 'design'
         assert calls[0]['parent_id'] == parent_id and calls[0]['source_run_id'] == run_id
         assert calls[0]['platform'] == 'moments' and calls[0]['craft_edit'] == edit()
+        assert calls[0]['surface'] == 'photo'
         assert calls[0]['instruction'] == '小幅收紧'
         assert load_body('design', parent_id)['version'] == 1
         tool.conversation['current_artifact'] = {'kind': 'design', 'id': parent_id}

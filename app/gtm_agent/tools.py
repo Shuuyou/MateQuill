@@ -756,6 +756,8 @@ class AgentTools:
         platform = parent['platform'] if parent else args.platform
         parameters = {'source_run_id': source_id, 'platform': platform,
             'instruction': args.instruction, 'parent_id': parent['id'] if parent else None}
+        if parent:
+            parameters['surface'] = parent.get('surface', '')
         if args.craft_edit is not None:
             parameters['craft_edit'] = args.craft_edit.model_dump()
         effect_key = hashlib.sha256(json.dumps({'operation': name, **parameters}, sort_keys=True, ensure_ascii=False).encode()).hexdigest()
