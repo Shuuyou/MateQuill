@@ -192,7 +192,11 @@ class OpenAICompatibleLLM:
                 stage = ('repair' if strategy.get('repair') else
                          'reselection' if strategy.get('reselect') else 'draft')
         try:
-            async with httpx.AsyncClient(timeout=self.timeout) as client:
+            # Model connections are explicitly configured server-side. On
+            # Windows trust_env also reads the interactive user's registry
+            # proxy, even with no HTTP_PROXY environment variable. Keep this
+            # route consistent with the direct image/review clients.
+            async with httpx.AsyncClient(timeout=self.timeout, trust_env=False) as client:
                 # Bounded extra attempts only for explicit upstream congestion
                 # (HTTP 429/5xx, connect/read timeouts); anything else stays fatal.
                 for upstream_attempt in range(3):

@@ -51,3 +51,18 @@ def test_format_retry_preserves_budget_for_final_review(monkeypatch):
   return [await model._json('JSON',{}) for _ in range(4)]
  assert [value['step'] for value in asyncio.run(stages())]==['write','review','repair','final_review']
  assert model._calls==5
+
+
+def test_explicit_model_route_does_not_inherit_windows_system_proxy(monkeypatch):
+ original=httpx.AsyncClient
+ options=[]
+ def build(**kwargs):
+  options.append(kwargs.copy())
+  def handle(request):
+   return httpx.Response(200,json={'choices':[{'finish_reason':'stop',
+    'message':{'content':'{"ok":true}'}}]})
+  return original(transport=httpx.MockTransport(handle),**kwargs)
+ monkeypatch.setattr(httpx,'AsyncClient',build)
+ result=asyncio.run(OpenAICompatibleLLM(api_key='test-only')._json('JSON',{}))
+ assert result=={'ok':True}
+ assert options and all(item.get('trust_env') is False for item in options)

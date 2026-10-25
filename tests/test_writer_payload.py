@@ -85,6 +85,37 @@ def test_new_reference_pairs_keep_different_and_small_guidance():
     assert compact_writer_payload(original) == original
 
 
+def test_initial_requirements_reference_restores_snapshot_before_parent_copy():
+    import hashlib
+    requirements = '保留当前门店、完整来源、用户要求及产品适用限定。' * 150
+    snapshot = {'context': {'requirements': requirements, 'scene': '本店当前场景'},
+                'pack': {'recipe': '原定策略'}}
+    snapshot['snapshot_hash'] = hashlib.sha256(json.dumps(snapshot, ensure_ascii=False).encode('utf8')).hexdigest()
+    original = {'task': {'requirements': requirements, 'scene': '本店当前场景'},
+        'strategy': {'strategy_snapshot': snapshot},
+        'creative_brief': {'strategy_snapshot': snapshot,
+            'task_context': {'requirements': requirements, 'scene': '本店当前场景'}}}
+    saved = deepcopy(original)
+    compact = compact_writer_payload(original)
+    references = compact['context_refs']['fields']
+    child = 'strategy.strategy_snapshot.context.requirements'
+    assert references[child] == {'path': 'task.requirements'}
+    assert list(references).index(child) < list(references).index('creative_brief.strategy_snapshot')
+    assert 'requirements' not in compact['strategy']['strategy_snapshot']['context']
+    assert compact['task']['requirements'] == requirements
+    assert compact['strategy']['strategy_snapshot']['snapshot_hash'] == snapshot['snapshot_hash']
+    restored = _restore_references(compact)
+    assert restored == original == saved
+    assert restored['creative_brief']['strategy_snapshot']['context']['requirements'].encode('utf8') == requirements.encode('utf8')
+
+
+def test_initial_requirements_reference_keeps_different_or_short_requests():
+    for canonical, frozen in [('保留' * 200, '不同' * 200), ('短请求', '短请求'), (511 * 'x', 511 * 'x')]:
+        original = {'task': {'requirements': canonical}, 'creative_brief': {},
+            'strategy': {'strategy_snapshot': {'context': {'requirements': frozen}}}}
+        assert compact_writer_payload(original) == original
+
+
 def test_writer_records_actual_compacted_wire_sizes_without_content():
     from app.llm import OpenAICompatibleLLM
     model = OpenAICompatibleLLM(api_key='synthetic')

@@ -38,7 +38,7 @@ def compact_writer_payload(payload):
     # strategy. These records must remain in storage, but the writer need not
     # read identical account, local and editorial guidance twice. Explicit
     # canonical paths avoid generic deduplication of fact IDs or JSON schemas.
-    def exact_reference(destination, canonical_path):
+    def exact_reference(destination, canonical_path, *, allow_text=False):
         def at(path):
             node = value
             for key in path.split('.'):
@@ -48,10 +48,12 @@ def compact_writer_payload(payload):
             return node
         canonical = at(canonical_path)
         duplicate = at(destination)
-        if not isinstance(canonical, (dict, list)) or not canonical or duplicate != canonical:
+        allowed = (dict, list, str) if allow_text else (dict, list)
+        if not isinstance(canonical, allowed) or not canonical or duplicate != canonical:
             return
         serialized = json.dumps(canonical, ensure_ascii=False, sort_keys=True)
-        if (len(serialized.encode('utf8')) < 512 or
+        byte_size = len((canonical if isinstance(canonical, str) else serialized).encode('utf8'))
+        if (byte_size < 512 or
                 json.dumps(duplicate, ensure_ascii=False, sort_keys=True) != serialized):
             return
         parent_path, key = destination.rsplit('.', 1)
@@ -68,7 +70,15 @@ def compact_writer_payload(payload):
         ('creative_brief.cultural_context', 'strategy.creative_execution.cultural_context'),
     ):
         exact_reference(destination, canonical_path)
+    # The frozen snapshot retains the complete request in storage. On the wire
+    # it can read the identical canonical request once. The snapshot hash is
+    # never regenerated or changed by this transport-only projection.
+    exact_reference('strategy.strategy_snapshot.context.requirements', 'task.requirements', allow_text=True)
     if references:
-        value['context_refs'] = {'instruction': '这些字段与所指向的正文完全相同，按path读取对应内容；未删减要求、原文或限定。',
-                                 'fields': references}
+        # A parent snapshot reference may depend on a removed child field.
+        # Emit child restorations first, so a plain ordered expansion preserves
+        # the whole snapshot, including its original integrity hash.
+        ordered = dict(sorted(references.items(), key=lambda item: item[0].count('.'), reverse=True))
+        value['context_refs'] = {'instruction': '这些字段与所指向的正文完全相同，按fields顺序先还原子字段，再按path读取完整父对象；未删减要求、原文或限定。',
+                                 'fields': ordered}
     return value
