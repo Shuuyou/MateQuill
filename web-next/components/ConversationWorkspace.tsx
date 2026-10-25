@@ -48,6 +48,39 @@ type Editor = {
 };
 const terminal = new Set(["completed", "needs_input", "failed"]);
 
+function ReadyCopy({ run }: { run: RunResult }) {
+  const [copied, setCopied] = useState("");
+  const paragraphs = [
+    run.title,
+    run.intro,
+    ...(run.blocks || []).map((block) => [block.text, block.disclosures?.join("；")].filter(Boolean).join("\n")),
+    run.cta,
+    run.tags?.map((tag) => `#${tag.replace(/^#/, "")}`).join(" "),
+  ].filter((value): value is string => !!value);
+  async function copy() {
+    try {
+      await navigator.clipboard.writeText(paragraphs.join("\n\n"));
+      setCopied("已复制文案");
+    } catch {
+      setCopied("可以展开文案，选中文字复制");
+    }
+  }
+  return (
+    <section aria-label="已完成的文案">
+      <p>文案已准备好，配图继续制作。</p>
+      <details>
+        <summary className="mq-text-button">先读文案</summary>
+        <div className="mq-conversation-text">
+          {paragraphs.map((paragraph, index) => <p key={index}>{paragraph}</p>)}
+        </div>
+      </details>
+      <button type="button" className="mq-text-button" onClick={() => void copy()}>
+        {copied || "复制文案"}
+      </button>
+    </section>
+  );
+}
+
 function ArtifactCard({
   artifact,
   onOpen,
@@ -138,6 +171,10 @@ export default function ConversationWorkspace({
   // summary click pins the user's choice for the rest of this turn.
   const [processOpen, setProcessOpen] = useState<boolean | null>(null);
   const [pending, setPending] = useState<PendingTurn | null>(null);
+  const [readyCopy, setReadyCopy] = useState<{
+    conversationId: string; turnId: string; run: RunResult;
+  } | null>(null);
+  const readyCopyRequest = useRef<string | null>(null);
   const [questions, setQuestions] = useState<AgentQuestion[]>([]);
   const [error, setError] = useState("");
   const [editor, setEditor] = useState<Editor | null>(null);
@@ -182,6 +219,8 @@ export default function ConversationWorkspace({
     ]);
   }
   function rememberPending(value: PendingTurn | null) {
+    readyCopyRequest.current = null;
+    setReadyCopy(null);
     setPending(value);
     setWorkingMessage("正在准备这次创作。");
     if (value) {
@@ -239,6 +278,8 @@ export default function ConversationWorkspace({
         setWorkingMessage(turn.progress?.message || "正在准备这次创作。");
         if (turn.process) setProcess(turn.process);
         if (terminal.has(turn.status)) {
+          readyCopyRequest.current = null;
+          setReadyCopy(null);
           const current = await readProgress(() => getConversation(value.conversation_id));
           if (!live.current || token !== epoch.current) return;
           updateConversation(current);
@@ -249,6 +290,32 @@ export default function ConversationWorkspace({
               turn.message || "这次工作还没完成，可以接着告诉我怎么调整。",
             );
           return;
+        }
+        // The server checkpoints only reviewed, ready runs. Fetch that exact
+        // authorized record as a second gate; never expose a writer draft or
+        // delay image progress while loading it. Epoch + request identity
+        // prevent a late response from another turn/workspace resurfacing.
+        if (turn.artifact?.kind === "run") {
+          const artifact = turn.artifact;
+          const key = `${token}:${value.conversation_id}:${turnId}:${artifact.id}:${artifact.version}`;
+          if (readyCopyRequest.current !== key) {
+            readyCopyRequest.current = key;
+            setReadyCopy(null);
+            void getRun(artifact.id).then((run) => {
+              if (!live.current || token !== epoch.current || readyCopyRequest.current !== key) return;
+              if (run.run_id === artifact.id && run.status === "ready") {
+                setReadyCopy({ conversationId: value.conversation_id, turnId: turnId!, run });
+              } else setReadyCopy(null);
+            }).catch(() => {
+              if (live.current && token === epoch.current && readyCopyRequest.current === key) {
+                readyCopyRequest.current = null;
+                setReadyCopy(null);
+              }
+            });
+          }
+        } else if (turn.artifact) {
+          readyCopyRequest.current = null;
+          setReadyCopy(null);
         }
         await new Promise((resolve) => setTimeout(resolve, 1200));
       }
@@ -282,6 +349,8 @@ export default function ConversationWorkspace({
 
   useEffect(() => {
     live.current = true;
+    readyCopyRequest.current = null;
+    setReadyCopy(null);
     let active = true;
     async function load() {
       try {
@@ -676,6 +745,11 @@ export default function ConversationWorkspace({
               {message.quotation && <QuotationCard quoteId={message.quotation.id} />}
             </li>
           ))}
+          {readyCopy && readyCopy.conversationId === conversation?.id && readyCopy.turnId === pending?.turn_id && (
+            <li className="mq-conversation-message is-assistant" key={`ready-copy-${readyCopy.turnId}`}>
+              <ReadyCopy key={readyCopy.run.run_id} run={readyCopy.run} />
+            </li>
+          )}
           {(busy || process) && (
             <li className="mq-conversation-working" role={busy ? "status" : undefined}>
               <Character state={busy ? "thinking" : "done"} />
