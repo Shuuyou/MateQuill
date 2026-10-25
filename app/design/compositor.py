@@ -190,7 +190,7 @@ def compose_design(task,record,plan,assets:dict)->list[DesignArtboard]:
                     # Do not strand one or two final characters merely because
                     # the maximum headline size fits vertically. Reflow using
                     # the same exact approved copy and actual glyph metrics.
-                    for candidate in range(int(fontsize)-1,minimum-1,-1):
+                    for candidate in range(int(fontsize)-1,math.ceil(minimum)-1,-1):
                         candidate_lines=semantic_wrap(content,bw,candidate,region.letter_spacing,family,weight,preferred_breaks=preferred)
                         candidate_widths=[measure(line,candidate,region.letter_spacing,family,weight) for line in candidate_lines]
                         candidate_fit=max(candidate_widths,default=0)<=bw and len(candidate_lines)*candidate*region.line_height<=bh
